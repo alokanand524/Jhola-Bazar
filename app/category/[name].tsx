@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 import { ProductCard } from '@/components/ProductCard';
+import { categoryImages } from '@/data/categoryImages';
 
 const categoryData: { [key: string]: string[] } = {
   'Favourites': ['All', 'Most Ordered', 'Recently Bought', 'Saved Items'],
@@ -76,6 +77,10 @@ export default function CategoryScreen() {
                 ]}
                 onPress={() => setSelectedSubCategory(subCat)}
               >
+                <Image 
+                  source={{ uri: categoryImages[categoryName]?.[subCat] || categoryImages[categoryName]?.['All'] }}
+                  style={styles.sidebarImage}
+                />
                 <Text style={[
                   styles.sidebarText,
                   selectedSubCategory === subCat && styles.selectedSidebarText
@@ -150,24 +155,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   sidebar: {
-    width: 120,
+    width: 80,
     backgroundColor: '#f8f8f8',
     borderRightWidth: 1,
     borderRightColor: '#f0f0f0',
   },
   sidebarItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    alignItems: 'center',
   },
   selectedSidebarItem: {
     backgroundColor: '#fff',
     borderRightWidth: 3,
     borderRightColor: '#00B761',
   },
+  sidebarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginBottom: 4,
+  },
   sidebarText: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#666',
     textAlign: 'center',
   },

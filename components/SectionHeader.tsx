@@ -1,22 +1,27 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 interface SectionHeaderProps {
   title: string;
-  onSeeAll?: () => void;
+  categoryName?: string;
 }
 
-export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, onSeeAll }) => {
+export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, categoryName }) => {
+  const handleSeeAll = () => {
+    if (categoryName) {
+      router.push(`/category/${encodeURIComponent(categoryName)}`);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>
-      {onSeeAll && (
-        <TouchableOpacity style={styles.seeAllButton} onPress={onSeeAll}>
-          <Text style={styles.seeAllText}>See all</Text>
-          <Ionicons name="chevron-forward" size={16} color="#00B761" />
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity style={styles.seeAllButton} onPress={handleSeeAll}>
+        <Text style={styles.seeAllText}>See all</Text>
+        <Ionicons name="chevron-forward" size={16} color="#00B761" />
+      </TouchableOpacity>
     </View>
   );
 };

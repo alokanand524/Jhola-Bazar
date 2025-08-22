@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, FlatList } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, FlatList, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
@@ -18,6 +18,9 @@ export default function HomeScreen() {
   const dispatch = useDispatch();
   const { products, selectedCategory } = useSelector((state: RootState) => state.products);
   const { items } = useSelector((state: RootState) => state.cart);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
+  const tabBarOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     dispatch(setProducts([...mockProducts, ...featuredThisWeek]));
@@ -28,6 +31,30 @@ export default function HomeScreen() {
     : products.filter(product => product.category === selectedCategory).slice(0, 6);
 
   const cartItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  const handleScroll = () => {
+    if (!isScrolling) {
+      setIsScrolling(true);
+      Animated.timing(tabBarOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+
+    if (scrollTimeout.current) {
+      clearTimeout(scrollTimeout.current);
+    }
+
+    scrollTimeout.current = setTimeout(() => {
+      setIsScrolling(false);
+      Animated.timing(tabBarOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }, 1000);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -58,18 +85,18 @@ export default function HomeScreen() {
         <Text style={styles.searchPlaceholder}>Search for products</Text>
       </TouchableOpacity>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={16}>
         <BannerCarousel />
         <CategoryList />
         
-        <SectionHeader title="Frequently bought" onSeeAll={() => router.push('/(tabs)/categories')} />
+        <SectionHeader title="Frequently bought" categoryName="Favourites" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
           {frequentlyBought.map((item, index) => (
             <SectionCard key={index} title={item.title} image={item.image} category={item.category} />
           ))}
         </ScrollView>
 
-        <SectionHeader title="Featured this week" onSeeAll={() => router.push('/(tabs)/categories')} />
+        <SectionHeader title="Featured this week" categoryName="Vegetables" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productScroll}>
           {featuredThisWeek.map((item) => (
             <View key={item.id} style={styles.featuredCard}>
@@ -78,21 +105,21 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        <SectionHeader title="Grocery & Kitchen" onSeeAll={() => router.push('/(tabs)/categories')} />
+        <SectionHeader title="Grocery & Kitchen" categoryName="Vegetables" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
           {groceryKitchen.map((item, index) => (
             <SectionCard key={index} title={item.title} image={item.image} category={item.category} />
           ))}
         </ScrollView>
 
-        <SectionHeader title="Snacks & Drinks" onSeeAll={() => router.push('/(tabs)/categories')} />
+        <SectionHeader title="Snacks & Drinks" categoryName="Snacks" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
           {snacksDrinks.map((item, index) => (
             <SectionCard key={index} title={item.title} image={item.image} category={item.category} />
           ))}
         </ScrollView>
 
-        <SectionHeader title="Beauty & Personal Care" onSeeAll={() => router.push('/(tabs)/categories')} />
+        <SectionHeader title="Beauty & Personal Care" categoryName="Personal Care" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
           {beautyPersonalCare.map((item, index) => (
             <SectionCard key={index} title={item.title} image={item.image} category={item.category} />
@@ -100,7 +127,7 @@ export default function HomeScreen() {
         </ScrollView>
         
         <View style={styles.productsContainer}>
-          <SectionHeader title="Popular Products" onSeeAll={() => router.push('/(tabs)/categories')} />
+          <SectionHeader title="Popular Products" categoryName="Vegetables" />
           <FlatList
             data={filteredProducts}
             renderItem={({ item }) => <ProductCard product={item} />}
@@ -111,6 +138,8 @@ export default function HomeScreen() {
           />
         </View>
       </ScrollView>
+
+      <Animated.View style={[styles.tabBarOverlay, { opacity: tabBarOpacity }]} pointerEvents={isScrolling ? 'none' : 'auto'} />
     </SafeAreaView>
   );
 }
@@ -188,6 +217,14 @@ const styles = StyleSheet.create({
   featuredCard: {
     width: 160,
     marginRight: 12,
+  },
+  tabBarOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
+    backgroundColor: 'transparent',
   },
   productsContainer: {
     padding: 16,
