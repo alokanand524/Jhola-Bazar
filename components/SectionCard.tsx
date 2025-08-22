@@ -11,7 +11,7 @@ interface SectionCardProps {
 export const SectionCard: React.FC<SectionCardProps> = ({ title, image, category }) => {
   const handlePress = () => {
     if (category) {
-      router.push(`/(tabs)/categories?filter=${category}`);
+      router.push(`/category/${encodeURIComponent(title)}`);
     }
   };
 

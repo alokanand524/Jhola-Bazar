@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Blinkit Clone - Grocery Delivery App
 
 A production-ready grocery delivery app built with React Native and Expo, inspired by Blinkit's design and functionality.
@@ -187,3 +188,6 @@ This project is for educational purposes. Please respect Blinkit's intellectual 
 ---
 
 **Note**: This is a clone project for learning purposes. It's not affiliated with or endorsed by Blinkit.
+=======
+# blinkit-clone
+>>>>>>> 666418ff6ee0df2f16c8f01f4e6e7814871d0c22
