@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface SectionHeaderProps {
   title: string;
@@ -15,6 +15,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, categoryNam
     }
   };
 
+  // side arrow icon 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>

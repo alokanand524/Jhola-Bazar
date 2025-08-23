@@ -11,7 +11,7 @@ export interface Product {
   unit: string;
   inStock: boolean;
   rating: number;
-  deliveryTime: string;
+  // deliveryTime: string;
 }
 
 interface ProductsState {

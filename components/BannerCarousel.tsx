@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Image, Dimensions } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Dimensions, Image, ScrollView, StyleSheet, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -44,7 +44,7 @@ export const BannerCarousel: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    height: 150,
+    height: 180,
     marginVertical: 16,
   },
   scrollView: {
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   },
   banner: {
     width: width * 0.9,
-    height: 130,
+    height: 180,
     borderRadius: 12,
     marginRight: 16,
   },

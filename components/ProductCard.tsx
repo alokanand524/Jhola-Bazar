@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useDispatch, useSelector } from 'react-redux';
-import { router } from 'expo-router';
-import { Product } from '@/store/slices/productsSlice';
 import { addToCart, updateQuantity } from '@/store/slices/cartSlice';
+import { Product } from '@/store/slices/productsSlice';
 import { RootState } from '@/store/store';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import React from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
 
 interface ProductCardProps {
   product: Product;
@@ -54,14 +54,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 style={styles.quantityButton}
                 onPress={() => handleUpdateQuantity(cartItem.quantity - 1)}
               >
-                <Ionicons name="remove" size={16} color="#00B761" />
+                <Ionicons name="remove" size={16} color="#ffffffff" />
               </TouchableOpacity>
               <Text style={styles.quantity}>{cartItem.quantity}</Text>
               <TouchableOpacity 
                 style={styles.quantityButton}
                 onPress={() => handleUpdateQuantity(cartItem.quantity + 1)}
               >
-                <Ionicons name="add" size={16} color="#00B761" />
+                <Ionicons name="add" size={16} color="#ffffffff" />
               </TouchableOpacity>
             </View>
           ) : (
@@ -77,18 +77,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: '#dfdfdf13',
     borderRadius: 12,
     padding: 12,
     marginBottom: 16,
-    width: '48%',
+    width: '35%',
     borderWidth: 1,
-    borderColor: '#f0f0f0',
-    minWidth: 150,
+    borderColor: '#44ff00ff',
+    minWidth: 120,
   },
   image: {
     width: '100%',
-    height: 120,
+    height: 70,
     borderRadius: 8,
     marginBottom: 8,
   },

@@ -1,18 +1,18 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, FlatList, Animated } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useDispatch, useSelector } from 'react-redux';
-import { router } from 'expo-router';
-import { RootState } from '@/store/store';
-import { setProducts } from '@/store/slices/productsSlice';
-import { mockProducts } from '@/data/products';
-import { ProductCard } from '@/components/ProductCard';
-import { CategoryList } from '@/components/CategoryList';
 import { BannerCarousel } from '@/components/BannerCarousel';
+import { CategoryList } from '@/components/CategoryList';
+import { ProductCard } from '@/components/ProductCard';
 import { SectionCard } from '@/components/SectionCard';
 import { SectionHeader } from '@/components/SectionHeader';
-import { frequentlyBought, featuredThisWeek, groceryKitchen, snacksDrinks, beautyPersonalCare } from '@/data/sections';
+import { mockProducts } from '@/data/products';
+import { beautyPersonalCare, featuredThisWeek, frequentlyBought, groceryKitchen, snacksDrinks } from '@/data/sections';
+import { setProducts } from '@/store/slices/productsSlice';
+import { RootState } from '@/store/store';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDispatch, useSelector } from 'react-redux';
 
 export default function HomeScreen() {
   const dispatch = useDispatch();
@@ -60,7 +60,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.locationContainer}>
-          <Ionicons name="location" size={20} color="#00B761" />
+          <Ionicons name="location" size={20} color="#ffffffff" />
           <Text style={styles.locationText}>Deliver in 10 mins</Text>
           <Text style={styles.addressText}>Home - New Delhi</Text>
         </View>
@@ -68,7 +68,7 @@ export default function HomeScreen() {
           style={styles.cartButton}
           onPress={() => router.push('/cart')}
         >
-          <Ionicons name="bag" size={24} color="#00B761" />
+          <Ionicons name="bag" size={24} color="#aabd4d3e" />
           {cartItemsCount > 0 && (
             <View style={styles.cartBadge}>
               <Text style={styles.cartBadgeText}>{cartItemsCount}</Text>
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#a5a5a52c',
   },
   locationContainer: {
     flex: 1,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    backgroundColor: '#FF3B30',
+    backgroundColor: '#95ff00ff',
     borderRadius: 10,
     minWidth: 20,
     height: 20,

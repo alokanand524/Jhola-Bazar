@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, router } from 'expo-router';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '@/store/store';
 import { addToCart, updateQuantity } from '@/store/slices/cartSlice';
+import { RootState } from '@/store/store';
+import { Ionicons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
+import React from 'react';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDispatch, useSelector } from 'react-redux';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -125,14 +125,14 @@ export default function ProductDetailScreen() {
               style={styles.quantityButton}
               onPress={() => handleUpdateQuantity(cartItem.quantity - 1)}
             >
-              <Ionicons name="remove" size={20} color="#00B761" />
+              <Ionicons name="remove" size={20} color="#ffffffff" />
             </TouchableOpacity>
             <Text style={styles.quantity}>{cartItem.quantity}</Text>
             <TouchableOpacity 
               style={styles.quantityButton}
               onPress={() => handleUpdateQuantity(cartItem.quantity + 1)}
             >
-              <Ionicons name="add" size={20} color="#00B761" />
+              <Ionicons name="add" size={20} color="#ffffffff" />
             </TouchableOpacity>
           </View>
         ) : (

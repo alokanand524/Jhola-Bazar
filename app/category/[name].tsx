@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, router } from 'expo-router';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/store/store';
 import { ProductCard } from '@/components/ProductCard';
 import { categoryImages } from '@/data/categoryImages';
+import { RootState } from '@/store/store';
+import { Ionicons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useState } from 'react';
+import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
 
 const categoryData: { [key: string]: string[] } = {
   'Favourites': ['All', 'Most Ordered', 'Recently Bought', 'Saved Items'],
@@ -161,8 +161,8 @@ const styles = StyleSheet.create({
     borderRightColor: '#f0f0f0',
   },
   sidebarItem: {
-    paddingHorizontal: 8,
-    paddingVertical: 12,
+    paddingHorizontal: 1,
+    paddingVertical: 5,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
     alignItems: 'center',
@@ -173,10 +173,10 @@ const styles = StyleSheet.create({
     borderRightColor: '#00B761',
   },
   sidebarImage: {
-    width: 40,
-    height: 40,
+    width: 30,
+    height: 30,
     borderRadius: 20,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   sidebarText: {
     fontSize: 10,
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   },
   productsArea: {
     flex: 1,
-    padding: 16,
+    padding: 20,
   },
   productsTitle: {
     fontSize: 18,

@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { router } from 'expo-router';
+import React from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 interface SectionCardProps {
   title: string;
@@ -25,7 +25,8 @@ export const SectionCard: React.FC<SectionCardProps> = ({ title, image, category
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#00B761',
+    backgroundColor: '#b3b3b31d',
+    borderColor: '#00B761',
     borderRadius: 12,
     padding: 12,
     alignItems: 'center',
@@ -39,7 +40,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    color: '#fff',
+    color: '#614545ff',
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
