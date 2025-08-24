@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import React from 'react';
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AboutScreen() {
   const handleLinkPress = (url: string) => {
@@ -23,14 +23,14 @@ export default function AboutScreen() {
           <View style={styles.logo}>
             <Ionicons name="storefront" size={60} color="#00B761" />
           </View>
-          <Text style={styles.appName}>Blinkit Clone</Text>
+          <Text style={styles.appName}>Jhola-Bazar Clone</Text>
           <Text style={styles.version}>Version 1.0.0</Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About the App</Text>
           <Text style={styles.description}>
-            This is a clone of the popular grocery delivery app Blinkit, built with React Native and Expo. 
+            This is a clone of the popular grocery delivery app Jhola-Bazar, built with React Native and Expo. 
             It demonstrates modern mobile app development practices including state management, navigation, 
             and user interface design.
           </Text>
@@ -88,13 +88,13 @@ export default function AboutScreen() {
         <View style={styles.section}>
           <Text style={styles.disclaimer}>
             This is a demo application created for educational purposes. 
-            It is not affiliated with or endorsed by Blinkit or any other company.
+            It is not affiliated with or endorsed by Jhola-Bazar or any other company.
           </Text>
         </View>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Made with ❤️ using React Native</Text>
-          <Text style={styles.copyright}>© 2024 Blinkit Clone</Text>
+          <Text style={styles.copyright}>© 2024 Jhola-Bazar Clone</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

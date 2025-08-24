@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useSelector, useDispatch } from 'react-redux';
-import { router } from 'expo-router';
-import { RootState } from '@/store/store';
 import { logout } from '@/store/slices/userSlice';
+import { RootState } from '@/store/store';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import React from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDispatch, useSelector } from 'react-redux';
 import { hideTabBar } from './_layout';
 
 const menuItems = [
@@ -96,7 +96,7 @@ export default function ProfileScreen() {
         )}
 
         <View style={styles.appInfo}>
-          <Text style={styles.appVersion}>Blinkit Clone v1.0.0</Text>
+          <Text style={styles.appVersion}>Jhola-Bazar  v1.0.0</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

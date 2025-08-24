@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { setUser } from '@/store/slices/userSlice';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import React, { useState } from 'react';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-import { setUser } from '@/store/slices/userSlice';
 
 export default function LoginScreen() {
   const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [email, setEmail] = useState('');
+  // const [email, setEmail] = useState(''); // Email login disabled - will be enabled later
   const [otp, setOtp] = useState('');
   const [showOtp, setShowOtp] = useState(false);
   const dispatch = useDispatch();
@@ -19,10 +19,11 @@ export default function LoginScreen() {
       Alert.alert('Error', 'Please enter a valid 10-digit phone number');
       return;
     }
-    if (loginMethod === 'email' && !email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      return;
-    }
+    // Email login validation disabled - will be enabled later
+    // if (loginMethod === 'email' && !email.includes('@')) {
+    //   Alert.alert('Error', 'Please enter a valid email address');
+    //   return;
+    // }
     
     setShowOtp(true);
     Alert.alert('OTP Sent', `OTP sent to your ${loginMethod}. Use 123456 for demo.`);
@@ -31,8 +32,8 @@ export default function LoginScreen() {
   const handleVerifyOtp = () => {
     if (otp === '123456') {
       dispatch(setUser({
-        name: 'John Doe',
-        phone: loginMethod === 'phone' ? phoneNumber : '+91 9876543210'
+        name: 'Test User',
+        phone: loginMethod === 'phone' ? phoneNumber : '+91 6207338266'
       }));
       router.replace('/(tabs)');
     } else {
@@ -43,8 +44,8 @@ export default function LoginScreen() {
   const handleGoogleLogin = () => {
     // Simulate Google login
     dispatch(setUser({
-      name: 'Google User',
-      phone: '+91 9876543210'
+      name: 'Google Test User',
+      phone: '+91 6207338266'
     }));
     router.replace('/(tabs)');
   };
@@ -59,12 +60,13 @@ export default function LoginScreen() {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>Welcome to Blinkit</Text>
+        <Text style={styles.title}>Welcome to Jhola-Bazar</Text>
         <Text style={styles.subtitle}>Login to continue</Text>
 
         {!showOtp ? (
           <>
-            <View style={styles.methodSelector}>
+            {/* Email login method selector disabled - will be enabled later */}
+            {/* <View style={styles.methodSelector}>
               <TouchableOpacity
                 style={[styles.methodButton, loginMethod === 'phone' && styles.activeMethod]}
                 onPress={() => setLoginMethod('phone')}
@@ -81,36 +83,36 @@ export default function LoginScreen() {
                   Email
                 </Text>
               </TouchableOpacity>
-            </View>
+            </View> */}
 
-            {loginMethod === 'phone' ? (
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Phone Number</Text>
-                <View style={styles.phoneInput}>
-                  <Text style={styles.countryCode}>+91</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="Enter phone number"
-                    value={phoneNumber}
-                    onChangeText={setPhoneNumber}
-                    keyboardType="numeric"
-                    maxLength={10}
-                  />
-                </View>
-              </View>
-            ) : (
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Email Address</Text>
+            {/* Only phone login available - email login disabled */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Phone Number</Text>
+              <View style={styles.phoneInput}>
+                <Text style={styles.countryCode}>+91</Text>
                 <TextInput
-                  style={styles.fullInput}
-                  placeholder="Enter email address"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
+                  style={styles.textInput}
+                  placeholder="Enter phone number"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  keyboardType="numeric"
+                  maxLength={10}
                 />
               </View>
-            )}
+            </View>
+            {/* Email input disabled - will be enabled later
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Email Address</Text>
+              <TextInput
+                style={styles.fullInput}
+                placeholder="Enter email address"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+            */}
 
             <TouchableOpacity style={styles.sendOtpButton} onPress={handleSendOtp}>
               <Text style={styles.sendOtpText}>Send OTP</Text>
@@ -132,7 +134,7 @@ export default function LoginScreen() {
             <View style={styles.otpContainer}>
               <Text style={styles.otpLabel}>Enter OTP</Text>
               <Text style={styles.otpSubtext}>
-                OTP sent to {loginMethod === 'phone' ? phoneNumber : email}
+                OTP sent to {phoneNumber}
               </Text>
               <TextInput
                 style={styles.otpInput}

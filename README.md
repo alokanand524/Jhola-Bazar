@@ -1,7 +1,7 @@
 <<<<<<< HEAD
-# Blinkit Clone - Grocery Delivery App
+# jhola-Bazar - Grocery Delivery App
 
-A production-ready grocery delivery app built with React Native and Expo, inspired by Blinkit's design and functionality.
+A production-ready grocery delivery app built with React Native and Expo, inspired by Jhola-Bazar's design and functionality.
 
 ## Features
 
@@ -14,7 +14,7 @@ A production-ready grocery delivery app built with React Native and Expo, inspir
 - **User Profile**: User management and preferences
 
 ### 🎨 UI/UX Features
-- **Modern Design**: Clean, intuitive interface matching Blinkit's design language
+- **Modern Design**: Clean, intuitive interface matching Jhola-Bazar's design language
 - **Responsive Layout**: Optimized for different screen sizes
 - **Smooth Animations**: Enhanced user experience with smooth transitions
 - **Loading States**: Proper loading indicators and empty states
@@ -37,7 +37,7 @@ A production-ready grocery delivery app built with React Native and Expo, inspir
 ## Project Structure
 
 ```
-blinkit-clone/
+jhola-Bazar/
 ├── app/                    # App screens and navigation
 │   ├── (tabs)/            # Tab-based screens
 │   │   ├── index.tsx      # Home screen
@@ -177,17 +177,17 @@ npx expo build:android
 
 ## License
 
-This project is for educational purposes. Please respect Blinkit's intellectual property and trademarks.
+This project is for educational purposes. Please respect Jhola-Bazar's intellectual property and trademarks.
 
 ## Acknowledgments
 
-- Inspired by Blinkit's design and user experience
+- Inspired by Jhola-Bazar's design and user experience
 - Built with Expo and React Native ecosystem
 - Uses Unsplash for product images
 
 ---
 
-**Note**: This is a clone project for learning purposes. It's not affiliated with or endorsed by Blinkit.
+**Note**: This is a clone project for learning purposes. It's not affiliated with or endorsed by Jhola-Bazar.
 =======
-# blinkit-clone
+# jhola-Bazar
 >>>>>>> 666418ff6ee0df2f16c8f01f4e6e7814871d0c22

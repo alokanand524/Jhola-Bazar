@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import React, { useState } from 'react';
+import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Address {
   id: string;
@@ -16,15 +16,15 @@ const mockAddresses: Address[] = [
   {
     id: '1',
     type: 'Home',
-    address: '123 Main Street, New Delhi, 110001',
-    landmark: 'Near Metro Station',
+    address: 'Kokar, Ranchi, 834001',
+    landmark: 'Near Statue',
     isDefault: true,
   },
   {
     id: '2',
     type: 'Work',
-    address: '456 Business Park, Gurgaon, 122001',
-    landmark: 'Tower B, 5th Floor',
+    address: 'Indian Park Park, India, 888888',
+    landmark: 'Test Mark',
     isDefault: false,
   },
 ];

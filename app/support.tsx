@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import React from 'react';
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const supportOptions = [
   {
@@ -22,9 +22,9 @@ const supportOptions = [
   {
     id: '3',
     title: 'Email Support',
-    subtitle: 'support@blinkit.com',
+    subtitle: 'support@Jholabazar.com',
     icon: 'mail',
-    action: () => Linking.openURL('mailto:support@blinkit.com'),
+    action: () => Linking.openURL('mailto:support@Jholabazar.com'),
   },
   {
     id: '4',

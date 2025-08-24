@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "blinkit-clone",
-    "slug": "blinkit-clone",
+    "name": "jhola-Bazar",
+    "slug": "jhola-Bazar",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "blinkitclone",
+    "scheme": "Jhola-Bazar",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

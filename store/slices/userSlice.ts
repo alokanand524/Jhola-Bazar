@@ -19,7 +19,7 @@ interface PaymentMethod {
 interface UserState {
   name: string;
   phone: string;
-  email?: string;
+  // email?: string; // Email functionality disabled - will be enabled later
   addresses: Address[];
   selectedAddress: Address | null;
   paymentMethods: PaymentMethod[];
@@ -29,7 +29,7 @@ interface UserState {
 const initialState: UserState = {
   name: '',
   phone: '',
-  email: '',
+  // email: '', // Email functionality disabled - will be enabled later
   addresses: [],
   selectedAddress: null,
   paymentMethods: [],
@@ -43,7 +43,7 @@ const userSlice = createSlice({
     setUser: (state, action: PayloadAction<{ name: string; phone: string; email?: string }>) => {
       state.name = action.payload.name;
       state.phone = action.payload.phone;
-      state.email = action.payload.email;
+      // state.email = action.payload.email; // Email functionality disabled - will be enabled later
       state.isLoggedIn = true;
     },
     addAddress: (state, action: PayloadAction<Address>) => {
@@ -64,7 +64,7 @@ const userSlice = createSlice({
     logout: (state) => {
       state.name = '';
       state.phone = '';
-      state.email = '';
+      // state.email = ''; // Email functionality disabled - will be enabled later
       state.addresses = [];
       state.selectedAddress = null;
       state.paymentMethods = [];
