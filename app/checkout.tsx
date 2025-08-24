@@ -38,7 +38,7 @@ export default function CheckoutScreen() {
         [
           {
             text: 'OK',
-            onPress: () => router.push('/(tabs)/'),
+            onPress: () => router.push('/(tabs)/' as any),
           },
         ]
       );

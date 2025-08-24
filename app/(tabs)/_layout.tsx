@@ -1,9 +1,33 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Animated } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
 import TabBarBackground from '@/components/ui/TabBarBackground';
+
+let scrollTimeout: ReturnType<typeof setTimeout> | null = null;
+const tabBarTranslateY = new Animated.Value(0);
+
+export const hideTabBar = () => {
+  if (scrollTimeout) {
+    clearTimeout(scrollTimeout);
+  }
+  
+  Animated.timing(tabBarTranslateY, {
+    toValue: 80,
+    duration: 200,
+    useNativeDriver: true,
+  }).start();
+  
+  scrollTimeout = setTimeout(() => {
+    Animated.timing(tabBarTranslateY, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, 700);
+};
 
 export default function TabLayout() {
   return (
@@ -15,12 +39,13 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
         tabBarStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: '#f4f4f4ff',
           borderTopWidth: 1,
-          borderTopColor: '#f0f0f0',
+          borderTopColor: '#f0f0f0ff',
           height: 60,
           paddingBottom: 8,
           position: 'absolute',
+          transform: [{ translateY: tabBarTranslateY }],
         },
       }}>
       <Tabs.Screen

@@ -8,10 +8,10 @@ export const frequentlyBought = [
 ];
 
 export const featuredThisWeek = [
-  { id: '9', name: 'Organic Spinach', price: 25, image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=300', category: 'Vegetables' },
-  { id: '10', name: 'Greek Yogurt', price: 80, image: 'https://tse3.mm.bing.net/th/id/OIP.hM911U7uckVqOPEv_ws5mgHaHa?pid=Api&P=0&?w=300', category: 'Dairy' },
-  { id: '11', name: 'Almonds', price: 450, image: 'https://images.unsplash.com/photo-1508747703725-719777637510?w=300', category: 'Dry Fruits' },
-  { id: '12', name: 'Green Tea', price: 120, image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=300', category: 'Beverages' },
+  { id: '9', name: 'Organic Spinach', price: 25, image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=300', category: 'Vegetables', description: 'Fresh organic spinach leaves', unit: '250g', inStock: true, rating: 4.3 },
+  { id: '10', name: 'Greek Yogurt', price: 80, image: 'https://tse3.mm.bing.net/th/id/OIP.hM911U7uckVqOPEv_ws5mgHaHa?pid=Api&P=0&?w=300', category: 'Dairy', description: 'Creamy Greek yogurt', unit: '200g', inStock: true, rating: 4.5 },
+  { id: '11', name: 'Almonds', price: 450, image: 'https://images.unsplash.com/photo-1508747703725-719777637510?w=300', category: 'Snacks', description: 'Premium quality almonds', unit: '500g', inStock: true, rating: 4.7 },
+  { id: '12', name: 'Green Tea', price: 120, image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=300', category: 'Beverages', description: 'Organic green tea bags', unit: '25 bags', inStock: true, rating: 4.2 },
 ];
 
 export const groceryKitchen = [

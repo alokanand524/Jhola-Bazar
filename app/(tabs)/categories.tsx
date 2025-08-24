@@ -7,6 +7,7 @@ import { RootState } from '@/store/store';
 import { setSelectedCategory } from '@/store/slices/productsSlice';
 import { ProductCard } from '@/components/ProductCard';
 import { CategoryCard } from '@/components/CategoryCard';
+import { hideTabBar } from './_layout';
 
 
 
@@ -41,7 +42,11 @@ export default function CategoriesScreen() {
         <Text style={styles.headerTitle}>Categories</Text>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView 
+        style={styles.content}
+        onScroll={hideTabBar}
+        scrollEventThrottle={16}
+      >
         <FlatList
           data={filteredCategories}
           renderItem={({ item }) => (

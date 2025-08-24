@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 import { ProductCard } from '@/components/ProductCard';
+import { hideTabBar } from './_layout';
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,6 +69,8 @@ export default function SearchScreen() {
               numColumns={2}
               columnWrapperStyle={styles.row}
               showsVerticalScrollIndicator={false}
+              onScroll={hideTabBar}
+              scrollEventThrottle={16}
             />
           </>
         )}

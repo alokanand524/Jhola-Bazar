@@ -39,7 +39,7 @@ export default function CartScreen() {
           <Text style={styles.emptyCartSubtext}>Add some products to get started</Text>
           <TouchableOpacity 
             style={styles.shopNowButton}
-            onPress={() => router.push('/(tabs)/')}
+            onPress={() => router.push('/(tabs)/' as any)}
           >
             <Text style={styles.shopNowText}>Shop Now</Text>
           </TouchableOpacity>

@@ -47,7 +47,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
         </View>
         <View style={styles.footer}>
-          <Text style={styles.deliveryTime}>{product.deliveryTime}</Text>
+          <Text style={styles.deliveryTime}>10 mins</Text>
           {cartItem ? (
             <View style={styles.quantityContainer}>
               <TouchableOpacity 

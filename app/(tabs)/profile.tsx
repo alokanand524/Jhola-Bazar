@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector, useDispatch } from 'react-redux';
+import { router } from 'expo-router';
 import { RootState } from '@/store/store';
 import { logout } from '@/store/slices/userSlice';
+import { hideTabBar } from './_layout';
 
 const menuItems = [
   { id: '1', title: 'My Orders', icon: 'bag-outline', screen: 'orders' },
@@ -30,8 +32,7 @@ export default function ProfileScreen() {
   };
 
   const handleLogin = () => {
-    // In a real app, this would navigate to login screen
-    Alert.alert('Login', 'Login functionality would be implemented here');
+    router.push('/login');
   };
 
   return (
@@ -40,7 +41,11 @@ export default function ProfileScreen() {
         <Text style={styles.headerTitle}>Profile</Text>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView 
+        style={styles.content}
+        onScroll={hideTabBar}
+        scrollEventThrottle={16}
+      >
         {isLoggedIn ? (
           <View style={styles.userInfo}>
             <View style={styles.avatar}>
@@ -69,7 +74,11 @@ export default function ProfileScreen() {
 
         <View style={styles.menuSection}>
           {menuItems.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.menuItem}>
+            <TouchableOpacity 
+              key={item.id} 
+              style={styles.menuItem}
+              onPress={() => router.push(`/${item.screen}` as any)}
+            >
               <View style={styles.menuItemLeft}>
                 <Ionicons name={item.icon as any} size={24} color="#666" />
                 <Text style={styles.menuItemText}>{item.title}</Text>

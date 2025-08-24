@@ -73,7 +73,7 @@ export default function ProductDetailScreen() {
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={16} color="#FFD700" />
             <Text style={styles.rating}>{product.rating}</Text>
-            <Text style={styles.deliveryTime}>• {product.deliveryTime}</Text>
+            <Text style={styles.deliveryTime}>• 10 mins</Text>
           </View>
           
           <View style={styles.priceContainer}>

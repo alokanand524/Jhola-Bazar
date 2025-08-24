@@ -13,14 +13,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
+import { hideTabBar } from './_layout';
 
 export default function HomeScreen() {
   const dispatch = useDispatch();
   const { products, selectedCategory } = useSelector((state: RootState) => state.products);
   const { items } = useSelector((state: RootState) => state.cart);
-  const [isScrolling, setIsScrolling] = useState(false);
-  const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
-  const tabBarOpacity = useRef(new Animated.Value(1)).current;
+
 
   useEffect(() => {
     dispatch(setProducts([...mockProducts, ...featuredThisWeek]));
@@ -33,27 +32,7 @@ export default function HomeScreen() {
   const cartItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleScroll = () => {
-    if (!isScrolling) {
-      setIsScrolling(true);
-      Animated.timing(tabBarOpacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    }
-
-    if (scrollTimeout.current) {
-      clearTimeout(scrollTimeout.current);
-    }
-
-    scrollTimeout.current = setTimeout(() => {
-      setIsScrolling(false);
-      Animated.timing(tabBarOpacity, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    }, 1000);
+    hideTabBar();
   };
 
   return (
@@ -86,8 +65,8 @@ export default function HomeScreen() {
       </TouchableOpacity>
 
       <ScrollView showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={16}>
-        <BannerCarousel />
         <CategoryList />
+        <BannerCarousel />
         
         <SectionHeader title="Frequently bought" categoryName="Favourites" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
@@ -139,7 +118,7 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      <Animated.View style={[styles.tabBarOverlay, { opacity: tabBarOpacity }]} pointerEvents={isScrolling ? 'none' : 'auto'} />
+
     </SafeAreaView>
   );
 }
@@ -218,14 +197,7 @@ const styles = StyleSheet.create({
     width: 160,
     marginRight: 12,
   },
-  tabBarOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 60,
-    backgroundColor: 'transparent',
-  },
+
   productsContainer: {
     padding: 16,
   },
