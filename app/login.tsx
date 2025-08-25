@@ -6,38 +6,133 @@ import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'reac
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 
+const API_BASE_URL = 'https://jholabazar.onrender.com/api/v1';
+
 export default function LoginScreen() {
   const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   // const [email, setEmail] = useState(''); // Email login disabled - will be enabled later
   const [otp, setOtp] = useState('');
   const [showOtp, setShowOtp] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
   const dispatch = useDispatch();
 
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     if (loginMethod === 'phone' && phoneNumber.length !== 10) {
       Alert.alert('Error', 'Please enter a valid 10-digit phone number');
       return;
     }
-    // Email login validation disabled - will be enabled later
-    // if (loginMethod === 'email' && !email.includes('@')) {
-    //   Alert.alert('Error', 'Please enter a valid email address');
-    //   return;
-    // }
     
-    setShowOtp(true);
-    Alert.alert('OTP Sent', `OTP sent to your ${loginMethod}. Use 123456 for demo.`);
+    setIsLoading(true);
+    try {
+      // Try login first
+      let response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: `${phoneNumber}`,
+        }),
+      });
+      
+      let data = await response.json();
+      
+      // If login fails (user doesn't exist), try signup
+      if (!response.ok) {
+        response = await fetch(`${API_BASE_URL}/auth/signup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phone: `${phoneNumber}`,
+          }),
+        });
+        
+        data = await response.json();
+        setIsNewUser(true);
+      } else {
+        setIsNewUser(false);
+      }
+      
+      if (response.ok) {
+        setShowOtp(true);
+        Alert.alert('OTP Sent', 'OTP sent to your phone number');
+      } else {
+        Alert.alert('Error', data.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleVerifyOtp = () => {
-    if (otp === '123456') {
-      dispatch(setUser({
-        name: 'Test User',
-        phone: loginMethod === 'phone' ? phoneNumber : '+91 6207338266'
-      }));
-      router.replace('/(tabs)');
-    } else {
-      Alert.alert('Error', 'Invalid OTP. Use 123456 for demo.');
+  const handleVerifyOtp = async () => {
+    if (otp.length !== 6) {
+      Alert.alert('Error', 'Please enter a valid 6-digit OTP');
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: `${phoneNumber}`,
+          otp: otp,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        dispatch(setUser({
+          name: data.user?.name || 'User',
+          phone: `${phoneNumber}`,
+        }));
+        router.replace('/referral');
+      } else {
+        Alert.alert('Error', data.message || 'Invalid OTP');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setIsLoading(true);
+    try {
+      // Use the same endpoint that was successful initially
+      const endpoint = isNewUser ? '/auth/signup' : '/auth/login';
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: `${phoneNumber}`,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        Alert.alert('OTP Resent', 'New OTP sent to your phone number');
+      } else {
+        Alert.alert('Error', data.message || 'Failed to resend OTP');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -45,9 +140,9 @@ export default function LoginScreen() {
     // Simulate Google login
     dispatch(setUser({
       name: 'Google Test User',
-      phone: '+91 6207338266'
+      phone: ' 6207338266'
     }));
-    router.replace('/(tabs)');
+    router.replace('/referral');
   };
 
   return (
@@ -89,7 +184,7 @@ export default function LoginScreen() {
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Phone Number</Text>
               <View style={styles.phoneInput}>
-                <Text style={styles.countryCode}>+91</Text>
+                <Text style={styles.countryCode}></Text>
                 <TextInput
                   style={styles.textInput}
                   placeholder="Enter phone number"
@@ -114,8 +209,12 @@ export default function LoginScreen() {
             </View>
             */}
 
-            <TouchableOpacity style={styles.sendOtpButton} onPress={handleSendOtp}>
-              <Text style={styles.sendOtpText}>Send OTP</Text>
+            <TouchableOpacity 
+              style={[styles.sendOtpButton, isLoading && styles.disabledButton]} 
+              onPress={handleSendOtp}
+              disabled={isLoading}
+            >
+              <Text style={styles.sendOtpText}>{isLoading ? 'Sending...' : 'Send OTP'}</Text>
             </TouchableOpacity>
 
             <View style={styles.divider}>
@@ -146,8 +245,20 @@ export default function LoginScreen() {
               />
             </View>
 
-            <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyOtp}>
-              <Text style={styles.verifyText}>Verify OTP</Text>
+            <TouchableOpacity 
+              style={[styles.verifyButton, isLoading && styles.disabledButton]} 
+              onPress={handleVerifyOtp}
+              disabled={isLoading}
+            >
+              <Text style={styles.verifyText}>{isLoading ? 'Verifying...' : 'Verify OTP'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.resendButton} 
+              onPress={handleResendOtp}
+              disabled={isLoading}
+            >
+              <Text style={[styles.resendText, isLoading && styles.disabledText]}>Resend OTP</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => setShowOtp(false)}>
@@ -335,5 +446,20 @@ const styles = StyleSheet.create({
     color: '#00B761',
     fontSize: 16,
     fontWeight: '500',
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
+  },
+  resendButton: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  resendText: {
+    color: '#00B761',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  disabledText: {
+    color: '#ccc',
   },
 });

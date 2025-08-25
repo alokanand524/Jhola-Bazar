@@ -5,6 +5,7 @@ import { SectionCard } from '@/components/SectionCard';
 import { SectionHeader } from '@/components/SectionHeader';
 import { mockProducts } from '@/data/products';
 import { beautyPersonalCare, featuredThisWeek, frequentlyBought, groceryKitchen, snacksDrinks } from '@/data/sections';
+import { useTheme } from '@/hooks/useTheme';
 import { setProducts } from '@/store/slices/productsSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,7 @@ export default function HomeScreen() {
   const dispatch = useDispatch();
   const { products, selectedCategory } = useSelector((state: RootState) => state.products);
   const { items } = useSelector((state: RootState) => state.cart);
+  const { colors } = useTheme();
 
 
   useEffect(() => {
@@ -36,18 +38,18 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.locationContainer}>
           <Ionicons name="location" size={20} color="#ffffffff" />
           <Text style={styles.locationText}>Deliver in 10 mins</Text>
-          <Text style={styles.addressText}>Home - New Delhi</Text>
+          <Text style={[styles.addressText, { color: colors.gray }]}>Home - New Delhi</Text>
         </View>
         <TouchableOpacity 
           style={styles.cartButton}
           onPress={() => router.push('/cart')}
         >
-          <Ionicons name="bag" size={24} color="#aabd4d3e" />
+          <Ionicons name="bag" size={24} color="#909b5bff" />
           {cartItemsCount > 0 && (
             <View style={styles.cartBadge}>
               <Text style={styles.cartBadgeText}>{cartItemsCount}</Text>
@@ -57,11 +59,11 @@ export default function HomeScreen() {
       </View>
 
       <TouchableOpacity 
-        style={styles.searchContainer}
+        style={[styles.searchContainer, { backgroundColor: colors.lightGray }]}
         onPress={() => router.push('/(tabs)/search')}
       >
-        <Ionicons name="search" size={20} color="#666" />
-        <Text style={styles.searchPlaceholder}>Search for products</Text>
+        <Ionicons name="search" size={20} color={colors.gray} />
+        <Text style={[styles.searchPlaceholder, { color: colors.gray }]}>Search for products</Text>
       </TouchableOpacity>
 
       <ScrollView showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={16}>
@@ -126,7 +128,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -135,7 +136,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#efefef4b',
   },
   locationContainer: {
     flex: 1,
@@ -147,7 +147,6 @@ const styles = StyleSheet.create({
   },
   addressText: {
     fontSize: 12,
-    color: '#666',
     marginTop: 2,
   },
   cartButton: {
@@ -173,7 +172,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f8f8',
     margin: 16,
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -183,7 +181,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     fontSize: 16,
-    color: '#666',
   },
   sectionScroll: {
     paddingLeft: 16,

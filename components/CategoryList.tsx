@@ -3,10 +3,12 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 import { setSelectedCategory } from '@/store/slices/productsSlice';
+import { useTheme } from '@/hooks/useTheme';
 
 export const CategoryList: React.FC = () => {
   const dispatch = useDispatch();
   const { categories, selectedCategory } = useSelector((state: RootState) => state.products);
+  const { colors } = useTheme();
 
   const handleCategoryPress = (category: string) => {
     dispatch(setSelectedCategory(category));
@@ -24,13 +26,15 @@ export const CategoryList: React.FC = () => {
             key={category}
             style={[
               styles.categoryButton,
-              selectedCategory === category && styles.selectedCategory
+              { backgroundColor: colors.lightGray },
+              selectedCategory === category && { backgroundColor: colors.primary }
             ]}
             onPress={() => handleCategoryPress(category)}
           >
             <Text style={[
               styles.categoryText,
-              selectedCategory === category && styles.selectedCategoryText
+              { color: colors.gray },
+              selectedCategory === category && { color: '#fff' }
             ]}>
               {category}
             </Text>
@@ -49,21 +53,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   categoryButton: {
-    backgroundColor: '#f8f8f8',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     marginRight: 12,
   },
-  selectedCategory: {
-    backgroundColor: '#00B761',
-  },
   categoryText: {
     fontSize: 14,
-    color: '#666',
     fontWeight: '500',
-  },
-  selectedCategoryText: {
-    color: '#fff',
   },
 });

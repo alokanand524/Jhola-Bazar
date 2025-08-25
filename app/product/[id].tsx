@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme';
 import { addToCart, updateQuantity } from '@/store/slices/cartSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +11,7 @@ import { useDispatch, useSelector } from 'react-redux';
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
   const dispatch = useDispatch();
+  const { colors } = useTheme();
   
   const product = useSelector((state: RootState) => 
     state.products.products.find(p => p.id === id)
@@ -21,12 +23,12 @@ export default function ProductDetailScreen() {
 
   if (!product) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Product Not Found</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Product Not Found</Text>
           <View style={{ width: 24 }} />
         </View>
       </SafeAreaView>
@@ -48,14 +50,14 @@ export default function ProductDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Product Details</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Product Details</Text>
         <TouchableOpacity onPress={() => router.push('/cart')}>
-          <Ionicons name="bag-outline" size={24} color="#333" />
+          <Ionicons name="bag-outline" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -63,21 +65,21 @@ export default function ProductDetailScreen() {
         <Image source={{ uri: product.image }} style={styles.productImage} />
         
         <View style={styles.productInfo}>
-          <View style={styles.categoryBadge}>
+          <View style={[styles.categoryBadge, { backgroundColor: colors.primary }]}>
             <Text style={styles.categoryText}>{product.category}</Text>
           </View>
           
-          <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.productUnit}>{product.unit}</Text>
+          <Text style={[styles.productName, { color: colors.text }]}>{product.name}</Text>
+          <Text style={[styles.productUnit, { color: colors.gray }]}>{product.unit}</Text>
           
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={16} color="#FFD700" />
-            <Text style={styles.rating}>{product.rating}</Text>
-            <Text style={styles.deliveryTime}>• 10 mins</Text>
+            <Text style={[styles.rating, { color: colors.text }]}>{product.rating}</Text>
+            <Text style={[styles.deliveryTime, { color: colors.gray }]}>• 10 mins</Text>
           </View>
           
           <View style={styles.priceContainer}>
-            <Text style={styles.price}>₹{product.price}</Text>
+            <Text style={[styles.price, { color: colors.text }]}>₹{product.price}</Text>
             {product.originalPrice && (
               <Text style={styles.originalPrice}>₹{product.originalPrice}</Text>
             )}
@@ -91,36 +93,36 @@ export default function ProductDetailScreen() {
           </View>
           
           <View style={styles.descriptionContainer}>
-            <Text style={styles.descriptionTitle}>Description</Text>
-            <Text style={styles.description}>{product.description}</Text>
+            <Text style={[styles.descriptionTitle, { color: colors.text }]}>Description</Text>
+            <Text style={[styles.description, { color: colors.gray }]}>{product.description}</Text>
           </View>
           
           <View style={styles.featuresContainer}>
-            <Text style={styles.featuresTitle}>Features</Text>
+            <Text style={[styles.featuresTitle, { color: colors.text }]}>Features</Text>
             <View style={styles.feature}>
-              <Ionicons name="checkmark-circle" size={20} color="#00B761" />
-              <Text style={styles.featureText}>Fresh and high quality</Text>
+              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+              <Text style={[styles.featureText, { color: colors.gray }]}>Fresh and high quality</Text>
             </View>
             <View style={styles.feature}>
-              <Ionicons name="checkmark-circle" size={20} color="#00B761" />
-              <Text style={styles.featureText}>Fast delivery in 10 minutes</Text>
+              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+              <Text style={[styles.featureText, { color: colors.gray }]}>Fast delivery in 10 minutes</Text>
             </View>
             <View style={styles.feature}>
-              <Ionicons name="checkmark-circle" size={20} color="#00B761" />
-              <Text style={styles.featureText}>Best price guaranteed</Text>
+              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+              <Text style={[styles.featureText, { color: colors.gray }]}>Best price guaranteed</Text>
             </View>
           </View>
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
         <View style={styles.priceInfo}>
-          <Text style={styles.footerPrice}>₹{product.price}</Text>
-          <Text style={styles.footerUnit}>{product.unit}</Text>
+          <Text style={[styles.footerPrice, { color: colors.text }]}>₹{product.price}</Text>
+          <Text style={[styles.footerUnit, { color: colors.gray }]}>{product.unit}</Text>
         </View>
         
         {cartItem ? (
-          <View style={styles.quantityContainer}>
+          <View style={[styles.quantityContainer, { backgroundColor: colors.primary }]}>
             <TouchableOpacity 
               style={styles.quantityButton}
               onPress={() => handleUpdateQuantity(cartItem.quantity - 1)}
@@ -136,8 +138,8 @@ export default function ProductDetailScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <TouchableOpacity style={styles.addToCartButton} onPress={handleAddToCart}>
-            <Text style={styles.addToCartText}>Add to Cart</Text>
+          <TouchableOpacity style={[styles.addToCartButton, { backgroundColor: colors.primary }]} onPress={handleAddToCart}>
+            <Text style={styles.addToCartText}>Add to Jhola</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -148,7 +150,6 @@ export default function ProductDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -157,12 +158,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
   },
   content: {
     flex: 1,
@@ -176,7 +175,6 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   categoryBadge: {
-    backgroundColor: '#00B761',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -191,12 +189,10 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   productUnit: {
     fontSize: 16,
-    color: '#666',
     marginBottom: 12,
   },
   ratingContainer: {
@@ -206,12 +202,10 @@ const styles = StyleSheet.create({
   },
   rating: {
     fontSize: 14,
-    color: '#333',
     marginLeft: 4,
   },
   deliveryTime: {
     fontSize: 14,
-    color: '#666',
     marginLeft: 8,
   },
   priceContainer: {
@@ -222,7 +216,6 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
   },
   originalPrice: {
     fontSize: 18,
@@ -248,12 +241,10 @@ const styles = StyleSheet.create({
   descriptionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 8,
   },
   description: {
     fontSize: 16,
-    color: '#666',
     lineHeight: 24,
   },
   featuresContainer: {
@@ -262,7 +253,6 @@ const styles = StyleSheet.create({
   featuresTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 12,
   },
   feature: {
@@ -272,7 +262,6 @@ const styles = StyleSheet.create({
   },
   featureText: {
     fontSize: 16,
-    color: '#666',
     marginLeft: 12,
   },
   footer: {
@@ -282,8 +271,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    backgroundColor: '#fff',
   },
   priceInfo: {
     flex: 1,
@@ -291,14 +278,11 @@ const styles = StyleSheet.create({
   footerPrice: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
   },
   footerUnit: {
     fontSize: 14,
-    color: '#666',
   },
   addToCartButton: {
-    backgroundColor: '#00B761',
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 8,
@@ -311,7 +295,6 @@ const styles = StyleSheet.create({
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#00B761',
     borderRadius: 8,
     paddingHorizontal: 8,
   },

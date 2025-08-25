@@ -1,10 +1,11 @@
 import { ProductCard } from '@/components/ProductCard';
 import { categoryImages } from '@/data/categoryImages';
+import { useTheme } from '@/hooks/useTheme';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
-import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 
@@ -22,68 +23,165 @@ export default function CategoryScreen() {
   const { name } = useLocalSearchParams();
   const categoryName = Array.isArray(name) ? name[0] : name || '';
   const [selectedSubCategory, setSelectedSubCategory] = useState('All');
+  const [showFilters, setShowFilters] = useState(false);
+  const [showSort, setShowSort] = useState(false);
+  const [showBrand, setShowBrand] = useState(false);
+  const [sortBy, setSortBy] = useState('Popular');
+  const [selectedBrand, setSelectedBrand] = useState('All');
   const { products } = useSelector((state: RootState) => state.products);
+  const { colors } = useTheme();
 
   const subCategories = categoryData[categoryName] || ['All'];
-  
+
   const filteredProducts = products.filter(product => {
     if (categoryName === 'Favourites') return true;
     return product.category === categoryName;
   });
 
+  const { items } = useSelector((state: RootState) => state.cart);
+  const cartItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={24} color="#333" />
+          <Ionicons name="close" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{categoryName}</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{categoryName}</Text>
         <TouchableOpacity onPress={() => router.push('/cart')}>
-          <Ionicons name="bag-outline" size={24} color="#333" />
+          <Ionicons name="bag-outline" size={24} color={colors.text} />
+          {cartItemsCount > 0 && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{cartItemsCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
-      <View style={styles.topCategories}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {subCategories.map((subCat) => (
-            <TouchableOpacity
-              key={subCat}
-              style={[
-                styles.topCategoryButton,
-                selectedSubCategory === subCat && styles.selectedTopCategory
-              ]}
-              onPress={() => setSelectedSubCategory(subCat)}
-            >
-              <Text style={[
-                styles.topCategoryText,
-                selectedSubCategory === subCat && styles.selectedTopCategoryText
-              ]}>
-                {subCat}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+      <View style={[styles.filterSection, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity
+          style={[styles.filterButton, { backgroundColor: colors.lightGray }]}
+          onPress={() => setShowFilters(true)}
+        >
+          <Ionicons name="options-outline" size={16} color={colors.text} />
+          <Text style={[styles.filterText, { color: colors.text }]}>Filters</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterButton, { backgroundColor: colors.lightGray }]}
+          onPress={() => setShowSort(true)}
+        >
+          <Ionicons name="swap-vertical-outline" size={16} color={colors.text} />
+          <Text style={[styles.filterText, { color: colors.text }]}>{sortBy}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterButton, { backgroundColor: colors.lightGray }]}
+          onPress={() => setShowBrand(true)}
+        >
+          <Ionicons name="business-outline" size={16} color={colors.text} />
+          <Text style={[styles.filterText, { color: colors.text }]}>{selectedBrand}</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Sort Modal */}
+      <Modal visible={showSort} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Sort by</Text>
+            {['Popular', 'Price: Low to High', 'Price: High to Low', 'Newest', 'Rating'].map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.modalOption}
+                onPress={() => { setSortBy(option); setShowSort(false); }}
+              >
+                <Text style={[styles.modalOptionText, { color: colors.text }]}>{option}</Text>
+                {sortBy === option && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[styles.modalClose, { backgroundColor: colors.primary }]}
+              onPress={() => setShowSort(false)}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Brand Modal */}
+      <Modal visible={showBrand} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Brand</Text>
+            {['All', 'Fresh & Pure', 'Organic Valley', 'Farm Fresh', 'Premium Choice'].map((brand) => (
+              <TouchableOpacity
+                key={brand}
+                style={styles.modalOption}
+                onPress={() => { setSelectedBrand(brand); setShowBrand(false); }}
+              >
+                <Text style={[styles.modalOptionText, { color: colors.text }]}>{brand}</Text>
+                {selectedBrand === brand && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[styles.modalClose, { backgroundColor: colors.primary }]}
+              onPress={() => setShowBrand(false)}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Filters Modal */}
+      <Modal visible={showFilters} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Filters</Text>
+            <Text style={[styles.filterCategory, { color: colors.text }]}>Price Range</Text>
+            {['Under ₹50', '₹50 - ₹100', '₹100 - ₹200', 'Above ₹200'].map((price) => (
+              <TouchableOpacity key={price} style={styles.modalOption}>
+                <Text style={[styles.modalOptionText, { color: colors.text }]}>{price}</Text>
+              </TouchableOpacity>
+            ))}
+            <Text style={[styles.filterCategory, { color: colors.text }]}>Discount</Text>
+            {['10% and above', '20% and above', '30% and above', '50% and above'].map((discount) => (
+              <TouchableOpacity key={discount} style={styles.modalOption}>
+                <Text style={[styles.modalOptionText, { color: colors.text }]}>{discount}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[styles.modalClose, { backgroundColor: colors.primary }]}
+              onPress={() => setShowFilters(false)}
+            >
+              <Text style={styles.modalCloseText}>Apply Filters</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <View style={styles.content}>
-        <View style={styles.sidebar}>
+        <View style={[styles.sidebar, { backgroundColor: colors.lightGray, borderRightColor: colors.border }]}>
           <ScrollView showsVerticalScrollIndicator={false}>
             {subCategories.map((subCat) => (
               <TouchableOpacity
                 key={subCat}
                 style={[
                   styles.sidebarItem,
-                  selectedSubCategory === subCat && styles.selectedSidebarItem
+                  { borderBottomColor: colors.border },
+                  selectedSubCategory === subCat && { backgroundColor: colors.background, borderRightColor: colors.primary }
                 ]}
                 onPress={() => setSelectedSubCategory(subCat)}
               >
-                <Image 
+                <Image
                   source={{ uri: categoryImages[categoryName]?.[subCat] || categoryImages[categoryName]?.['All'] }}
                   style={styles.sidebarImage}
                 />
                 <Text style={[
                   styles.sidebarText,
-                  selectedSubCategory === subCat && styles.selectedSidebarText
+                  { color: colors.gray },
+                  selectedSubCategory === subCat && { color: colors.primary, fontWeight: '600' }
                 ]}>
                   {subCat}
                 </Text>
@@ -93,7 +191,7 @@ export default function CategoryScreen() {
         </View>
 
         <View style={styles.productsArea}>
-          <Text style={styles.productsTitle}>{selectedSubCategory}</Text>
+          <Text style={[styles.productsTitle, { color: colors.text }]}>{selectedSubCategory}</Text>
           <FlatList
             data={filteredProducts}
             renderItem={({ item }) => <ProductCard product={item} />}
@@ -111,7 +209,6 @@ export default function CategoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -120,35 +217,74 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
   },
-  topCategories: {
+  filterSection: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    justifyContent: 'space-around',
   },
-  topCategoryButton: {
-    paddingHorizontal: 16,
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
     paddingVertical: 8,
+    borderRadius: 6,
+    flex: 1,
     marginHorizontal: 4,
-    borderRadius: 20,
-    backgroundColor: '#f8f8f8',
+    justifyContent: 'center',
   },
-  selectedTopCategory: {
-    backgroundColor: '#00B761',
-  },
-  topCategoryText: {
+  filterText: {
     fontSize: 14,
-    color: '#666',
+    marginLeft: 4,
+    fontWeight: '500',
   },
-  selectedTopCategoryText: {
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '70%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  modalOptionText: {
+    fontSize: 16,
+  },
+  modalClose: {
+    marginTop: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalCloseText: {
     color: '#fff',
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  filterCategory: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
   },
   content: {
     flex: 1,
@@ -156,21 +292,15 @@ const styles = StyleSheet.create({
   },
   sidebar: {
     width: 80,
-    backgroundColor: '#f8f8f8',
     borderRightWidth: 1,
-    borderRightColor: '#f0f0f0',
   },
   sidebarItem: {
     paddingHorizontal: 1,
     paddingVertical: 5,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
     alignItems: 'center',
-  },
-  selectedSidebarItem: {
-    backgroundColor: '#fff',
     borderRightWidth: 3,
-    borderRightColor: '#00B761',
+    borderRightColor: 'transparent',
   },
   sidebarImage: {
     width: 30,
@@ -180,12 +310,7 @@ const styles = StyleSheet.create({
   },
   sidebarText: {
     fontSize: 10,
-    color: '#666',
     textAlign: 'center',
-  },
-  selectedSidebarText: {
-    color: '#00B761',
-    fontWeight: '600',
   },
   productsArea: {
     flex: 1,
@@ -194,10 +319,26 @@ const styles = StyleSheet.create({
   productsTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 16,
   },
   row: {
     justifyContent: 'space-between',
+  },
+
+  cartBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: '#95ff00ff',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });

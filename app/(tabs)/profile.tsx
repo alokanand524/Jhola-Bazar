@@ -7,6 +7,8 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { hideTabBar } from './_layout';
+import ThemeDropdown from '@/components/ThemeDropdown';
+import { useTheme } from '@/hooks/useTheme';
 
 const menuItems = [
   { id: '1', title: 'My Orders', icon: 'bag-outline', screen: 'orders' },
@@ -19,6 +21,7 @@ const menuItems = [
 export default function ProfileScreen() {
   const dispatch = useDispatch();
   const { name, phone, isLoggedIn } = useSelector((state: RootState) => state.user);
+  const { colors } = useTheme();
 
   const handleLogout = () => {
     Alert.alert(
@@ -36,9 +39,9 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
       </View>
 
       <ScrollView 
@@ -47,41 +50,52 @@ export default function ProfileScreen() {
         scrollEventThrottle={16}
       >
         {isLoggedIn ? (
-          <View style={styles.userInfo}>
+          <View style={[styles.userInfo, { backgroundColor: colors.lightGray }]}>
             <View style={styles.avatar}>
               <Ionicons name="person" size={40} color="#00B761" />
             </View>
             <View style={styles.userDetails}>
-              <Text style={styles.userName}>{name || 'User'}</Text>
-              <Text style={styles.userPhone}>{phone || '+91 XXXXXXXXXX'}</Text>
+              <Text style={[styles.userName, { color: colors.text }]}>{name || 'User'}</Text>
+              <Text style={[styles.userPhone, { color: colors.gray }]}>{phone || '+91 XXXXXXXXXX'}</Text>
             </View>
-            <TouchableOpacity style={styles.editButton}>
-              <Ionicons name="pencil" size={20} color="#00B761" />
+            <TouchableOpacity 
+              style={styles.editButton}
+              onPress={() => router.push('/edit-profile')}
+            >
+              <Ionicons name="pencil" size={20} color={colors.primary} />
             </TouchableOpacity>
           </View>
         ) : (
-          <TouchableOpacity style={styles.loginPrompt} onPress={handleLogin}>
+          <TouchableOpacity style={[styles.loginPrompt, { backgroundColor: colors.lightGray }]} onPress={handleLogin}>
             <View style={styles.avatar}>
               <Ionicons name="person" size={40} color="#666" />
             </View>
             <View style={styles.loginText}>
-              <Text style={styles.loginTitle}>Login to your account</Text>
-              <Text style={styles.loginSubtitle}>Access your orders and preferences</Text>
+              <Text style={[styles.loginTitle, { color: colors.text }]}>Login to your account</Text>
+              <Text style={[styles.loginSubtitle, { color: colors.gray }]}>Access your orders and preferences</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
         )}
 
         <View style={styles.menuSection}>
+          <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="color-palette-outline" size={24} color={colors.gray} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Theme</Text>
+            </View>
+            <ThemeDropdown />
+          </View>
+          
           {menuItems.map((item) => (
             <TouchableOpacity 
               key={item.id} 
-              style={styles.menuItem}
+              style={[styles.menuItem, { borderBottomColor: colors.border }]}
               onPress={() => router.push(`/${item.screen}` as any)}
             >
               <View style={styles.menuItemLeft}>
-                <Ionicons name={item.icon as any} size={24} color="#666" />
-                <Text style={styles.menuItemText}>{item.title}</Text>
+                <Ionicons name={item.icon as any} size={24} color={colors.gray} />
+                <Text style={[styles.menuItemText, { color: colors.text }]}>{item.title}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#ccc" />
             </TouchableOpacity>
@@ -106,18 +120,15 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
   },
   content: {
     flex: 1,
@@ -126,7 +137,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#f8f8f8',
     margin: 16,
     borderRadius: 12,
   },
@@ -134,7 +144,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#f8f8f8',
     margin: 16,
     borderRadius: 12,
   },
@@ -153,12 +162,10 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   userPhone: {
     fontSize: 14,
-    color: '#666',
   },
   editButton: {
     padding: 8,
@@ -169,12 +176,10 @@ const styles = StyleSheet.create({
   loginTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   loginSubtitle: {
     fontSize: 14,
-    color: '#666',
   },
   menuSection: {
     paddingHorizontal: 16,
@@ -185,7 +190,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   menuItemLeft: {
     flexDirection: 'row',
@@ -193,7 +197,6 @@ const styles = StyleSheet.create({
   },
   menuItemText: {
     fontSize: 16,
-    color: '#333',
     marginLeft: 16,
   },
   logoutButton: {

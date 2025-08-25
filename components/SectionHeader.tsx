@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '@/hooks/useTheme';
 
 interface SectionHeaderProps {
   title: string;
@@ -9,6 +10,8 @@ interface SectionHeaderProps {
 }
 
 export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, categoryName }) => {
+  const { colors } = useTheme();
+  
   const handleSeeAll = () => {
     if (categoryName) {
       router.push(`/category/${encodeURIComponent(categoryName)}`);
@@ -18,10 +21,10 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, categoryNam
   // side arrow icon 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
       <TouchableOpacity style={styles.seeAllButton} onPress={handleSeeAll}>
-        <Text style={styles.seeAllText}>See all</Text>
-        <Ionicons name="chevron-forward" size={16} color="#00B761" />
+        <Text style={[styles.seeAllText, { color: colors.primary }]}>See all</Text>
+        <Ionicons name="chevron-forward" size={16} color={colors.primary} />
       </TouchableOpacity>
     </View>
   );
@@ -38,7 +41,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
   },
   seeAllButton: {
     flexDirection: 'row',
@@ -46,7 +48,6 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 14,
-    color: '#00B761',
     fontWeight: '600',
   },
 });

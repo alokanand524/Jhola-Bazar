@@ -6,10 +6,12 @@ import React from 'react';
 import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function CartScreen() {
   const dispatch = useDispatch();
   const { items, total } = useSelector((state: RootState) => state.cart);
+  const { colors } = useTheme();
 
   const handleUpdateQuantity = (id: string, quantity: number) => {
     dispatch(updateQuantity({ id, quantity }));
@@ -24,21 +26,21 @@ export default function CartScreen() {
 
   if (items.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Cart</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Jhola</Text>
           <View style={{ width: 24 }} />
         </View>
         
         <View style={styles.emptyCart}>
-          <Ionicons name="bag-outline" size={80} color="#ccc" />
-          <Text style={styles.emptyCartText}>Your cart is empty</Text>
-          <Text style={styles.emptyCartSubtext}>Add some products to get started</Text>
+          <Ionicons name="bag-outline" size={80} color={colors.gray} />
+          <Text style={[styles.emptyCartText, { color: colors.text }]}>Your jhola is empty</Text>
+          <Text style={[styles.emptyCartSubtext, { color: colors.gray }]}>Add some products to get started</Text>
           <TouchableOpacity 
-            style={styles.shopNowButton}
+            style={[styles.shopNowButton, { backgroundColor: colors.primary }]}
             onPress={() => router.push('/(tabs)/' as any)}
           >
             <Text style={styles.shopNowText}>Shop Now</Text>
@@ -49,12 +51,12 @@ export default function CartScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cart ({items.length} items)</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Jhola  ({items.length} items)</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -62,12 +64,12 @@ export default function CartScreen() {
         <FlatList
           data={items}
           renderItem={({ item }) => (
-            <View style={styles.cartItem}>
+            <View style={[styles.cartItem, { borderBottomColor: colors.border }]}>
               <Image source={{ uri: item.image }} style={styles.itemImage} />
               <View style={styles.itemDetails}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemPrice}>₹{item.price}</Text>
-                <View style={styles.quantityContainer}>
+                <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
+                <Text style={[styles.itemPrice, { color: colors.gray }]}>₹{item.price}</Text>
+                <View style={[styles.quantityContainer, { backgroundColor: colors.primary }]}>
                   <TouchableOpacity 
                     style={styles.quantityButton}
                     onPress={() => handleUpdateQuantity(item.id, item.quantity - 1)}
@@ -95,30 +97,30 @@ export default function CartScreen() {
           scrollEnabled={false}
         />
 
-        <View style={styles.billDetails}>
-          <Text style={styles.billTitle}>Bill Details</Text>
+        <View style={[styles.billDetails, { backgroundColor: colors.lightGray }]}>
+          <Text style={[styles.billTitle, { color: colors.text }]}>Bill Details</Text>
           <View style={styles.billRow}>
-            <Text style={styles.billLabel}>Items Total</Text>
-            <Text style={styles.billValue}>₹{total}</Text>
+            <Text style={[styles.billLabel, { color: colors.gray }]}>Items Total</Text>
+            <Text style={[styles.billValue, { color: colors.text }]}>₹{total}</Text>
           </View>
           <View style={styles.billRow}>
-            <Text style={styles.billLabel}>Delivery Fee</Text>
-            <Text style={styles.billValue}>₹{deliveryFee}</Text>
+            <Text style={[styles.billLabel, { color: colors.gray }]}>Delivery Fee</Text>
+            <Text style={[styles.billValue, { color: colors.text }]}>₹{deliveryFee}</Text>
           </View>
           <View style={[styles.billRow, styles.totalRow]}>
-            <Text style={styles.totalLabel}>Grand Total</Text>
-            <Text style={styles.totalValue}>₹{finalTotal}</Text>
+            <Text style={[styles.totalLabel, { color: colors.text }]}>Grand Total</Text>
+            <Text style={[styles.totalValue, { color: colors.text }]}>₹{finalTotal}</Text>
           </View>
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
         <View style={styles.totalContainer}>
-          <Text style={styles.totalText}>₹{finalTotal}</Text>
-          <Text style={styles.totalSubtext}>Total</Text>
+          <Text style={[styles.totalText, { color: colors.text }]}>₹{finalTotal}</Text>
+          <Text style={[styles.totalSubtext, { color: colors.gray }]}>Total</Text>
         </View>
         <TouchableOpacity 
-          style={styles.checkoutButton}
+          style={[styles.checkoutButton, { backgroundColor: colors.primary }]}
           onPress={() => router.push('/checkout')}
         >
           <Text style={styles.checkoutText}>Proceed to Checkout</Text>
@@ -131,7 +133,6 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -140,12 +141,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
   },
   content: {
     flex: 1,
@@ -159,17 +158,14 @@ const styles = StyleSheet.create({
   emptyCartText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     marginTop: 16,
   },
   emptyCartSubtext: {
     fontSize: 14,
-    color: '#666',
     marginTop: 8,
     textAlign: 'center',
   },
   shopNowButton: {
-    backgroundColor: '#00B761',
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 8,
@@ -185,7 +181,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   itemImage: {
     width: 60,
@@ -199,18 +194,15 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   itemPrice: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 8,
   },
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#00B761',
     borderRadius: 6,
     paddingHorizontal: 4,
     alignSelf: 'flex-start',
@@ -230,13 +222,11 @@ const styles = StyleSheet.create({
   billDetails: {
     margin: 16,
     padding: 16,
-    backgroundColor: '#f8f8f8',
     borderRadius: 12,
   },
   billTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 12,
   },
   billRow: {
@@ -246,11 +236,9 @@ const styles = StyleSheet.create({
   },
   billLabel: {
     fontSize: 14,
-    color: '#666',
   },
   billValue: {
     fontSize: 14,
-    color: '#333',
   },
   totalRow: {
     borderTopWidth: 1,
@@ -261,12 +249,10 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
   },
   totalValue: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
   },
   footer: {
     flexDirection: 'row',
@@ -274,8 +260,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    backgroundColor: '#fff',
   },
   totalContainer: {
     flex: 1,
@@ -283,14 +267,11 @@ const styles = StyleSheet.create({
   totalText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
   },
   totalSubtext: {
     fontSize: 12,
-    color: '#666',
   },
   checkoutButton: {
-    backgroundColor: '#00B761',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,

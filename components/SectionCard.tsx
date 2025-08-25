@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { useTheme } from '@/hooks/useTheme';
 
 interface SectionCardProps {
   title: string;
@@ -9,6 +10,8 @@ interface SectionCardProps {
 }
 
 export const SectionCard: React.FC<SectionCardProps> = ({ title, image, category }) => {
+  const { colors } = useTheme();
+  
   const handlePress = () => {
     if (category) {
       router.push(`/category/${encodeURIComponent(title)}`);
@@ -16,17 +19,15 @@ export const SectionCard: React.FC<SectionCardProps> = ({ title, image, category
   };
 
   return (
-    <TouchableOpacity style={styles.card} onPress={handlePress}>
+    <TouchableOpacity style={[styles.card, { backgroundColor: colors.lightGray, borderColor: colors.primary }]} onPress={handlePress}>
       <Image source={{ uri: image }} style={styles.image} />
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#b3b3b31d',
-    borderColor: '#00B761',
     borderRadius: 12,
     padding: 12,
     alignItems: 'center',
@@ -40,7 +41,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    color: '#614545ff',
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',

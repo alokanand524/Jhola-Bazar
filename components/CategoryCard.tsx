@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '@/hooks/useTheme';
 
 interface CategoryCardProps {
   category: string;
@@ -24,22 +25,39 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
   onPress,
   itemCount,
 }) => {
+  const { colors } = useTheme();
   return (
     <TouchableOpacity
-      style={[styles.card, isSelected && styles.selectedCard]}
+      style={[
+        styles.card, 
+        { backgroundColor: colors.background, borderColor: colors.border },
+        isSelected && { backgroundColor: colors.primary, borderColor: colors.primary }
+      ]}
       onPress={() => onPress(category)}
     >
-      <View style={[styles.iconContainer, isSelected && styles.selectedIconContainer]}>
+      <View style={[
+        styles.iconContainer, 
+        { backgroundColor: colors.lightGray },
+        isSelected && styles.selectedIconContainer
+      ]}>
         <Ionicons
           name={categoryIcons[category] as any || 'grid'}
           size={24}
-          color={isSelected ? '#fff' : '#00B761'}
+          color={isSelected ? '#fff' : colors.primary}
         />
       </View>
-      <Text style={[styles.categoryName, isSelected && styles.selectedText]}>
+      <Text style={[
+        styles.categoryName, 
+        { color: colors.text },
+        isSelected && { color: '#fff' }
+      ]}>
         {category}
       </Text>
-      <Text style={[styles.itemCount, isSelected && styles.selectedText]}>
+      <Text style={[
+        styles.itemCount, 
+        { color: colors.gray },
+        isSelected && { color: '#fff' }
+      ]}>
         {itemCount} items
       </Text>
     </TouchableOpacity>
@@ -48,24 +66,17 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#f0f0f0',
     minHeight: 100,
     justifyContent: 'center',
-  },
-  selectedCard: {
-    backgroundColor: '#00B761',
-    borderColor: '#00B761',
   },
   iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f8f8f8',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
@@ -76,16 +87,11 @@ const styles = StyleSheet.create({
   categoryName: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 2,
   },
   itemCount: {
     fontSize: 10,
-    color: '#666',
     textAlign: 'center',
-  },
-  selectedText: {
-    color: '#fff',
   },
 });

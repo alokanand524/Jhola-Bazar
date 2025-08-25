@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Animated } from 'react-native';
+import { useTheme } from '@/hooks/useTheme';
 
 import { HapticTab } from '@/components/HapticTab';
 import TabBarBackground from '@/components/ui/TabBarBackground';
@@ -30,18 +31,20 @@ export const hideTabBar = () => {
 };
 
 export default function TabLayout() {
+  const { colors } = useTheme();
+  
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#00B761',
-        tabBarInactiveTintColor: '#666',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.gray,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
         tabBarStyle: {
-          backgroundColor: '#f4f4f4ff',
+          backgroundColor: colors.background,
           borderTopWidth: 1,
-          borderTopColor: '#f0f0f0ff',
+          borderTopColor: colors.border,
           height: 60,
           paddingBottom: 8,
           position: 'absolute',

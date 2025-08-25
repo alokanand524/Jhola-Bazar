@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useSelector, useDispatch } from 'react-redux';
-import { router } from 'expo-router';
-import { RootState } from '@/store/store';
+import { useTheme } from '@/hooks/useTheme';
 import { clearCart } from '@/store/slices/cartSlice';
+import { setSelectedAddress } from '@/store/slices/userSlice';
+import { RootState } from '@/store/store';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import React, { useState } from 'react';
+import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDispatch, useSelector } from 'react-redux';
 
 const paymentMethods = [
   { id: 'cod', name: 'Cash on Delivery', icon: 'cash' },
@@ -17,12 +19,41 @@ export default function CheckoutScreen() {
   const dispatch = useDispatch();
   const { items, total } = useSelector((state: RootState) => state.cart);
   const { selectedAddress } = useSelector((state: RootState) => state.user);
+  const { colors } = useTheme();
   
   const [selectedPayment, setSelectedPayment] = useState('cod');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+  const [referralDiscount, setReferralDiscount] = useState(0);
+  const [isReferralApplied, setIsReferralApplied] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+
+  const mockAddresses = [
+    { id: '1', type: 'Home' as const, address: 'New Delhi, India', landmark: 'Near Metro Station', isDefault: true },
+    { id: '2', type: 'Work' as const, address: 'Gurgaon, Haryana', landmark: 'Cyber City', isDefault: false },
+    { id: '3', type: 'Other' as const, address: 'Noida, UP', landmark: 'Sector 18', isDefault: false },
+  ];
 
   const deliveryFee = 25;
-  const finalTotal = total + deliveryFee;
+  const finalTotal = total + deliveryFee - referralDiscount;
+
+  const handleApplyReferral = () => {
+    if (referralCode.trim().length >= 6) {
+      const discount = Math.min(50, total * 0.1); // ₹50 or 10% of total, whichever is less
+      setReferralDiscount(discount);
+      setIsReferralApplied(true);
+      Alert.alert('Success!', `Referral code applied! You saved ₹${discount}`);
+    } else {
+      Alert.alert('Invalid Code', 'Please enter a valid referral code');
+    }
+  };
+
+  const handleRemoveReferral = () => {
+    setReferralCode('');
+    setReferralDiscount(0);
+    setIsReferralApplied(false);
+  };
 
   const handlePlaceOrder = async () => {
     setIsPlacingOrder(true);
@@ -46,101 +77,235 @@ export default function CheckoutScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Checkout</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Checkout</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView style={styles.content}>
         {/* Delivery Address */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Delivery Address</Text>
-          <View style={styles.addressCard}>
-            <Ionicons name="location" size={20} color="#00B761" />
+        <View style={[styles.section, { borderBottomColor: colors.lightGray }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Delivery Address</Text>
+          <View style={[styles.addressCard, { backgroundColor: colors.lightGray }]}>
+            <Ionicons name="location" size={20} color={colors.primary} />
             <View style={styles.addressInfo}>
-              <Text style={styles.addressType}>Home</Text>
-              <Text style={styles.addressText}>
+              <Text style={[styles.addressType, { color: colors.text }]}>{selectedAddress?.type || 'Home'}</Text>
+              <Text style={[styles.addressText, { color: colors.gray }]}>
                 {selectedAddress?.address || 'New Delhi, India'}
               </Text>
             </View>
-            <TouchableOpacity>
-              <Text style={styles.changeText}>Change</Text>
+            <TouchableOpacity onPress={() => setShowAddressModal(true)}>
+              <Text style={[styles.changeText, { color: colors.primary }]}>Change</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Order Summary */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Order Summary</Text>
+        <View style={[styles.section, { borderBottomColor: colors.lightGray }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Order Summary</Text>
           {items.map((item) => (
-            <View key={item.id} style={styles.orderItem}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemQuantity}>x{item.quantity}</Text>
-              <Text style={styles.itemPrice}>₹{item.price * item.quantity}</Text>
+            <View key={item.id} style={[styles.orderItem, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
+              <Text style={[styles.itemQuantity, { color: colors.gray }]}>x{item.quantity}</Text>
+              <Text style={[styles.itemPrice, { color: colors.text }]}>₹{item.price * item.quantity}</Text>
             </View>
           ))}
         </View>
 
         {/* Payment Method */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Payment Method</Text>
+       {/*  <View style={[styles.section, { borderBottomColor: colors.lightGray }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Payment Method</Text>
           {paymentMethods.map((method) => (
             <TouchableOpacity
               key={method.id}
               style={[
                 styles.paymentMethod,
-                selectedPayment === method.id && styles.selectedPayment
+                { borderBottomColor: colors.border },
+                selectedPayment === method.id && { backgroundColor: colors.lightGray }
               ]}
               onPress={() => setSelectedPayment(method.id)}
             >
-              <Ionicons name={method.icon as any} size={24} color="#666" />
-              <Text style={styles.paymentText}>{method.name}</Text>
-              <View style={styles.radioButton}>
+              <Ionicons name={method.icon as any} size={24} color={colors.gray} />
+              <Text style={[styles.paymentText, { color: colors.text }]}>{method.name}</Text>
+              <View style={[styles.radioButton, { borderColor: colors.primary }]}>
                 {selectedPayment === method.id && (
-                  <View style={styles.radioSelected} />
+                  <View style={[styles.radioSelected, { backgroundColor: colors.primary }]} />
                 )}
               </View>
             </TouchableOpacity>
           ))}
+        </View> */}
+
+        {/* Referral Code */}
+        <View style={[styles.section, { borderBottomColor: colors.lightGray }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Have a Referral Code?</Text>
+          {!isReferralApplied ? (
+            <View style={styles.referralContainer}>
+              <TextInput
+                style={[
+                  styles.referralInput,
+                  { 
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text
+                  }
+                ]}
+                placeholder="Enter referral code"
+                placeholderTextColor={colors.gray}
+                value={referralCode}
+                onChangeText={setReferralCode}
+                autoCapitalize="characters"
+              />
+              <TouchableOpacity 
+                style={[styles.applyButton, { backgroundColor: colors.primary }]}
+                onPress={handleApplyReferral}
+              >
+                <Text style={styles.applyButtonText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={[styles.appliedReferral, { backgroundColor: colors.lightGray }]}>
+              <View style={styles.appliedInfo}>
+                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                <Text style={[styles.appliedText, { color: colors.text }]}>Code Applied: {referralCode}</Text>
+              </View>
+              <TouchableOpacity onPress={handleRemoveReferral}>
+                <Ionicons name="close" size={20} color={colors.gray} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Bill Details */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Bill Details</Text>
+        <View style={[styles.section, { borderBottomColor: colors.lightGray }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Bill Details</Text>
           <View style={styles.billRow}>
-            <Text style={styles.billLabel}>Items Total</Text>
-            <Text style={styles.billValue}>₹{total}</Text>
+            <Text style={[styles.billLabel, { color: colors.gray }]}>Items Total</Text>
+            <Text style={[styles.billValue, { color: colors.text }]}>₹{total}</Text>
           </View>
           <View style={styles.billRow}>
-            <Text style={styles.billLabel}>Delivery Fee</Text>
-            <Text style={styles.billValue}>₹{deliveryFee}</Text>
+            <Text style={[styles.billLabel, { color: colors.gray }]}>Delivery Fee</Text>
+            <Text style={[styles.billValue, { color: colors.text }]}>₹{deliveryFee}</Text>
           </View>
-          <View style={[styles.billRow, styles.totalRow]}>
-            <Text style={styles.totalLabel}>Grand Total</Text>
-            <Text style={styles.totalValue}>₹{finalTotal}</Text>
+          {referralDiscount > 0 && (
+            <View style={styles.billRow}>
+              <Text style={[styles.billLabel, { color: colors.primary }]}>Referral Discount</Text>
+              <Text style={[styles.billValue, { color: colors.primary }]}>-₹{referralDiscount}</Text>
+            </View>
+          )}
+          <View style={[styles.billRow, styles.totalRow, { borderTopColor: colors.border }]}>
+            <Text style={[styles.totalLabel, { color: colors.text }]}>Grand Total</Text>
+            <Text style={[styles.totalValue, { color: colors.text }]}>₹{finalTotal}</Text>
           </View>
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
-        <View style={styles.totalContainer}>
-          <Text style={styles.totalText}>₹{finalTotal}</Text>
-          <Text style={styles.totalSubtext}>Total Amount</Text>
-        </View>
+      <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
         <TouchableOpacity 
-          style={[styles.placeOrderButton, isPlacingOrder && styles.disabledButton]}
+          style={[styles.paymentSelector, { backgroundColor: colors.lightGray }]}
+          onPress={() => setShowPaymentModal(true)}
+        >
+          <View style={styles.paymentInfo}>
+            <Ionicons 
+              name={paymentMethods.find(p => p.id === selectedPayment)?.icon as any} 
+              size={20} 
+              color={colors.text} 
+            />
+            <Text style={[styles.paymentLabel, { color: colors.text }]}>
+              {paymentMethods.find(p => p.id === selectedPayment)?.name}
+            </Text>
+          </View>
+          <Ionicons name="chevron-down" size={16} color={colors.gray} />
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[
+            styles.placeOrderButton, 
+            { backgroundColor: colors.primary },
+            isPlacingOrder && styles.disabledButton
+          ]}
           onPress={handlePlaceOrder}
           disabled={isPlacingOrder}
         >
-          <Text style={styles.placeOrderText}>
-            {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
+          <Text style={styles.placeOrderText}>₹{finalTotal}</Text>
+          <Text style={styles.placeOrderSubtext}>
+            {isPlacingOrder ? 'Placing...' : 'Place Order'}
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Address Modal */}
+      <Modal visible={showAddressModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Delivery Address</Text>
+            {mockAddresses.map((address) => (
+              <TouchableOpacity
+                key={address.id}
+                style={styles.modalOption}
+                onPress={() => {
+                  dispatch(setSelectedAddress(address));
+                  setShowAddressModal(false);
+                }}
+              >
+                <View style={styles.modalOptionLeft}>
+                  <Ionicons name="location" size={24} color={colors.text} />
+                  <View>
+                    <Text style={[styles.modalOptionText, { color: colors.text }]}>{address.type}</Text>
+                    <Text style={[styles.modalOptionSubtext, { color: colors.gray }]}>{address.address}</Text>
+                  </View>
+                </View>
+                {selectedAddress?.id === address.id && (
+                  <Ionicons name="checkmark" size={20} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity 
+              style={[styles.modalClose, { backgroundColor: colors.primary }]}
+              onPress={() => setShowAddressModal(false)}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Payment Modal */}
+      <Modal visible={showPaymentModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Payment Method</Text>
+            {paymentMethods.map((method) => (
+              <TouchableOpacity
+                key={method.id}
+                style={styles.modalOption}
+                onPress={() => {
+                  setSelectedPayment(method.id);
+                  setShowPaymentModal(false);
+                }}
+              >
+                <View style={styles.modalOptionLeft}>
+                  <Ionicons name={method.icon as any} size={24} color={colors.text} />
+                  <Text style={[styles.modalOptionText, { color: colors.text }]}>{method.name}</Text>
+                </View>
+                {selectedPayment === method.id && (
+                  <Ionicons name="checkmark" size={20} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity 
+              style={[styles.modalClose, { backgroundColor: colors.primary }]}
+              onPress={() => setShowPaymentModal(false)}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -148,7 +313,6 @@ export default function CheckoutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -157,12 +321,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
   },
   content: {
     flex: 1,
@@ -170,18 +332,15 @@ const styles = StyleSheet.create({
   section: {
     padding: 16,
     borderBottomWidth: 8,
-    borderBottomColor: '#f8f8f8',
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 12,
   },
   addressCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f8f8',
     padding: 12,
     borderRadius: 8,
   },
@@ -192,16 +351,13 @@ const styles = StyleSheet.create({
   addressType: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   addressText: {
     fontSize: 14,
-    color: '#666',
   },
   changeText: {
     fontSize: 14,
-    color: '#00B761',
     fontWeight: '600',
   },
   orderItem: {
@@ -209,39 +365,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   itemName: {
     flex: 1,
     fontSize: 14,
-    color: '#333',
   },
   itemQuantity: {
     fontSize: 14,
-    color: '#666',
     marginRight: 16,
   },
   itemPrice: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
   },
   paymentMethod: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  selectedPayment: {
-    backgroundColor: '#f8f8f8',
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
   },
   paymentText: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
     marginLeft: 12,
   },
   radioButton: {
@@ -249,7 +394,6 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#00B761',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -257,7 +401,45 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#00B761',
+  },
+  referralContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  referralInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginRight: 12,
+  },
+  applyButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  applyButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  appliedReferral: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 8,
+  },
+  appliedInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  appliedText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   billRow: {
     flexDirection: 'row',
@@ -266,54 +448,110 @@ const styles = StyleSheet.create({
   },
   billLabel: {
     fontSize: 14,
-    color: '#666',
   },
   billValue: {
     fontSize: 14,
-    color: '#333',
   },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: '#ddd',
     paddingTop: 12,
     marginTop: 8,
   },
   totalLabel: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
   },
   totalValue: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    backgroundColor: '#fff',
+    gap: 12,
   },
-  totalContainer: {
+
+  paymentSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
     flex: 1,
   },
-  totalText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+  paymentInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  totalSubtext: {
-    fontSize: 12,
-    color: '#666',
+  paymentLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 8,
   },
   placeOrderButton: {
-    backgroundColor: '#00B761',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    minWidth: 120,
+  },
+  placeOrderText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  placeOrderSubtext: {
+    color: '#fff',
+    fontSize: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  modalOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    marginLeft: 12,
+  },
+  modalOptionSubtext: {
+    fontSize: 14,
+    marginLeft: 12,
+    marginTop: 2,
+  },
+  modalClose: {
+    marginTop: 20,
     paddingVertical: 12,
     borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalCloseText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   disabledButton: {
     backgroundColor: '#ccc',

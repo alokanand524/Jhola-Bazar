@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTheme } from '@/hooks/useTheme';
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +14,7 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const dispatch = useDispatch();
+  const { colors } = useTheme();
   const cartItem = useSelector((state: RootState) => 
     state.cart.items.find(item => item.id === product.id)
   );
@@ -33,23 +35,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   return (
     <TouchableOpacity 
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.lightGray, borderColor: colors.border }]}
       onPress={() => router.push(`/product/${product.id}`)}
     >
       <Image source={{ uri: product.image }} style={styles.image} />
       <View style={styles.content}>
-        <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
-        <Text style={styles.unit}>{product.unit}</Text>
+        <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>{product.name}</Text>
+        <Text style={[styles.unit, { color: colors.gray }]}>{product.unit}</Text>
         <View style={styles.priceContainer}>
-          <Text style={styles.price}>₹{product.price}</Text>
+          <Text style={[styles.price, { color: colors.text }]}>₹{product.price}</Text>
           {product.originalPrice && (
-            <Text style={styles.originalPrice}>₹{product.originalPrice}</Text>
+            <Text style={[styles.originalPrice, { color: colors.gray }]}>₹{product.originalPrice}</Text>
           )}
         </View>
         <View style={styles.footer}>
-          <Text style={styles.deliveryTime}>10 mins</Text>
+          {/* <Text style={styles.deliveryTime}>10 mins</Text> */}
           {cartItem ? (
-            <View style={styles.quantityContainer}>
+            <View style={[styles.quantityContainer, { backgroundColor: colors.primary }]}>
               <TouchableOpacity 
                 style={styles.quantityButton}
                 onPress={() => handleUpdateQuantity(cartItem.quantity - 1)}
@@ -65,7 +67,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity style={styles.addButton} onPress={handleAddToCart}>
+            <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.primary }]} onPress={handleAddToCart}>
               <Text style={styles.addButtonText}>ADD</Text>
             </TouchableOpacity>
           )}
@@ -77,13 +79,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#dfdfdf13',
     borderRadius: 12,
     padding: 12,
     marginBottom: 16,
     width: '35%',
     borderWidth: 1,
-    borderColor: '#44ff00ff',
     minWidth: 120,
   },
   image: {
@@ -98,12 +98,10 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   unit: {
     fontSize: 12,
-    color: '#666',
     marginBottom: 8,
   },
   priceContainer: {
@@ -114,11 +112,9 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
   },
   originalPrice: {
     fontSize: 12,
-    color: '#999',
     textDecorationLine: 'line-through',
     marginLeft: 8,
   },
@@ -132,7 +128,6 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   addButton: {
-    backgroundColor: '#00B761',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 6,
@@ -145,7 +140,6 @@ const styles = StyleSheet.create({
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#00B761',
     borderRadius: 6,
     paddingHorizontal: 4,
   },

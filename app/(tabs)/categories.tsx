@@ -8,6 +8,7 @@ import { setSelectedCategory } from '@/store/slices/productsSlice';
 import { ProductCard } from '@/components/ProductCard';
 import { CategoryCard } from '@/components/CategoryCard';
 import { hideTabBar } from './_layout';
+import { useTheme } from '@/hooks/useTheme';
 
 
 
@@ -15,6 +16,7 @@ export default function CategoriesScreen() {
   const dispatch = useDispatch();
   const { filter } = useLocalSearchParams();
   const { categories, products, selectedCategory } = useSelector((state: RootState) => state.products);
+  const { colors } = useTheme();
 
   useEffect(() => {
     if (filter && typeof filter === 'string') {
@@ -37,9 +39,9 @@ export default function CategoriesScreen() {
     : products.filter(product => product.category === selectedCategory);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Categories</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Categories</Text>
       </View>
 
       <ScrollView 
@@ -66,7 +68,7 @@ export default function CategoriesScreen() {
         
         {selectedCategory !== 'All' && filteredProducts.length > 0 && (
           <View style={styles.productsSection}>
-            <Text style={styles.productsTitle}>{selectedCategory} Products</Text>
+            <Text style={[styles.productsTitle, { color: colors.text }]}>{selectedCategory} Products</Text>
             <FlatList
               data={filteredProducts}
               renderItem={({ item }) => <ProductCard product={item} />}
@@ -85,18 +87,15 @@ export default function CategoriesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
   },
   content: {
     flex: 1,
@@ -116,7 +115,6 @@ const styles = StyleSheet.create({
   productsTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 16,
   },
   row: {

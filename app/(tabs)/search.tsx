@@ -6,10 +6,12 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 import { ProductCard } from '@/components/ProductCard';
 import { hideTabBar } from './_layout';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const { products } = useSelector((state: RootState) => state.products);
+  const { colors } = useTheme();
 
   const filteredProducts = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -20,17 +22,17 @@ export default function SearchScreen() {
   }, [products, searchQuery]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Search Products</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Search Products</Text>
       </View>
 
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#666" />
+      <View style={[styles.searchContainer, { backgroundColor: colors.lightGray }]}>
+        <Ionicons name="search" size={20} color={colors.gray} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: colors.text }]}
           placeholder="Search for products..."
-          placeholderTextColor="#666"
+          placeholderTextColor={colors.gray}
           value={searchQuery}
           onChangeText={setSearchQuery}
           autoFocus
@@ -39,7 +41,7 @@ export default function SearchScreen() {
           <Ionicons 
             name="close-circle" 
             size={20} 
-            color="#666" 
+            color={colors.gray} 
             onPress={() => setSearchQuery('')}
           />
         )}
@@ -48,18 +50,18 @@ export default function SearchScreen() {
       <View style={styles.content}>
         {searchQuery.trim() === '' ? (
           <View style={styles.emptyState}>
-            <Ionicons name="search" size={64} color="#ccc" />
-            <Text style={styles.emptyStateText}>Start typing to search products</Text>
+            <Ionicons name="search" size={64} color={colors.gray} />
+            <Text style={[styles.emptyStateText, { color: colors.gray }]}>Start typing to search products</Text>
           </View>
         ) : filteredProducts.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="sad" size={64} color="#ccc" />
-            <Text style={styles.emptyStateText}>No products found</Text>
-            <Text style={styles.emptyStateSubtext}>Try searching with different keywords</Text>
+            <Ionicons name="sad" size={64} color={colors.gray} />
+            <Text style={[styles.emptyStateText, { color: colors.gray }]}>No products found</Text>
+            <Text style={[styles.emptyStateSubtext, { color: colors.gray }]}>Try searching with different keywords</Text>
           </View>
         ) : (
           <>
-            <Text style={styles.resultsText}>
+            <Text style={[styles.resultsText, { color: colors.text }]}>
               {filteredProducts.length} result{filteredProducts.length !== 1 ? 's' : ''} found
             </Text>
             <FlatList
@@ -82,23 +84,19 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f8f8',
     margin: 16,
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -120,20 +118,17 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 18,
-    color: '#666',
     marginTop: 16,
     textAlign: 'center',
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#999',
     marginTop: 8,
     textAlign: 'center',
   },
   resultsText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 16,
   },
   row: {
