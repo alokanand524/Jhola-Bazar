@@ -1,42 +1,56 @@
 {
   "expo": {
-    "name": "jhola-Bazar",
-    "slug": "jhola-Bazar",
+    "name": "Jhola-Bazar",                
+    "slug": "jhola-bazar",                
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "Jhola-Bazar",
+    "icon": "./assets/images/jhola-bazar.png",   
+    "scheme": "jholabazar",               
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.alok524.jholabazar"   
     },
+
     "android": {
+      "package": "com.alok524.jholabazar",           
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/jhola-bazar.png",  
+        "backgroundColor": "#FFCC00"
       },
       "edgeToEdgeEnabled": true
     },
+
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/jhola-bazar.png"
     },
+
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/jhola-bazar.png",
           "imageWidth": 200,
-          "resizeMode": "contain",
+          "resizeMode": "contain",                     
           "backgroundColor": "#ffffff"
         }
       ]
     ],
+
     "experiments": {
       "typedRoutes": true
+    },
+
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "89b2babb-199c-4e18-a7a3-0c172da970a5"
+      }
     }
   }
 }
