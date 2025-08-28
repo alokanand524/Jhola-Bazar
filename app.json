@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Jhola-Bazar",                
-    "slug": "jhola-bazar",                
+    "slug": "jhola-Bazar",                
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/jhola-bazar.png",   
@@ -38,6 +38,12 @@
           "imageWidth": 200,
           "resizeMode": "contain",                     
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "This app needs access to location to show nearby stores and delivery options."
         }
       ]
     ],

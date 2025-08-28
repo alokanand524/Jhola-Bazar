@@ -6,13 +6,14 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { mockProducts } from '@/data/products';
 import { featuredThisWeek } from '@/data/sections';
 import { useTheme } from '@/hooks/useTheme';
+import { useLocation } from '@/hooks/useLocation';
 import { setProducts } from '@/store/slices/productsSlice';
 import { fetchCategories } from '@/store/slices/categoriesSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
-import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { hideTabBar } from './_layout';
@@ -23,6 +24,7 @@ export default function HomeScreen() {
   const { categories } = useSelector((state: RootState) => state.categories);
   const { items } = useSelector((state: RootState) => state.cart);
   const { colors } = useTheme();
+  const { location, loading: locationLoading, error: locationError } = useLocation();
 
 
   useEffect(() => {
@@ -44,9 +46,18 @@ export default function HomeScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.locationContainer}>
-          <Ionicons name="location" size={20} color="#ffffffff" />
+          <Ionicons name="location" size={20} color={colors.primary} />
           <Text style={styles.locationText}>Deliver in 10 mins</Text>
-          <Text style={[styles.addressText, { color: colors.gray }]}>Home - New Delhi</Text>
+          {locationLoading ? (
+            <View style={styles.locationLoading}>
+              <ActivityIndicator size="small" color={colors.gray} />
+              <Text style={[styles.addressText, { color: colors.gray }]}>Getting location...</Text>
+            </View>
+          ) : locationError ? (
+            <Text style={[styles.addressText, { color: colors.gray }]}>Location unavailable</Text>
+          ) : (
+            <Text style={[styles.addressText, { color: colors.gray }]}>{location?.address || 'Location not found'}</Text>
+          )}
         </View>
         <TouchableOpacity 
           style={styles.cartButton}
@@ -208,5 +219,10 @@ const styles = StyleSheet.create({
   },
   row: {
     justifyContent: 'space-between',
+  },
+  locationLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
   },
 });
