@@ -2,9 +2,10 @@ import { ProductCard } from '@/components/ProductCard';
 import { categoryImages } from '@/data/categoryImages';
 import { useTheme } from '@/hooks/useTheme';
 import { RootState } from '@/store/store';
+import { categoryAPI } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FlatList, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
@@ -28,10 +29,40 @@ export default function CategoryScreen() {
   const [showBrand, setShowBrand] = useState(false);
   const [sortBy, setSortBy] = useState('Popular');
   const [selectedBrand, setSelectedBrand] = useState('All');
+  const [subCategories, setSubCategories] = useState(['All']);
   const { products } = useSelector((state: RootState) => state.products);
+  const { categories } = useSelector((state: RootState) => state.categories);
   const { colors } = useTheme();
 
-  const subCategories = categoryData[categoryName] || ['All'];
+  const [subCategoriesData, setSubCategoriesData] = useState([]);
+
+  // Fetch subcategories when category changes
+  useEffect(() => {
+    const fetchSubCategories = async () => {
+      try {
+        // Find the category by name
+        const category = categories.find(cat => cat.name === categoryName);
+        if (category) {
+          const categoryData = await categoryAPI.getCategoryById(category.id);
+          const subCats = ['All', ...categoryData.children.map(child => child.name)];
+          setSubCategories(subCats);
+          setSubCategoriesData([{ id: 'all', name: 'All', image: category.image }, ...categoryData.children]);
+        } else {
+          // Fallback to static data if category not found
+          setSubCategories(categoryData[categoryName] || ['All']);
+          setSubCategoriesData([]);
+        }
+      } catch (error) {
+        console.error('Error fetching subcategories:', error);
+        setSubCategories(categoryData[categoryName] || ['All']);
+        setSubCategoriesData([]);
+      }
+    };
+
+    if (categoryName && categories.length > 0) {
+      fetchSubCategories();
+    }
+  }, [categoryName, categories]);
 
   const filteredProducts = products.filter(product => {
     if (categoryName === 'Favourites') return true;
@@ -164,26 +195,26 @@ export default function CategoryScreen() {
       <View style={styles.content}>
         <View style={[styles.sidebar, { backgroundColor: colors.lightGray, borderRightColor: colors.border }]}>
           <ScrollView showsVerticalScrollIndicator={false}>
-            {subCategories.map((subCat) => (
+            {subCategoriesData.map((subCat) => (
               <TouchableOpacity
-                key={subCat}
+                key={subCat.id}
                 style={[
                   styles.sidebarItem,
                   { borderBottomColor: colors.border },
-                  selectedSubCategory === subCat && { backgroundColor: colors.background, borderRightColor: colors.primary }
+                  selectedSubCategory === subCat.name && { backgroundColor: colors.background, borderRightColor: colors.primary }
                 ]}
-                onPress={() => setSelectedSubCategory(subCat)}
+                onPress={() => setSelectedSubCategory(subCat.name)}
               >
                 <Image
-                  source={{ uri: categoryImages[categoryName]?.[subCat] || categoryImages[categoryName]?.['All'] }}
+                  source={{ uri: subCat.image }}
                   style={styles.sidebarImage}
                 />
                 <Text style={[
                   styles.sidebarText,
                   { color: colors.gray },
-                  selectedSubCategory === subCat && { color: colors.primary, fontWeight: '600' }
+                  selectedSubCategory === subCat.name && { color: colors.primary, fontWeight: '600' }
                 ]}>
-                  {subCat}
+                  {subCat.name}
                 </Text>
               </TouchableOpacity>
             ))}

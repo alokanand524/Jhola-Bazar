@@ -11,7 +11,6 @@ export interface Product {
   unit: string;
   inStock: boolean;
   rating: number;
-  // deliveryTime: string;
 }
 
 interface ProductsState {
@@ -20,6 +19,7 @@ interface ProductsState {
   selectedCategory: string;
   searchQuery: string;
   loading: boolean;
+  error: string | null;
 }
 
 const initialState: ProductsState = {
@@ -28,7 +28,10 @@ const initialState: ProductsState = {
   selectedCategory: 'All',
   searchQuery: '',
   loading: false,
+  error: null,
 };
+
+
 
 const productsSlice = createSlice({
   name: 'products',
@@ -47,6 +50,7 @@ const productsSlice = createSlice({
       state.loading = action.payload;
     },
   },
+
 });
 
 export const { setProducts, setSelectedCategory, setSearchQuery, setLoading } = productsSlice.actions;

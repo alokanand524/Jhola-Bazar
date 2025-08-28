@@ -4,9 +4,10 @@ import { ProductCard } from '@/components/ProductCard';
 import { SectionCard } from '@/components/SectionCard';
 import { SectionHeader } from '@/components/SectionHeader';
 import { mockProducts } from '@/data/products';
-import { beautyPersonalCare, featuredThisWeek, frequentlyBought, groceryKitchen, snacksDrinks } from '@/data/sections';
+import { featuredThisWeek } from '@/data/sections';
 import { useTheme } from '@/hooks/useTheme';
 import { setProducts } from '@/store/slices/productsSlice';
+import { fetchCategories } from '@/store/slices/categoriesSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -19,13 +20,15 @@ import { hideTabBar } from './_layout';
 export default function HomeScreen() {
   const dispatch = useDispatch();
   const { products, selectedCategory } = useSelector((state: RootState) => state.products);
+  const { categories } = useSelector((state: RootState) => state.categories);
   const { items } = useSelector((state: RootState) => state.cart);
   const { colors } = useTheme();
 
 
   useEffect(() => {
     dispatch(setProducts([...mockProducts, ...featuredThisWeek]));
-  }, []);
+    dispatch(fetchCategories());
+  }, [dispatch]);
 
   const filteredProducts = selectedCategory === 'All' 
     ? products.slice(0, 6)
@@ -72,8 +75,8 @@ export default function HomeScreen() {
         
         <SectionHeader title="Frequently bought" categoryName="Favourites" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {frequentlyBought.map((item, index) => (
-            <SectionCard key={index} title={item.title} image={item.image} category={item.category} />
+          {categories.slice(0, 4).map((category) => (
+            <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
           ))}
         </ScrollView>
 
@@ -88,22 +91,22 @@ export default function HomeScreen() {
 
         <SectionHeader title="Grocery & Kitchen" categoryName="Vegetables" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {groceryKitchen.map((item, index) => (
-            <SectionCard key={index} title={item.title} image={item.image} category={item.category} />
+          {categories.slice(4, 8).map((category) => (
+            <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
           ))}
         </ScrollView>
 
         <SectionHeader title="Snacks & Drinks" categoryName="Snacks" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {snacksDrinks.map((item, index) => (
-            <SectionCard key={index} title={item.title} image={item.image} category={item.category} />
+          {categories.slice(8, 12).map((category) => (
+            <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
           ))}
         </ScrollView>
 
         <SectionHeader title="Beauty & Personal Care" categoryName="Personal Care" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {beautyPersonalCare.map((item, index) => (
-            <SectionCard key={index} title={item.title} image={item.image} category={item.category} />
+          {categories.slice(0, 4).map((category) => (
+            <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
           ))}
         </ScrollView>
         

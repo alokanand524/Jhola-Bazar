@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocalSearchParams } from 'expo-router';
 import { RootState } from '@/store/store';
 import { setSelectedCategory } from '@/store/slices/productsSlice';
+import { fetchCategories } from '@/store/slices/categoriesSlice';
 import { ProductCard } from '@/components/ProductCard';
 import { CategoryCard } from '@/components/CategoryCard';
 import { hideTabBar } from './_layout';
@@ -15,28 +16,41 @@ import { useTheme } from '@/hooks/useTheme';
 export default function CategoriesScreen() {
   const dispatch = useDispatch();
   const { filter } = useLocalSearchParams();
-  const { categories, products, selectedCategory } = useSelector((state: RootState) => state.products);
+  const { products, selectedCategory } = useSelector((state: RootState) => state.products);
+  const { categories, loading } = useSelector((state: RootState) => state.categories);
   const { colors } = useTheme();
 
   useEffect(() => {
+    dispatch(fetchCategories());
     if (filter && typeof filter === 'string') {
       dispatch(setSelectedCategory(filter));
     }
-  }, [filter]);
+  }, [dispatch, filter]);
+
+
 
   const handleCategoryPress = (category: string) => {
     dispatch(setSelectedCategory(category));
   };
 
-  const getCategoryCount = (category: string) => {
-    if (category === 'All') return products.length;
-    return products.filter(product => product.category === category).length;
+  const getCategoryCount = (categoryName: string) => {
+    return products.filter(product => product.category === categoryName).length;
   };
 
-  const filteredCategories = categories.filter(cat => cat !== 'All');
   const filteredProducts = selectedCategory === 'All' 
     ? products 
     : products.filter(product => product.category === selectedCategory);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.text }]}>Loading categories...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -50,16 +64,17 @@ export default function CategoriesScreen() {
         scrollEventThrottle={16}
       >
         <FlatList
-          data={filteredCategories}
+          data={Array.isArray(categories) ? categories : []}
           renderItem={({ item }) => (
             <CategoryCard
-              category={item}
-              isSelected={selectedCategory === item}
+              category={item.name}
+              image={item.image}
+              isSelected={selectedCategory === item.name}
               onPress={handleCategoryPress}
-              itemCount={getCategoryCount(item)}
+              itemCount={getCategoryCount(item.name)}
             />
           )}
-          keyExtractor={(item) => item}
+          keyExtractor={(item) => item.id}
           numColumns={3}
           scrollEnabled={false}
           columnWrapperStyle={styles.categoryRow}
@@ -119,5 +134,14 @@ const styles = StyleSheet.create({
   },
   row: {
     justifyContent: 'space-between',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
   },
 });

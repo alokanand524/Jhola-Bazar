@@ -7,8 +7,15 @@ import { useTheme } from '@/hooks/useTheme';
 
 export const CategoryList: React.FC = () => {
   const dispatch = useDispatch();
-  const { categories, selectedCategory } = useSelector((state: RootState) => state.products);
+  const { selectedCategory } = useSelector((state: RootState) => state.products);
+  const { categories } = useSelector((state: RootState) => state.categories);
   const { colors } = useTheme();
+
+  const allCategories = [{ id: 'all', name: 'All', image: '' }, ...(Array.isArray(categories) ? categories : [])];
+
+  if (!Array.isArray(categories)) {
+    return null;
+  }
 
   const handleCategoryPress = (category: string) => {
     dispatch(setSelectedCategory(category));
@@ -21,22 +28,22 @@ export const CategoryList: React.FC = () => {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {categories.map((category) => (
+        {allCategories.map((category) => (
           <TouchableOpacity
-            key={category}
+            key={category.id}
             style={[
               styles.categoryButton,
               { backgroundColor: colors.lightGray },
-              selectedCategory === category && { backgroundColor: colors.primary }
+              selectedCategory === category.name && { backgroundColor: colors.primary }
             ]}
-            onPress={() => handleCategoryPress(category)}
+            onPress={() => handleCategoryPress(category.name)}
           >
             <Text style={[
               styles.categoryText,
               { color: colors.gray },
-              selectedCategory === category && { color: '#fff' }
+              selectedCategory === category.name && { color: colors.white || '#fff' }
             ]}>
-              {category}
+              {category.name}
             </Text>
           </TouchableOpacity>
         ))}

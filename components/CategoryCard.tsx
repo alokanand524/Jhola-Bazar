@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 
 interface CategoryCardProps {
   category: string;
+  image?: string;
   isSelected: boolean;
   onPress: (category: string) => void;
   itemCount: number;
@@ -21,6 +22,7 @@ const categoryIcons: { [key: string]: string } = {
 
 export const CategoryCard: React.FC<CategoryCardProps> = ({
   category,
+  image,
   isSelected,
   onPress,
   itemCount,
@@ -40,11 +42,19 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
         { backgroundColor: colors.lightGray },
         isSelected && styles.selectedIconContainer
       ]}>
-        <Ionicons
-          name={categoryIcons[category] as any || 'grid'}
-          size={24}
-          color={isSelected ? '#fff' : colors.primary}
-        />
+        {image ? (
+          <Image 
+            source={{ uri: image }} 
+            style={styles.categoryImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <Ionicons
+            name={categoryIcons[category] as any || 'grid'}
+            size={24}
+            color={isSelected ? '#fff' : colors.primary}
+          />
+        )}
       </View>
       <Text style={[
         styles.categoryName, 
@@ -93,5 +103,10 @@ const styles = StyleSheet.create({
   itemCount: {
     fontSize: 10,
     textAlign: 'center',
+  },
+  categoryImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
 });
