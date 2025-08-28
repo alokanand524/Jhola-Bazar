@@ -187,7 +187,6 @@ This project is for educational purposes. Please respect Jhola-Bazar's intellect
 
 ---
 
-**Note**: This is a clone project for learning purposes. It's not affiliated with or endorsed by Jhola-Bazar.
 =======
 # jhola-Bazar
 >>>>>>> 666418ff6ee0df2f16c8f01f4e6e7814871d0c22

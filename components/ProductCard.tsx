@@ -1,25 +1,36 @@
+import { useTheme } from '@/hooks/useTheme';
 import { addToCart, updateQuantity } from '@/store/slices/cartSlice';
 import { Product } from '@/store/slices/productsSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { Image, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { useTheme } from '@/hooks/useTheme';
 
 interface ProductCardProps {
   product: Product;
 }
 
+const sizeOptions = ['100g', '200g', '500g', '1kg', '2kg'];
+
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const dispatch = useDispatch();
   const { colors } = useTheme();
+  const [showSizeModal, setShowSizeModal] = useState(false);
   const cartItem = useSelector((state: RootState) => 
     state.cart.items.find(item => item.id === product.id)
   );
 
-  const handleAddToCart = () => {
+  // Check if product has multiple size options
+  const hasMultipleSizes = product.category === 'Vegetables' || product.category === 'Fruits';
+
+  const handleAddToCart = (selectedSize?: string) => {
+    if (hasMultipleSizes && !cartItem && !selectedSize) {
+      setShowSizeModal(true);
+      return;
+    }
+    
     dispatch(addToCart({
       id: product.id,
       name: product.name,
@@ -27,87 +38,218 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       image: product.image,
       category: product.category,
     }));
+    
+    if (selectedSize) {
+      setShowSizeModal(false);
+    }
   };
 
   const handleUpdateQuantity = (quantity: number) => {
     dispatch(updateQuantity({ id: product.id, quantity }));
   };
 
+  const handleSizeSelect = (size: string) => {
+    handleAddToCart(size);
+  };
+
+  const getWeightRange = () => {
+    if (product.category === 'Vegetables' || product.category === 'Fruits') {
+      return '(0.95 - 1.05) kg';
+    }
+    return product.unit;
+  };
+
+  const getDiscountPercentage = () => {
+    if (product.originalPrice) {
+      return Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+    }
+    return 0;
+  };
+
   return (
-    <TouchableOpacity 
-      style={[styles.container, { backgroundColor: colors.lightGray, borderColor: colors.border }]}
-      onPress={() => router.push(`/product/${product.id}`)}
-    >
-      <Image source={{ uri: product.image }} style={styles.image} />
-      <View style={styles.content}>
-        <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>{product.name}</Text>
-        <Text style={[styles.unit, { color: colors.gray }]}>{product.unit}</Text>
-        <View style={styles.priceContainer}>
-          <Text style={[styles.price, { color: colors.text }]}>₹{product.price}</Text>
-          {product.originalPrice && (
-            <Text style={[styles.originalPrice, { color: colors.gray }]}>₹{product.originalPrice}</Text>
-          )}
+    <>
+      <TouchableOpacity 
+        style={[styles.container, { backgroundColor: colors.background, borderColor: colors.border }]}
+        onPress={() => router.push(`/product/${product.id}`)}
+      >
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: product.image }} style={styles.image} />
+          
+          {/* Overlay Add Button */}
+          <View style={styles.addButtonOverlay}>
+            {cartItem ? (
+              <View style={[styles.quantityContainer, { backgroundColor: colors.primary }]}>
+                <TouchableOpacity 
+                  style={styles.quantityButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleUpdateQuantity(cartItem.quantity - 1);
+                  }}
+                >
+                  <Ionicons name="remove" size={14} color="#fff" />
+                </TouchableOpacity>
+                <Text style={styles.quantity}>{cartItem.quantity}</Text>
+                <TouchableOpacity 
+                  style={styles.quantityButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleUpdateQuantity(cartItem.quantity + 1);
+                  }}
+                >
+                  <Ionicons name="add" size={14} color="#ffffffff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity 
+                style={[styles.addButton, { backgroundColor: colors.primary }]} 
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleAddToCart();
+                }}
+              >
+                <Ionicons name="add" size={18} color="#fff" />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-        <View style={styles.footer}>
-          {/* <Text style={styles.deliveryTime}>10 mins</Text> */}
-          {cartItem ? (
-            <View style={[styles.quantityContainer, { backgroundColor: colors.primary }]}>
-              <TouchableOpacity 
-                style={styles.quantityButton}
-                onPress={() => handleUpdateQuantity(cartItem.quantity - 1)}
-              >
-                <Ionicons name="remove" size={16} color="#ffffffff" />
-              </TouchableOpacity>
-              <Text style={styles.quantity}>{cartItem.quantity}</Text>
-              <TouchableOpacity 
-                style={styles.quantityButton}
-                onPress={() => handleUpdateQuantity(cartItem.quantity + 1)}
-              >
-                <Ionicons name="add" size={16} color="#ffffffff" />
-              </TouchableOpacity>
+
+        <View style={styles.content}>
+          {/* Weight Range */}
+          <Text style={[styles.weightRange, { color: colors.gray }]}>{getWeightRange()}</Text>
+          
+          {/* Product Name */}
+          {product.name && (
+            <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>{product.name}</Text>
+          )}
+          
+          {/* Delivery Time */}
+          <View style={styles.deliveryContainer}>
+            <View style={[styles.greenDot, { backgroundColor: colors.primary }]} />
+            <Text style={[styles.deliveryTime, { color: colors.gray }]}>10 mins</Text>
+          </View>
+          
+          {/* Discount Badge */}
+          {getDiscountPercentage() > 0 && (
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountText}>{getDiscountPercentage()}% OFF</Text>
             </View>
-          ) : (
-            <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.primary }]} onPress={handleAddToCart}>
-              <Text style={styles.addButtonText}>ADD</Text>
-            </TouchableOpacity>
           )}
+          
+          {/* Price Section */}
+          <View style={styles.priceContainer}>
+            <Text style={[styles.price, { color: colors.text }]}>₹{product.price}</Text>
+            {product.originalPrice && (
+              <Text style={[styles.originalPrice, { color: colors.gray }]}>₹{product.originalPrice}</Text>
+            )}
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+
+      {/* Size Selection Modal */}
+      <Modal visible={showSizeModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Size</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.gray }]}>{product.name}</Text>
+            
+            {sizeOptions.map((size) => (
+              <TouchableOpacity
+                key={size}
+                style={[styles.sizeOption, { borderBottomColor: colors.border }]}
+                onPress={() => handleSizeSelect(size)}
+              >
+                <Text style={[styles.sizeText, { color: colors.text }]}>{size}</Text>
+                <Text style={[styles.sizePrice, { color: colors.text }]}>₹{product.price}</Text>
+              </TouchableOpacity>
+            ))}
+            
+            <TouchableOpacity 
+              style={[styles.modalClose, { backgroundColor: colors.border }]}
+              onPress={() => setShowSizeModal(false)}
+            >
+              <Text style={[styles.modalCloseText, { color: colors.text }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     borderRadius: 12,
-    padding: 12,
     marginBottom: 16,
-    width: '35%',
+    flex: 1,
     borderWidth: 1,
-    minWidth: 120,
+    overflow: 'hidden',
+    marginHorizontal: 4,
+  },
+  imageContainer: {
+    position: 'relative',
   },
   image: {
     width: '100%',
-    height: 70,
-    borderRadius: 8,
-    marginBottom: 8,
+    height: 120,
+    resizeMode: 'cover',
+  },
+  addButtonOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+  },
+  addButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 4,
+  },
+  quantityButton: {
+    padding: 4,
+  },
+  quantity: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginHorizontal: 6,
   },
   content: {
-    flex: 1,
+    padding: 12,
+  },
+  weightRange: {
+    fontSize: 11,
+    marginBottom: 4,
   },
   name: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 6,
+    lineHeight: 18,
   },
-  unit: {
-    fontSize: 12,
+  deliveryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
+  },
+  greenDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 4,
+  },
+  deliveryTime: {
+    fontSize: 11,
   },
   priceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
   },
   price: {
     fontSize: 16,
@@ -116,40 +258,64 @@ const styles = StyleSheet.create({
   originalPrice: {
     fontSize: 12,
     textDecorationLine: 'line-through',
-    marginLeft: 8,
+    marginLeft: 6,
   },
-  footer: {
+  discountBadge: {
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+  },
+  discountText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '60%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    marginBottom: 20,
+  },
+  sizeOption: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
   },
-  deliveryTime: {
-    fontSize: 10,
-    color: '#666',
+  sizeText: {
+    fontSize: 16,
   },
-  addButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 12,
+  sizePrice: {
+    fontSize: 16,
     fontWeight: 'bold',
   },
-  quantityContainer: {
-    flexDirection: 'row',
+  modalClose: {
+    marginTop: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
     alignItems: 'center',
-    borderRadius: 6,
-    paddingHorizontal: 4,
   },
-  quantityButton: {
-    padding: 6,
-  },
-  quantity: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginHorizontal: 8,
+  modalCloseText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
