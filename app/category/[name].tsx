@@ -6,7 +6,8 @@ import { categoryAPI } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState, useEffect } from 'react';
-import { FlatList, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ImageWithLoading } from '@/components/ImageWithLoading';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 
@@ -89,30 +90,15 @@ export default function CategoryScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.filterSection, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity
-          style={[styles.filterButton, { backgroundColor: colors.lightGray }]}
-          onPress={() => setShowFilters(true)}
-        >
-          <Ionicons name="options-outline" size={16} color={colors.text} />
-          <Text style={[styles.filterText, { color: colors.text }]}>Filters</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.filterButton, { backgroundColor: colors.lightGray }]}
-          onPress={() => setShowSort(true)}
-        >
-          <Ionicons name="swap-vertical-outline" size={16} color={colors.text} />
-          <Text style={[styles.filterText, { color: colors.text }]}>{sortBy}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.filterButton, { backgroundColor: colors.lightGray }]}
-          onPress={() => setShowBrand(true)}
-        >
-          <Ionicons name="business-outline" size={16} color={colors.text} />
-          <Text style={[styles.filterText, { color: colors.text }]}>{selectedBrand}</Text>
-        </TouchableOpacity>
+      <View style={[styles.searchSection, { borderBottomColor: colors.border }]}>
+        <View style={[styles.searchContainer, { backgroundColor: colors.lightGray }]}>
+          <Ionicons name="search" size={20} color={colors.gray} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search products..."
+            placeholderTextColor={colors.gray}
+          />
+        </View>
       </View>
 
       {/* Sort Modal */}
@@ -205,9 +191,11 @@ export default function CategoryScreen() {
                 ]}
                 onPress={() => setSelectedSubCategory(subCat.name)}
               >
-                <Image
+                <ImageWithLoading
                   source={{ uri: subCat.image }}
-                  style={styles.sidebarImage}
+                  width={50}
+                  height={50}
+                  borderRadius={10}
                 />
                 <Text style={[
                   styles.sidebarText,
@@ -253,27 +241,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  filterSection: {
-    flexDirection: 'row',
+  searchSection: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    justifyContent: 'space-around',
   },
-  filterButton: {
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    flex: 1,
-    marginHorizontal: 4,
-    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
   },
-  filterText: {
-    fontSize: 14,
-    marginLeft: 4,
-    fontWeight: '500',
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 16,
   },
   modalOverlay: {
     flex: 1,
@@ -322,7 +305,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   sidebar: {
-    width: 80,
+    width: 100,
     borderRightWidth: 1,
   },
   sidebarItem: {
@@ -334,9 +317,9 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
   },
   sidebarImage: {
-    width: 30,
-    height: 30,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 10,
     marginBottom: 3,
   },
   sidebarText: {
@@ -360,7 +343,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    backgroundColor: '#95ff00ff',
+    backgroundColor: 'red',
     borderRadius: 10,
     minWidth: 20,
     height: 20,

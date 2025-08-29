@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Image, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ImageWithLoading } from '@/components/ImageWithLoading';
 import { useDispatch, useSelector } from 'react-redux';
 
 interface ProductCardProps {
@@ -73,7 +74,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         onPress={() => router.push(`/product/${product.id}`)}
       >
         <View style={styles.imageContainer}>
-          <Image source={{ uri: product.image }} style={styles.image} />
+          <ImageWithLoading 
+            source={{ uri: product.image }} 
+            height={120} 
+            style={styles.image}
+          />
           
           {/* Overlay Add Button */}
           <View style={styles.addButtonOverlay}>
@@ -101,13 +106,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               </View>
             ) : (
               <TouchableOpacity 
-                style={[styles.addButton, { backgroundColor: colors.primary }]} 
+                style={[styles.addButton, { backgroundColor: 'white', borderColor: colors.primary, borderWidth: 2 }]} 
                 onPress={(e) => {
                   e.stopPropagation();
                   handleAddToCart();
                 }}
               >
-                <Ionicons name="add" size={18} color="#fff" />
+                <Ionicons name="add" size={18} color={colors.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -122,11 +127,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>{product.name}</Text>
           )}
           
-          {/* Delivery Time */}
-          <View style={styles.deliveryContainer}>
-            <View style={[styles.greenDot, { backgroundColor: colors.primary }]} />
-            <Text style={[styles.deliveryTime, { color: colors.gray }]}>10 mins</Text>
-          </View>
+
           
           {/* Discount Badge */}
           {getDiscountPercentage() > 0 && (
@@ -190,7 +191,6 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: 120,
     resizeMode: 'cover',
   },
   addButtonOverlay: {
@@ -233,20 +233,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     lineHeight: 18,
   },
-  deliveryContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  greenDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 4,
-  },
-  deliveryTime: {
-    fontSize: 11,
-  },
+
   priceContainer: {
     flexDirection: 'row',
     alignItems: 'center',

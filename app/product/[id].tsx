@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ImageWithLoading } from '@/components/ImageWithLoading';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -62,7 +63,7 @@ export default function ProductDetailScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        <Image source={{ uri: product.image }} style={styles.productImage} />
+        <ImageWithLoading source={{ uri: product.image }} height={300} style={styles.productImage} />
         
         <View style={styles.productInfo}>
           <View style={[styles.categoryBadge, { backgroundColor: colors.primary }]}>
@@ -97,6 +98,22 @@ export default function ProductDetailScreen() {
             <Text style={[styles.description, { color: colors.gray }]}>{product.description}</Text>
           </View>
           
+          {/* Weight Selection */}
+          <View style={styles.weightContainer}>
+            <Text style={[styles.weightTitle, { color: colors.text }]}>Select Weight</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.weightScroll}>
+              {['100g', '250g', '500g', '1kg', '2kg'].map((weight, index) => {
+                const prices = [25, 60, 120, 240, 480];
+                return (
+                  <TouchableOpacity key={weight} style={[styles.weightCard, { borderColor: colors.border }]}>
+                    <Text style={[styles.weightText, { color: colors.text }]}>{weight}</Text>
+                    <Text style={[styles.weightPrice, { color: colors.primary }]}>₹{prices[index]}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+
           <View style={styles.featuresContainer}>
             <Text style={[styles.featuresTitle, { color: colors.text }]}>Features</Text>
             <View style={styles.feature}>
@@ -168,7 +185,6 @@ const styles = StyleSheet.create({
   },
   productImage: {
     width: '100%',
-    height: 300,
     resizeMode: 'cover',
   },
   productInfo: {
@@ -246,6 +262,35 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 16,
     lineHeight: 24,
+  },
+  weightContainer: {
+    marginBottom: 20,
+  },
+  weightTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  weightScroll: {
+    paddingVertical: 4,
+  },
+  weightCard: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginRight: 12,
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  weightText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  weightPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   featuresContainer: {
     marginBottom: 20,

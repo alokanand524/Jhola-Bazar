@@ -1,0 +1,109 @@
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated } from 'react-native';
+import { useTheme } from '@/hooks/useTheme';
+
+interface SkeletonLoaderProps {
+  width?: number | string;
+  height?: number;
+  borderRadius?: number;
+  style?: any;
+}
+
+export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
+  width = '100%',
+  height = 20,
+  borderRadius = 4,
+  style,
+}) => {
+  const { colors } = useTheme();
+  const animatedValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(animatedValue, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: false,
+        }),
+        Animated.timing(animatedValue, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: false,
+        }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [animatedValue]);
+
+  const backgroundColor = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.lightGray, colors.border],
+  });
+
+  return (
+    <Animated.View
+      style={[
+        styles.skeleton,
+        {
+          width,
+          height,
+          borderRadius,
+          backgroundColor,
+        },
+        style,
+      ]}
+    />
+  );
+};
+
+export const ProductCardSkeleton: React.FC = () => {
+  const { colors } = useTheme();
+  
+  return (
+    <View style={[styles.productCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+      <SkeletonLoader height={120} borderRadius={8} style={{ marginBottom: 12 }} />
+      <SkeletonLoader width="60%" height={12} style={{ marginBottom: 4 }} />
+      <SkeletonLoader width="80%" height={14} style={{ marginBottom: 6 }} />
+      <SkeletonLoader width="40%" height={10} style={{ marginBottom: 8 }} />
+      <SkeletonLoader width="50%" height={16} />
+    </View>
+  );
+};
+
+export const CategoryCardSkeleton: React.FC = () => {
+  const { colors } = useTheme();
+  
+  return (
+    <View style={[styles.categoryCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+      <SkeletonLoader height={80} borderRadius={8} style={{ marginBottom: 8 }} />
+      <SkeletonLoader width="80%" height={12} />
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  skeleton: {
+    overflow: 'hidden',
+  },
+  productCard: {
+    borderRadius: 12,
+    marginBottom: 16,
+    flex: 1,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginHorizontal: 4,
+    padding: 12,
+  },
+  categoryCard: {
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    minHeight: 100,
+    justifyContent: 'center',
+    width: 120,
+    marginRight: 12,
+  },
+});

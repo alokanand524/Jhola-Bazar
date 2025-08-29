@@ -136,14 +136,7 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    // Simulate Google login
-    dispatch(setUser({
-      name: 'Google Test User',
-      phone: ' 6207338266'
-    }));
-    router.replace('/referral');
-  };
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -217,16 +210,7 @@ export default function LoginScreen() {
               <Text style={styles.sendOtpText}>{isLoading ? 'Sending...' : 'Send OTP'}</Text>
             </TouchableOpacity>
 
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
-            </View>
 
-            <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
-              <Ionicons name="logo-google" size={20} color="#4285F4" />
-              <Text style={styles.googleText}>Continue with Google</Text>
-            </TouchableOpacity>
           </>
         ) : (
           <>
@@ -375,36 +359,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#ddd',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: '#666',
-    fontSize: 14,
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    paddingVertical: 16,
-    borderRadius: 8,
-  },
-  googleText: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-  },
+
+
   otpContainer: {
     marginBottom: 24,
   },

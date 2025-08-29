@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
+import { ImageWithLoading } from '@/components/ImageWithLoading';
 
 interface CategoryCardProps {
   category: string;
@@ -43,10 +44,11 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
         isSelected && styles.selectedIconContainer
       ]}>
         {image ? (
-          <Image 
+          <ImageWithLoading 
             source={{ uri: image }} 
-            style={styles.categoryImage}
-            resizeMode="cover"
+            width={32} 
+            height={32} 
+            borderRadius={16}
           />
         ) : (
           <Ionicons
@@ -104,9 +106,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     textAlign: 'center',
   },
-  categoryImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
+
 });

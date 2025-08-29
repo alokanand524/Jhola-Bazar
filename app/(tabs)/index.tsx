@@ -1,27 +1,27 @@
 import { BannerCarousel } from '@/components/BannerCarousel';
-import { CategoryList } from '@/components/CategoryList';
+import { ProductCardSkeleton, CategoryCardSkeleton } from '@/components/SkeletonLoader';
 import { ProductCard } from '@/components/ProductCard';
 import { SectionCard } from '@/components/SectionCard';
 import { SectionHeader } from '@/components/SectionHeader';
 import { mockProducts } from '@/data/products';
 import { featuredThisWeek } from '@/data/sections';
-import { useTheme } from '@/hooks/useTheme';
 import { useLocation } from '@/hooks/useLocation';
-import { setProducts } from '@/store/slices/productsSlice';
+import { useTheme } from '@/hooks/useTheme';
 import { fetchCategories } from '@/store/slices/categoriesSlice';
+import { setProducts } from '@/store/slices/productsSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
-import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { hideTabBar } from './_layout';
 
 export default function HomeScreen() {
   const dispatch = useDispatch();
-  const { products, selectedCategory } = useSelector((state: RootState) => state.products);
-  const { categories } = useSelector((state: RootState) => state.categories);
+  const { products, selectedCategory, loading: productsLoading } = useSelector((state: RootState) => state.products);
+  const { categories, loading: categoriesLoading } = useSelector((state: RootState) => state.categories);
   const { items } = useSelector((state: RootState) => state.cart);
   const { colors } = useTheme();
   const { location, loading: locationLoading, error: locationError } = useLocation();
@@ -63,7 +63,7 @@ export default function HomeScreen() {
           style={styles.cartButton}
           onPress={() => router.push('/cart')}
         >
-          <Ionicons name="bag" size={24} color="#909b5bff" />
+          <Ionicons name="bag" size={24} color="green " />
           {cartItemsCount > 0 && (
             <View style={styles.cartBadge}>
               <Text style={styles.cartBadgeText}>{cartItemsCount}</Text>
@@ -81,56 +81,89 @@ export default function HomeScreen() {
       </TouchableOpacity>
 
       <ScrollView showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={16}>
-        <CategoryList />
         <BannerCarousel />
         
-        <SectionHeader title="Frequently bought" categoryName="Favourites" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {categories.slice(0, 4).map((category) => (
-            <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
-          ))}
-        </ScrollView>
-
         <SectionHeader title="Featured this week" categoryName="Vegetables" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productScroll}>
-          {featuredThisWeek.map((item) => (
-            <View key={item.id} style={styles.featuredCard}>
-              <ProductCard product={item} />
-            </View>
-          ))}
-        </ScrollView>
+        {productsLoading ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productScroll}>
+            {[1, 2, 3, 4].map((item) => (
+              <View key={item} style={styles.featuredCard}>
+                <ProductCardSkeleton />
+              </View>
+            ))}
+          </ScrollView>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productScroll}>
+            {featuredThisWeek.map((item) => (
+              <View key={item.id} style={styles.featuredCard}>
+                <ProductCard product={item} />
+              </View>
+            ))}
+          </ScrollView>
+        )}
 
-        <SectionHeader title="Grocery & Kitchen" categoryName="Vegetables" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {categories.slice(4, 8).map((category) => (
-            <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
-          ))}
-        </ScrollView>
+        <SectionHeader title="Grocery & Kitchen" categoryName="Categories" />
+        {categoriesLoading ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
+            {[1, 2, 3, 4, 5, 6].map((item) => (
+              <CategoryCardSkeleton key={item} />
+            ))}
+          </ScrollView>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
+            {categories.slice(0, 6).map((category) => (
+              <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
+            ))}
+          </ScrollView>
+        )}
 
-        <SectionHeader title="Snacks & Drinks" categoryName="Snacks" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {categories.slice(8, 12).map((category) => (
-            <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
-          ))}
-        </ScrollView>
+        <SectionHeader title="Beverages & Snacks" categoryName="Categories" />
+        {categoriesLoading ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
+            {[1, 2, 3, 4, 5, 6].map((item) => (
+              <CategoryCardSkeleton key={item} />
+            ))}
+          </ScrollView>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
+            {categories.slice(6, 12).map((category) => (
+              <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
+            ))}
+          </ScrollView>
+        )}
 
-        <SectionHeader title="Beauty & Personal Care" categoryName="Personal Care" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {categories.slice(0, 4).map((category) => (
-            <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
-          ))}
-        </ScrollView>
+        <SectionHeader title="Personal Care" categoryName="Categories" />
+        {categoriesLoading ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
+            {[1, 2, 3, 4, 5, 6].map((item) => (
+              <CategoryCardSkeleton key={item} />
+            ))}
+          </ScrollView>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
+            {categories.slice(12, 18).map((category) => (
+              <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
+            ))}
+          </ScrollView>
+        )}
         
         <View style={styles.productsContainer}>
           <SectionHeader title="Popular Products" categoryName="Vegetables" />
-          <FlatList
-            data={filteredProducts}
-            renderItem={({ item }) => <ProductCard product={item} />}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            scrollEnabled={false}
-            columnWrapperStyle={styles.row}
-          />
+          {productsLoading ? (
+            <View style={styles.row}>
+              <ProductCardSkeleton />
+              <ProductCardSkeleton />
+            </View>
+          ) : (
+            <FlatList
+              data={filteredProducts}
+              renderItem={({ item }) => <ProductCard product={item} />}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              scrollEnabled={false}
+              columnWrapperStyle={styles.row}
+            />
+          )}
         </View>
       </ScrollView>
 
@@ -166,12 +199,14 @@ const styles = StyleSheet.create({
   cartButton: {
     position: 'relative',
     padding: 8,
+    backgroundColor: 'white',
+    borderRadius: 8,
   },
   cartBadge: {
     position: 'absolute',
     top: 0,
     right: 0,
-    backgroundColor: '#95ff00ff',
+    backgroundColor: 'red',
     borderRadius: 10,
     minWidth: 20,
     height: 20,

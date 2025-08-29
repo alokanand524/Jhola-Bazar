@@ -8,6 +8,7 @@ import { setSelectedCategory } from '@/store/slices/productsSlice';
 import { fetchCategories } from '@/store/slices/categoriesSlice';
 import { ProductCard } from '@/components/ProductCard';
 import { CategoryCard } from '@/components/CategoryCard';
+import { ProductCardSkeleton } from '@/components/SkeletonLoader';
 import { hideTabBar } from './_layout';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -44,10 +45,19 @@ export default function CategoriesScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.text }]}>Loading categories...</Text>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Categories</Text>
         </View>
+        <ScrollView style={styles.content}>
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Loading Categories...</Text>
+            <View style={styles.categoriesGrid}>
+              {[1, 2, 3, 4, 5, 6].map((item) => (
+                <ProductCardSkeleton key={item} />
+              ))}
+            </View>
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -63,37 +73,71 @@ export default function CategoriesScreen() {
         onScroll={hideTabBar}
         scrollEventThrottle={16}
       >
-        <FlatList
-          data={Array.isArray(categories) ? categories : []}
-          renderItem={({ item }) => (
-            <CategoryCard
-              category={item.name}
-              image={item.image}
-              isSelected={selectedCategory === item.name}
-              onPress={handleCategoryPress}
-              itemCount={getCategoryCount(item.name)}
-            />
-          )}
-          keyExtractor={(item) => item.id}
-          numColumns={3}
-          scrollEnabled={false}
-          columnWrapperStyle={styles.categoryRow}
-          contentContainerStyle={styles.categoriesGrid}
-        />
-        
-        {selectedCategory !== 'All' && filteredProducts.length > 0 && (
-          <View style={styles.productsSection}>
-            <Text style={[styles.productsTitle, { color: colors.text }]}>{selectedCategory} Products</Text>
-            <FlatList
-              data={filteredProducts}
-              renderItem={({ item }) => <ProductCard product={item} />}
-              keyExtractor={(item) => item.id}
-              numColumns={2}
-              scrollEnabled={false}
-              columnWrapperStyle={styles.row}
-            />
-          </View>
-        )}
+        {/* Grocery & Kitchen Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Grocery & Kitchen</Text>
+          <FlatList
+            data={Array.isArray(categories) ? categories.slice(0, 6) : []}
+            renderItem={({ item }) => (
+              <CategoryCard
+                category={item.name}
+                image={item.image}
+                isSelected={selectedCategory === item.name}
+                onPress={handleCategoryPress}
+                itemCount={getCategoryCount(item.name)}
+              />
+            )}
+            keyExtractor={(item) => item.id}
+            numColumns={3}
+            scrollEnabled={false}
+            columnWrapperStyle={styles.categoryRow}
+            contentContainerStyle={styles.categoriesGrid}
+          />
+        </View>
+
+        {/* Beverages & Snacks Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Beverages & Snacks</Text>
+          <FlatList
+            data={Array.isArray(categories) ? categories.slice(6, 12) : []}
+            renderItem={({ item }) => (
+              <CategoryCard
+                category={item.name}
+                image={item.image}
+                isSelected={selectedCategory === item.name}
+                onPress={handleCategoryPress}
+                itemCount={getCategoryCount(item.name)}
+              />
+            )}
+            keyExtractor={(item) => item.id}
+            numColumns={3}
+            scrollEnabled={false}
+            columnWrapperStyle={styles.categoryRow}
+            contentContainerStyle={styles.categoriesGrid}
+          />
+        </View>
+
+        {/* Personal Care Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Personal Care</Text>
+          <FlatList
+            data={Array.isArray(categories) ? categories.slice(12, 18) : []}
+            renderItem={({ item }) => (
+              <CategoryCard
+                category={item.name}
+                image={item.image}
+                isSelected={selectedCategory === item.name}
+                onPress={handleCategoryPress}
+                itemCount={getCategoryCount(item.name)}
+              />
+            )}
+            keyExtractor={(item) => item.id}
+            numColumns={3}
+            scrollEnabled={false}
+            columnWrapperStyle={styles.categoryRow}
+            contentContainerStyle={styles.categoriesGrid}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -116,6 +160,14 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
   categoriesGrid: {
     paddingBottom: 16,
   },
@@ -134,14 +186,5 @@ const styles = StyleSheet.create({
   },
   row: {
     justifyContent: 'space-between',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
   },
 });
