@@ -1,8 +1,9 @@
 import { BannerCarousel } from '@/components/BannerCarousel';
-import { ProductCardSkeleton, CategoryCardSkeleton } from '@/components/SkeletonLoader';
 import { ProductCard } from '@/components/ProductCard';
 import { SectionCard } from '@/components/SectionCard';
+import { SectionCardSkeleton } from '@/components/SectionCardSkeleton';
 import { SectionHeader } from '@/components/SectionHeader';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { mockProducts } from '@/data/products';
 import { featuredThisWeek } from '@/data/sections';
 import { useLocation } from '@/hooks/useLocation';
@@ -13,7 +14,7 @@ import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { hideTabBar } from './_layout';
@@ -49,9 +50,8 @@ export default function HomeScreen() {
           <Ionicons name="location" size={20} color={colors.primary} />
           <Text style={styles.locationText}>Deliver in 10 mins</Text>
           {locationLoading ? (
-            <View style={styles.locationLoading}>
-              <ActivityIndicator size="small" color={colors.gray} />
-              <Text style={[styles.addressText, { color: colors.gray }]}>Getting location...</Text>
+            <View style={{ marginTop: 2 }}>
+              <SkeletonLoader width="70%" height={12} />
             </View>
           ) : locationError ? (
             <Text style={[styles.addressText, { color: colors.gray }]}>Location unavailable</Text>
@@ -63,7 +63,7 @@ export default function HomeScreen() {
           style={styles.cartButton}
           onPress={() => router.push('/cart')}
         >
-          <Ionicons name="bag" size={24} color="green " />
+          <Ionicons name="bag" size={24} color={colors.primary} />
           {cartItemsCount > 0 && (
             <View style={styles.cartBadge}>
               <Text style={styles.cartBadgeText}>{cartItemsCount}</Text>
@@ -72,98 +72,77 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity 
-        style={[styles.searchContainer, { backgroundColor: colors.lightGray }]}
-        onPress={() => router.push('/(tabs)/search')}
-      >
+      <View style={[styles.searchContainer, { backgroundColor: colors.lightGray }]}>
         <Ionicons name="search" size={20} color={colors.gray} />
-        <Text style={[styles.searchPlaceholder, { color: colors.gray }]}>Search for products</Text>
-      </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.searchTouchable}
+          onPress={() => router.push('/(tabs)/search')}
+        >
+          <Text style={[styles.searchPlaceholder, { color: colors.gray }]}>Search for products</Text>
+        </TouchableOpacity>
+      </View>
 
       <ScrollView showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={16}>
         <BannerCarousel />
         
         <SectionHeader title="Featured this week" categoryName="Vegetables" />
-        {productsLoading ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productScroll}>
-            {[1, 2, 3, 4].map((item) => (
-              <View key={item} style={styles.featuredCard}>
-                <ProductCardSkeleton />
-              </View>
-            ))}
-          </ScrollView>
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productScroll}>
-            {featuredThisWeek.map((item) => (
-              <View key={item.id} style={styles.featuredCard}>
-                <ProductCard product={item} />
-              </View>
-            ))}
-          </ScrollView>
-        )}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productScroll}>
+          {featuredThisWeek.map((item) => (
+            <View key={item.id} style={styles.featuredCard}>
+              <ProductCard product={item} />
+            </View>
+          ))}
+        </ScrollView>
 
         <SectionHeader title="Grocery & Kitchen" categoryName="Categories" />
-        {categoriesLoading ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-            {[1, 2, 3, 4, 5, 6].map((item) => (
-              <CategoryCardSkeleton key={item} />
-            ))}
-          </ScrollView>
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-            {categories.slice(0, 6).map((category) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
+          {categoriesLoading ? (
+            [1, 2, 3, 4, 5, 6].map((item) => (
+              <SectionCardSkeleton key={item} />
+            ))
+          ) : (
+            categories.slice(0, 6).map((category) => (
               <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
-            ))}
-          </ScrollView>
-        )}
+            ))
+          )}
+        </ScrollView>
 
         <SectionHeader title="Beverages & Snacks" categoryName="Categories" />
-        {categoriesLoading ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-            {[1, 2, 3, 4, 5, 6].map((item) => (
-              <CategoryCardSkeleton key={item} />
-            ))}
-          </ScrollView>
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-            {categories.slice(6, 12).map((category) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
+          {categoriesLoading ? (
+            [1, 2, 3, 4, 5, 6].map((item) => (
+              <SectionCardSkeleton key={item} />
+            ))
+          ) : (
+            categories.slice(6, 12).map((category) => (
               <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
-            ))}
-          </ScrollView>
-        )}
+            ))
+          )}
+        </ScrollView>
 
         <SectionHeader title="Personal Care" categoryName="Categories" />
-        {categoriesLoading ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-            {[1, 2, 3, 4, 5, 6].map((item) => (
-              <CategoryCardSkeleton key={item} />
-            ))}
-          </ScrollView>
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-            {categories.slice(12, 18).map((category) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
+          {categoriesLoading ? (
+            [1, 2, 3, 4, 5, 6].map((item) => (
+              <SectionCardSkeleton key={item} />
+            ))
+          ) : (
+            categories.slice(12, 18).map((category) => (
               <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
-            ))}
-          </ScrollView>
-        )}
+            ))
+          )}
+        </ScrollView>
         
         <View style={styles.productsContainer}>
           <SectionHeader title="Popular Products" categoryName="Vegetables" />
-          {productsLoading ? (
-            <View style={styles.row}>
-              <ProductCardSkeleton />
-              <ProductCardSkeleton />
-            </View>
-          ) : (
-            <FlatList
-              data={filteredProducts}
-              renderItem={({ item }) => <ProductCard product={item} />}
-              keyExtractor={(item) => item.id}
-              numColumns={2}
-              scrollEnabled={false}
-              columnWrapperStyle={styles.row}
-            />
-          )}
+          <FlatList
+            data={filteredProducts}
+            renderItem={({ item }) => <ProductCard product={item} />}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            scrollEnabled={false}
+            columnWrapperStyle={styles.row}
+          />
         </View>
       </ScrollView>
 
@@ -199,7 +178,7 @@ const styles = StyleSheet.create({
   cartButton: {
     position: 'relative',
     padding: 8,
-    backgroundColor: 'white',
+    // backgroundColor: 'white',
     borderRadius: 8,
   },
   cartBadge: {
@@ -226,9 +205,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
   },
-  searchPlaceholder: {
+  searchTouchable: {
     flex: 1,
     marginLeft: 8,
+  },
+  searchPlaceholder: {
     fontSize: 16,
   },
   sectionScroll: {

@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Dimensions, Image, ScrollView, StyleSheet, View } from 'react-native';
+import { SkeletonLoader } from './SkeletonLoader';
 
 const { width } = Dimensions.get('window');
 
@@ -12,8 +13,11 @@ const banners = [
 export const BannerCarousel: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);
   const currentIndex = useRef(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setTimeout(() => setIsLoading(false), 1000);
+    
     const interval = setInterval(() => {
       currentIndex.current = (currentIndex.current + 1) % banners.length;
       scrollRef.current?.scrollTo({
@@ -24,6 +28,16 @@ export const BannerCarousel: React.FC = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.scrollView}>
+          <SkeletonLoader width={width * 0.9} height={180} borderRadius={12} />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

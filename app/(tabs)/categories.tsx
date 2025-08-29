@@ -168,12 +168,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 16,
   },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
   categoriesGrid: {
     paddingBottom: 16,
+    paddingHorizontal: 8,
   },
   categoryRow: {
-    justifyContent: 'space-between',
-    marginBottom: 12,
+    justifyContent: 'space-around',
+    marginBottom: 8,
   },
   productsSection: {
     padding: 16,

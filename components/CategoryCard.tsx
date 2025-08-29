@@ -46,14 +46,14 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
         {image ? (
           <ImageWithLoading 
             source={{ uri: image }} 
-            width={32} 
-            height={32} 
-            borderRadius={16}
+            width={40} 
+            height={40} 
+            borderRadius={20}
           />
         ) : (
           <Ionicons
             name={categoryIcons[category] as any || 'grid'}
-            size={24}
+            size={28}
             color={isSelected ? '#fff' : colors.primary}
           />
         )}
@@ -82,13 +82,15 @@ const styles = StyleSheet.create({
     padding: 12,
     alignItems: 'center',
     borderWidth: 1,
-    minHeight: 100,
-    justifyContent: 'center',
+    height: 120,
+    width: '31%',
+    marginBottom: 12,
+    justifyContent: 'space-between',
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,

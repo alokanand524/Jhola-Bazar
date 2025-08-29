@@ -7,11 +7,17 @@ import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '@/hooks/useTheme';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 
 export default function CartScreen() {
   const dispatch = useDispatch();
   const { items, total } = useSelector((state: RootState) => state.cart);
   const { colors } = useTheme();
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    setTimeout(() => setIsLoading(false), 800);
+  }, []);
 
   const handleUpdateQuantity = (id: string, quantity: number) => {
     dispatch(updateQuantity({ id, quantity }));
@@ -23,6 +29,30 @@ export default function CartScreen() {
 
   const deliveryFee = 25;
   const finalTotal = total + deliveryFee;
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <SkeletonLoader width={24} height={24} />
+          <SkeletonLoader width={120} height={18} />
+          <View style={{ width: 24 }} />
+        </View>
+        <ScrollView style={styles.content}>
+          {[1, 2, 3].map((item) => (
+            <View key={item} style={[styles.cartItem, { borderBottomColor: colors.border }]}>
+              <SkeletonLoader width={60} height={60} borderRadius={8} style={{ marginRight: 12 }} />
+              <View style={{ flex: 1 }}>
+                <SkeletonLoader width="80%" height={16} style={{ marginBottom: 4 }} />
+                <SkeletonLoader width="40%" height={14} style={{ marginBottom: 8 }} />
+                <SkeletonLoader width={80} height={32} borderRadius={6} />
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   if (items.length === 0) {
     return (

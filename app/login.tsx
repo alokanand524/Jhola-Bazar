@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 
 const API_BASE_URL = 'https://jholabazar.onrender.com/api/v1';
 
@@ -202,13 +203,16 @@ export default function LoginScreen() {
             </View>
             */}
 
-            <TouchableOpacity 
-              style={[styles.sendOtpButton, isLoading && styles.disabledButton]} 
-              onPress={handleSendOtp}
-              disabled={isLoading}
-            >
-              <Text style={styles.sendOtpText}>{isLoading ? 'Sending...' : 'Send OTP'}</Text>
-            </TouchableOpacity>
+            {isLoading ? (
+              <SkeletonLoader width="100%" height={50} borderRadius={8} style={{ marginBottom: 24 }} />
+            ) : (
+              <TouchableOpacity 
+                style={styles.sendOtpButton} 
+                onPress={handleSendOtp}
+              >
+                <Text style={styles.sendOtpText}>Send OTP</Text>
+              </TouchableOpacity>
+            )}
 
 
           </>
@@ -229,13 +233,16 @@ export default function LoginScreen() {
               />
             </View>
 
-            <TouchableOpacity 
-              style={[styles.verifyButton, isLoading && styles.disabledButton]} 
-              onPress={handleVerifyOtp}
-              disabled={isLoading}
-            >
-              <Text style={styles.verifyText}>{isLoading ? 'Verifying...' : 'Verify OTP'}</Text>
-            </TouchableOpacity>
+            {isLoading ? (
+              <SkeletonLoader width="100%" height={50} borderRadius={8} style={{ marginBottom: 16 }} />
+            ) : (
+              <TouchableOpacity 
+                style={styles.verifyButton} 
+                onPress={handleVerifyOtp}
+              >
+                <Text style={styles.verifyText}>Verify OTP</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity 
               style={styles.resendButton} 

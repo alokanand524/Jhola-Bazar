@@ -9,6 +9,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { hideTabBar } from './_layout';
 import ThemeDropdown from '@/components/ThemeDropdown';
 import { useTheme } from '@/hooks/useTheme';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 
 const menuItems = [
   { id: '1', title: 'My Orders', icon: 'bag-outline', screen: 'orders' },
@@ -22,6 +23,11 @@ export default function ProfileScreen() {
   const dispatch = useDispatch();
   const { name, phone, isLoggedIn } = useSelector((state: RootState) => state.user);
   const { colors } = useTheme();
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    setTimeout(() => setIsLoading(false), 1000);
+  }, []);
 
   const handleLogout = () => {
     Alert.alert(
@@ -37,6 +43,31 @@ export default function ProfileScreen() {
   const handleLogin = () => {
     router.push('/login');
   };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
+        </View>
+        <ScrollView style={styles.content}>
+          <View style={[styles.userInfo, { backgroundColor: colors.lightGray }]}>
+            <SkeletonLoader width={60} height={60} borderRadius={30} style={{ marginRight: 16 }} />
+            <View style={{ flex: 1 }}>
+              <SkeletonLoader width="60%" height={18} style={{ marginBottom: 8 }} />
+              <SkeletonLoader width="80%" height={14} />
+            </View>
+          </View>
+          {[1, 2, 3, 4, 5].map((item) => (
+            <View key={item} style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+              <SkeletonLoader width={24} height={24} style={{ marginRight: 16 }} />
+              <SkeletonLoader width="40%" height={16} />
+            </View>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>

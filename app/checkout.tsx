@@ -1,4 +1,5 @@
 import { useTheme } from '@/hooks/useTheme';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { clearCart } from '@/store/slices/cartSlice';
 import { setSelectedAddress } from '@/store/slices/userSlice';
 import { RootState } from '@/store/store';
@@ -20,6 +21,11 @@ export default function CheckoutScreen() {
   const { items, total } = useSelector((state: RootState) => state.cart);
   const { selectedAddress } = useSelector((state: RootState) => state.user);
   const { colors } = useTheme();
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    setTimeout(() => setIsLoading(false), 1000);
+  }, []);
   
   const [selectedPayment, setSelectedPayment] = useState('cod');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -75,6 +81,30 @@ export default function CheckoutScreen() {
       );
     }, 2000);
   };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <SkeletonLoader width={24} height={24} />
+          <SkeletonLoader width={80} height={18} />
+          <View style={{ width: 24 }} />
+        </View>
+        <ScrollView style={styles.content}>
+          <View style={[styles.section, { borderBottomColor: colors.lightGray }]}>
+            <SkeletonLoader width={120} height={16} style={{ marginBottom: 12 }} />
+            <SkeletonLoader width="100%" height={60} borderRadius={8} />
+          </View>
+          {[1, 2, 3].map((item) => (
+            <View key={item} style={[styles.section, { borderBottomColor: colors.lightGray }]}>
+              <SkeletonLoader width="60%" height={16} style={{ marginBottom: 12 }} />
+              <SkeletonLoader width="100%" height={40} />
+            </View>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>

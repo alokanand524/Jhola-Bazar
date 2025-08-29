@@ -5,16 +5,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 import { ProductCard } from '@/components/ProductCard';
+import { ProductCardSkeleton } from '@/components/SkeletonLoader';
 import { hideTabBar } from './_layout';
 import { useTheme } from '@/hooks/useTheme';
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const { products } = useSelector((state: RootState) => state.products);
   const { colors } = useTheme();
 
   const filteredProducts = useMemo(() => {
     if (!searchQuery.trim()) return [];
+    setIsSearching(true);
+    setTimeout(() => setIsSearching(false), 500);
     return products.filter(product =>
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -52,6 +56,11 @@ export default function SearchScreen() {
           <View style={styles.emptyState}>
             <Ionicons name="search" size={64} color={colors.gray} />
             <Text style={[styles.emptyStateText, { color: colors.gray }]}>Start typing to search products</Text>
+          </View>
+        ) : isSearching ? (
+          <View style={styles.row}>
+            <ProductCardSkeleton />
+            <ProductCardSkeleton />
           </View>
         ) : filteredProducts.length === 0 ? (
           <View style={styles.emptyState}>

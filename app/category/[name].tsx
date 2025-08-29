@@ -1,6 +1,7 @@
 import { ProductCard } from '@/components/ProductCard';
 import { categoryImages } from '@/data/categoryImages';
 import { useTheme } from '@/hooks/useTheme';
+import { ProductCardSkeleton, SkeletonLoader } from '@/components/SkeletonLoader';
 import { RootState } from '@/store/store';
 import { categoryAPI } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,10 +37,13 @@ export default function CategoryScreen() {
   const { colors } = useTheme();
 
   const [subCategoriesData, setSubCategoriesData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
   // Fetch subcategories when category changes
   useEffect(() => {
     const fetchSubCategories = async () => {
+      setIsLoading(true);
       try {
         // Find the category by name
         const category = categories.find(cat => cat.name === categoryName);
@@ -57,6 +61,8 @@ export default function CategoryScreen() {
         console.error('Error fetching subcategories:', error);
         setSubCategories(categoryData[categoryName] || ['All']);
         setSubCategoriesData([]);
+      } finally {
+        setTimeout(() => setIsLoading(false), 800);
       }
     };
 
@@ -64,6 +70,11 @@ export default function CategoryScreen() {
       fetchSubCategories();
     }
   }, [categoryName, categories]);
+
+  useEffect(() => {
+    setIsLoadingProducts(true);
+    setTimeout(() => setIsLoadingProducts(false), 1000);
+  }, [selectedSubCategory]);
 
   const filteredProducts = products.filter(product => {
     if (categoryName === 'Favourites') return true;
@@ -181,44 +192,66 @@ export default function CategoryScreen() {
       <View style={styles.content}>
         <View style={[styles.sidebar, { backgroundColor: colors.lightGray, borderRightColor: colors.border }]}>
           <ScrollView showsVerticalScrollIndicator={false}>
-            {subCategoriesData.map((subCat) => (
-              <TouchableOpacity
-                key={subCat.id}
-                style={[
-                  styles.sidebarItem,
-                  { borderBottomColor: colors.border },
-                  selectedSubCategory === subCat.name && { backgroundColor: colors.background, borderRightColor: colors.primary }
-                ]}
-                onPress={() => setSelectedSubCategory(subCat.name)}
-              >
-                <ImageWithLoading
-                  source={{ uri: subCat.image }}
-                  width={50}
-                  height={50}
-                  borderRadius={10}
-                />
-                <Text style={[
-                  styles.sidebarText,
-                  { color: colors.gray },
-                  selectedSubCategory === subCat.name && { color: colors.primary, fontWeight: '600' }
-                ]}>
-                  {subCat.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {isLoading ? (
+              [1, 2, 3, 4, 5, 6].map((item) => (
+                <View key={item} style={[styles.sidebarItem, { borderBottomColor: colors.border }]}>
+                  <SkeletonLoader width={50} height={50} borderRadius={10} style={{ marginBottom: 3 }} />
+                  <SkeletonLoader width={60} height={10} />
+                </View>
+              ))
+            ) : (
+              subCategoriesData.map((subCat) => (
+                <TouchableOpacity
+                  key={subCat.id}
+                  style={[
+                    styles.sidebarItem,
+                    { borderBottomColor: colors.border },
+                    selectedSubCategory === subCat.name && { backgroundColor: colors.background, borderRightColor: colors.primary }
+                  ]}
+                  onPress={() => setSelectedSubCategory(subCat.name)}
+                >
+                  <ImageWithLoading
+                    source={{ uri: subCat.image }}
+                    width={50}
+                    height={50}
+                    borderRadius={10}
+                  />
+                  <Text style={[
+                    styles.sidebarText,
+                    { color: colors.gray },
+                    selectedSubCategory === subCat.name && { color: colors.primary, fontWeight: '600' }
+                  ]}>
+                    {subCat.name}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            )}
           </ScrollView>
         </View>
 
         <View style={styles.productsArea}>
           <Text style={[styles.productsTitle, { color: colors.text }]}>{selectedSubCategory}</Text>
-          <FlatList
-            data={filteredProducts}
-            renderItem={({ item }) => <ProductCard product={item} />}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            columnWrapperStyle={styles.row}
-            showsVerticalScrollIndicator={false}
-          />
+          {isLoadingProducts ? (
+            <View>
+              <View style={styles.row}>
+                <ProductCardSkeleton />
+                <ProductCardSkeleton />
+              </View>
+              <View style={styles.row}>
+                <ProductCardSkeleton />
+                <ProductCardSkeleton />
+              </View>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredProducts}
+              renderItem={({ item }) => <ProductCard product={item} />}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              columnWrapperStyle={styles.row}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
         </View>
       </View>
     </SafeAreaView>
