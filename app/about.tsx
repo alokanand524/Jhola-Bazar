@@ -32,11 +32,13 @@ export default function AboutScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About the App</Text>
+          <Text style={styles.sectionTitle}>About Us</Text>
           <Text style={styles.description}>
-            This is a clone of the popular grocery delivery app Jhola-Bazar, built with React Native and Expo. 
-            It demonstrates modern mobile app development practices including state management, navigation, 
-            and user interface design.
+            At Jhola Bazar, we believe grocery shopping should be simple, fast, and reliable.
+            We are a local grocery delivery service in Samastipur, Bihar, proudly operated under Shree Hari Enterprises.
+            {"\n\n"}Our mission is to bring Daily essentials, and household products right to your doorstep, saving you time and effort. Whether it's Packaged foods, or home essentials, we make sure you get them at the best prices with hassle free delivery.
+            {"\n\n"}We're more than just a delivery app, we're your neighborhood partner, making everyday shopping easier for families across Samastipur.
+            {"\n\n"}✨ Jhola Bazar – Groceries made simple, just a tap away!
           </Text>
         </View>
 
@@ -54,13 +56,12 @@ export default function AboutScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Technology Stack</Text>
+          <Text style={styles.sectionTitle}>Why Choose Jhola Bazar?</Text>
           <View style={styles.techList}>
-            <Text style={styles.techItem}>• React Native with Expo</Text>
-            <Text style={styles.techItem}>• TypeScript</Text>
-            <Text style={styles.techItem}>• Redux Toolkit</Text>
-            <Text style={styles.techItem}>• Expo Router</Text>
-            <Text style={styles.techItem}>• React Native Vector Icons</Text>
+            <Text style={styles.techItem}>🛒 Wide range of groceries & essentials</Text>
+            <Text style={styles.techItem}>🚚 Fast & reliable home delivery in Samastipur</Text>
+            <Text style={styles.techItem}>💰 Affordable prices with great offers</Text>
+            <Text style={styles.techItem}>🤝 Trusted service backed by Shree Hari Enterprises</Text>
           </View>
         </View>
 
@@ -68,33 +69,22 @@ export default function AboutScreen() {
           <Text style={styles.sectionTitle}>Legal</Text>
           <TouchableOpacity 
             style={styles.linkItem}
-            onPress={() => handleLinkPress('https://example.com/privacy')}
+            onPress={() => handleLinkPress('https://jholabazar.com/privacy-policy')}
           >
             <Text style={styles.linkText}>Privacy Policy</Text>
             <Ionicons name="chevron-forward" size={16} color="#666" />
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.linkItem}
-            onPress={() => handleLinkPress('https://example.com/terms')}
+            onPress={() => handleLinkPress('https://jholabazar.com/t&c')}
           >
             <Text style={styles.linkText}>Terms of Service</Text>
             <Ionicons name="chevron-forward" size={16} color="#666" />
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.linkItem}
-            onPress={() => handleLinkPress('https://example.com/licenses')}
-          >
-            <Text style={styles.linkText}>Open Source Licenses</Text>
-            <Ionicons name="chevron-forward" size={16} color="#666" />
-          </TouchableOpacity>
+
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.disclaimer}>
-            This is a demo application created for educational purposes. 
-            It is not affiliated with or endorsed by Jhola-Bazar or any other company.
-          </Text>
-        </View>
+
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Made with ❤️ & Care</Text>

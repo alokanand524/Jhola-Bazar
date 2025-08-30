@@ -1,35 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useTheme } from '@/hooks/useTheme';
+import { addressAPI } from '@/services/api';
 
 interface Address {
   id: string;
-  type: 'Home' | 'Work' | 'Other';
-  address: string;
+  type: 'home' | 'office' | 'other';
+  addressLine1: string;
+  addressLine2?: string;
   landmark?: string;
-  isDefault: boolean;
+  isDefault?: boolean;
 }
-
-const mockAddresses: Address[] = [
-  {
-    id: '1',
-    type: 'Home',
-    address: 'Kokar, Ranchi, 834001',
-    landmark: 'Near Statue',
-    isDefault: true,
-  },
-  {
-    id: '2',
-    type: 'Work',
-    address: 'Indian Park Park, India, 888888',
-    landmark: 'Test Mark',
-    isDefault: false,
-  },
-];
 
 const AddressCardSkeleton = () => {
   const { colors } = useTheme();
@@ -56,11 +41,22 @@ const AddressCardSkeleton = () => {
 
 export default function AddressesScreen() {
   const { colors } = useTheme();
-  const [addresses, setAddresses] = useState(mockAddresses);
+  const [addresses, setAddresses] = useState<Address[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   
-  React.useEffect(() => {
-    setTimeout(() => setIsLoading(false), 300);
+  const fetchAddresses = async () => {
+    try {
+      const response = await addressAPI.getAddresses();
+      setAddresses(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch addresses:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    fetchAddresses();
   }, []);
 
   const handleDeleteAddress = (id: string) => {
@@ -72,7 +68,15 @@ export default function AddressesScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => setAddresses(addresses.filter(addr => addr.id !== id))
+          onPress: async () => {
+            try {
+              await addressAPI.deleteAddress(id);
+              setAddresses(addresses.filter(addr => addr.id !== id));
+              Alert.alert('Success', 'Address deleted successfully');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete address');
+            }
+          }
         },
       ]
     );
@@ -87,8 +91,8 @@ export default function AddressesScreen() {
 
   const getAddressIcon = (type: string) => {
     switch (type) {
-      case 'Home': return 'home';
-      case 'Work': return 'business';
+      case 'home': return 'home';
+      case 'office': return 'business';
       default: return 'location';
     }
   };
@@ -98,7 +102,7 @@ export default function AddressesScreen() {
       <View style={styles.addressHeader}>
         <View style={styles.addressTypeContainer}>
           <Ionicons name={getAddressIcon(item.type) as any} size={20} color="#00B761" />
-          <Text style={styles.addressType}>{item.type}</Text>
+          <Text style={styles.addressType}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</Text>
           {item.isDefault && (
             <View style={styles.defaultBadge}>
               <Text style={styles.defaultText}>Default</Text>
@@ -121,7 +125,10 @@ export default function AddressesScreen() {
         </View>
       </View>
 
-      <Text style={styles.addressText}>{item.address}</Text>
+      <Text style={styles.addressText}>{item.addressLine1}</Text>
+      {item.addressLine2 && (
+        <Text style={styles.addressText}>{item.addressLine2}</Text>
+      )}
       {item.landmark && (
         <Text style={styles.landmarkText}>Landmark: {item.landmark}</Text>
       )}

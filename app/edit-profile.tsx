@@ -3,27 +3,45 @@ import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Clipboard, Linking, Share, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Clipboard, Linking, Share, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '@/hooks/useTheme';
+import { profileAPI } from '@/services/api';
 
 export default function EditProfileScreen() {
   const dispatch = useDispatch();
   const { name, phone } = useSelector((state: RootState) => state.user);
   const { colors } = useTheme();
   
-  const [editedName, setEditedName] = useState(name || '');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [gender, setGender] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [day, setDay] = useState('');
+  const [month, setMonth] = useState('');
+  const [year, setYear] = useState('');
   const [referralCode] = useState(`JB${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
   const referralLink = `https://jhola-bazar.app/ref/${referralCode}`;
 
-  const handleSave = () => {
-    if (editedName.trim()) {
-      dispatch(setUser({ name: editedName.trim(), phone }));
+  const handleSave = async () => {
+    try {
+      const profileData = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        gender,
+        dateOfBirth,
+      };
+      
+      await profileAPI.updateProfile(profileData);
+      dispatch(setUser({ name: `${firstName} ${lastName}`.trim(), phone }));
       Alert.alert('Success', 'Profile updated successfully!');
       router.back();
-    } else {
-      Alert.alert('Error', 'Please enter a valid name');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update profile');
     }
   };
 
@@ -69,12 +87,12 @@ export default function EditProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
+      <ScrollView style={styles.content}>
         <View style={[styles.section, { backgroundColor: colors.lightGray }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Personal Information</Text>
           
           <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.text }]}>Full Name</Text>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>First Name</Text>
             <TextInput
               style={[
                 styles.input,
@@ -84,11 +102,92 @@ export default function EditProfileScreen() {
                   color: colors.text
                 }
               ]}
-              value={editedName}
-              onChangeText={setEditedName}
-              placeholder="Enter your name"
+              value={firstName}
+              onChangeText={setFirstName}
+              placeholder="Enter first name"
               placeholderTextColor={colors.gray}
             />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Last Name</Text>
+            <TextInput
+              style={[
+                styles.input,
+                { 
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.text
+                }
+              ]}
+              value={lastName}
+              onChangeText={setLastName}
+              placeholder="Enter last name"
+              placeholderTextColor={colors.gray}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Email</Text>
+            <TextInput
+              style={[
+                styles.input,
+                { 
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.text
+                }
+              ]}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Enter email address"
+              placeholderTextColor={colors.gray}
+              keyboardType="email-address"
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Gender</Text>
+            <View style={styles.genderContainer}>
+              {['Male', 'Female', 'Other'].map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.genderOption,
+                    { borderColor: colors.border },
+                    gender === option && { backgroundColor: colors.primary, borderColor: colors.primary }
+                  ]}
+                  onPress={() => setGender(option)}
+                >
+                  <Text style={[
+                    styles.genderText,
+                    { color: colors.text },
+                    gender === option && { color: '#fff' }
+                  ]}>
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Date of Birth</Text>
+            <TouchableOpacity
+              style={[
+                styles.input,
+                { 
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  justifyContent: 'center'
+                }
+              ]}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={[{ color: dateOfBirth ? colors.text : colors.gray }]}>
+                {dateOfBirth || 'Select Date of Birth (YYYY-MM-DD)'}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.inputContainer}>
@@ -165,7 +264,91 @@ export default function EditProfileScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </ScrollView>
+
+      <Modal visible={showDatePicker} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.datePickerModal, { backgroundColor: colors.background }]}>
+            <View style={styles.datePickerHeader}>
+              <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                <Text style={[styles.datePickerButton, { color: colors.gray }]}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={[styles.datePickerTitle, { color: colors.text }]}>Select Date of Birth</Text>
+              <TouchableOpacity onPress={() => {
+                if (day && month && year) {
+                  const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                  setDateOfBirth(formattedDate);
+                  setShowDatePicker(false);
+                } else {
+                  Alert.alert('Error', 'Please select day, month and year');
+                }
+              }}>
+                <Text style={[styles.datePickerButton, { color: colors.primary }]}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.dateInputContainer}>
+              <View style={styles.dateInputGroup}>
+                <Text style={[styles.dateLabel, { color: colors.text }]}>Day</Text>
+                <TextInput
+                  style={[styles.dateInput, { backgroundColor: colors.lightGray, color: colors.text }]}
+                  value={day}
+                  onChangeText={(text) => {
+                    if (text.length <= 2 && /^\d*$/.test(text)) {
+                      const num = parseInt(text);
+                      if (text === '' || (num >= 1 && num <= 31)) {
+                        setDay(text);
+                      }
+                    }
+                  }}
+                  placeholder="DD"
+                  keyboardType="numeric"
+                  maxLength={2}
+                />
+              </View>
+              
+              <View style={styles.dateInputGroup}>
+                <Text style={[styles.dateLabel, { color: colors.text }]}>Month</Text>
+                <TextInput
+                  style={[styles.dateInput, { backgroundColor: colors.lightGray, color: colors.text }]}
+                  value={month}
+                  onChangeText={(text) => {
+                    if (text.length <= 2 && /^\d*$/.test(text)) {
+                      const num = parseInt(text);
+                      if (text === '' || (num >= 1 && num <= 12)) {
+                        setMonth(text);
+                      }
+                    }
+                  }}
+                  placeholder="MM"
+                  keyboardType="numeric"
+                  maxLength={2}
+                />
+              </View>
+              
+              <View style={styles.dateInputGroup}>
+                <Text style={[styles.dateLabel, { color: colors.text }]}>Year</Text>
+                <TextInput
+                  style={[styles.dateInput, { backgroundColor: colors.lightGray, color: colors.text }]}
+                  value={year}
+                  onChangeText={(text) => {
+                    if (text.length <= 4 && /^\d*$/.test(text)) {
+                      const num = parseInt(text);
+                      const currentYear = new Date().getFullYear();
+                      if (text === '' || (num >= 1900 && num <= currentYear)) {
+                        setYear(text);
+                      }
+                    }
+                  }}
+                  placeholder="YYYY"
+                  keyboardType="numeric"
+                  maxLength={4}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -280,5 +463,70 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
+  },
+  genderContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  genderOption: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  genderText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  datePickerModal: {
+    borderRadius: 20,
+    width: '90%',
+    maxWidth: 400,
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  datePickerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  datePickerButton: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  dateInputContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 20,
+  },
+  dateInputGroup: {
+    alignItems: 'center',
+  },
+  dateLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  dateInput: {
+    width: 60,
+    height: 40,
+    borderRadius: 8,
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
