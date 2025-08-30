@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
-import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AboutScreen() {
@@ -21,9 +21,13 @@ export default function AboutScreen() {
       <ScrollView style={styles.content}>
         <View style={styles.logoSection}>
           <View style={styles.logo}>
-            <Ionicons name="storefront" size={60} color="#00B761" />
+            <Image 
+              source={require('../assets/images/jhola-bazar.png')} 
+              style={styles.logoImage}
+              resizeMode="cover"
+            />
           </View>
-          <Text style={styles.appName}>Jhola-Bazar Clone</Text>
+          <Text style={styles.appName}>Jhola Bazar</Text>
           <Text style={styles.version}>Version 1.0.0</Text>
         </View>
 
@@ -93,8 +97,8 @@ export default function AboutScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Made with ❤️ using React Native</Text>
-          <Text style={styles.copyright}>© 2024 Jhola-Bazar Clone</Text>
+          <Text style={styles.footerText}>Made with ❤️ & Care</Text>
+          <Text style={styles.copyright}>© 2025 Jhola Bazar</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -137,6 +141,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: 100,
+    height: 100,
   },
   appName: {
     fontSize: 24,

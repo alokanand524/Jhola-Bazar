@@ -3,6 +3,8 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { useTheme } from '@/hooks/useTheme';
 
 interface Address {
   id: string;
@@ -29,8 +31,37 @@ const mockAddresses: Address[] = [
   },
 ];
 
+const AddressCardSkeleton = () => {
+  const { colors } = useTheme();
+  
+  return (
+    <View style={[styles.addressCard, { backgroundColor: colors.background }]}>
+      <View style={styles.addressHeader}>
+        <View style={styles.addressTypeContainer}>
+          <SkeletonLoader width={20} height={20} style={{ marginRight: 8 }} />
+          <SkeletonLoader width={60} height={16} style={{ marginRight: 8 }} />
+          <SkeletonLoader width={50} height={20} borderRadius={10} />
+        </View>
+        <View style={styles.actionButtons}>
+          <SkeletonLoader width={16} height={16} style={{ marginLeft: 8 }} />
+          <SkeletonLoader width={16} height={16} style={{ marginLeft: 8 }} />
+        </View>
+      </View>
+      <SkeletonLoader width="90%" height={14} style={{ marginBottom: 8 }} />
+      <SkeletonLoader width="70%" height={12} style={{ marginBottom: 12 }} />
+      <SkeletonLoader width={100} height={24} borderRadius={16} />
+    </View>
+  );
+};
+
 export default function AddressesScreen() {
+  const { colors } = useTheme();
   const [addresses, setAddresses] = useState(mockAddresses);
+  const [isLoading, setIsLoading] = React.useState(true);
+  
+  React.useEffect(() => {
+    setTimeout(() => setIsLoading(false), 300);
+  }, []);
 
   const handleDeleteAddress = (id: string) => {
     Alert.alert(
@@ -106,13 +137,32 @@ export default function AddressesScreen() {
     </View>
   );
 
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.lightGray }]}>
+        <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+          <SkeletonLoader width={24} height={24} />
+          <SkeletonLoader width={120} height={18} style={{ marginLeft: 16 }} />
+        </View>
+        <View style={styles.addressesList}>
+          {[1, 2, 3].map((item) => (
+            <AddressCardSkeleton key={item} />
+          ))}
+        </View>
+        <View style={{ margin: 16 }}>
+          <SkeletonLoader width="100%" height={48} borderRadius={12} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.lightGray }]}>
+      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Addresses</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>My Addresses</Text>
       </View>
 
       <FlatList
@@ -124,7 +174,7 @@ export default function AddressesScreen() {
       />
 
       <TouchableOpacity 
-        style={styles.addButton}
+        style={[styles.addButton, { backgroundColor: colors.primary }]}
         onPress={() => router.push('/add-address' as any)}
       >
         <Ionicons name="add" size={24} color="#fff" />
@@ -137,7 +187,6 @@ export default function AddressesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
   },
   header: {
     flexDirection: 'row',
@@ -157,7 +206,6 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   addressCard: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,

@@ -8,7 +8,7 @@ import { setSelectedCategory } from '@/store/slices/productsSlice';
 import { fetchCategories } from '@/store/slices/categoriesSlice';
 import { ProductCard } from '@/components/ProductCard';
 import { CategoryCard } from '@/components/CategoryCard';
-import { ProductCardSkeleton } from '@/components/SkeletonLoader';
+import { ProductCardSkeleton, CategoryCardSkeleton } from '@/components/SkeletonLoader';
 import { hideTabBar } from './_layout';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -50,10 +50,26 @@ export default function CategoriesScreen() {
         </View>
         <ScrollView style={styles.content}>
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Loading Categories...</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Grocery & Kitchen</Text>
             <View style={styles.categoriesGrid}>
               {[1, 2, 3, 4, 5, 6].map((item) => (
-                <ProductCardSkeleton key={item} />
+                <CategoryCardSkeleton key={item} />
+              ))}
+            </View>
+          </View>
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Beverages & Snacks</Text>
+            <View style={styles.categoriesGrid}>
+              {[1, 2, 3, 4, 5, 6].map((item) => (
+                <CategoryCardSkeleton key={item} />
+              ))}
+            </View>
+          </View>
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Personal Care</Text>
+            <View style={styles.categoriesGrid}>
+              {[1, 2, 3, 4, 5, 6].map((item) => (
+                <CategoryCardSkeleton key={item} />
               ))}
             </View>
           </View>

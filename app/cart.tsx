@@ -7,7 +7,7 @@ import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '@/hooks/useTheme';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { SkeletonLoader, CartItemSkeleton } from '@/components/SkeletonLoader';
 
 export default function CartScreen() {
   const dispatch = useDispatch();
@@ -16,7 +16,7 @@ export default function CartScreen() {
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
-    setTimeout(() => setIsLoading(false), 800);
+    setTimeout(() => setIsLoading(false), 300);
   }, []);
 
   const handleUpdateQuantity = (id: string, quantity: number) => {
@@ -40,16 +40,31 @@ export default function CartScreen() {
         </View>
         <ScrollView style={styles.content}>
           {[1, 2, 3].map((item) => (
-            <View key={item} style={[styles.cartItem, { borderBottomColor: colors.border }]}>
-              <SkeletonLoader width={60} height={60} borderRadius={8} style={{ marginRight: 12 }} />
-              <View style={{ flex: 1 }}>
-                <SkeletonLoader width="80%" height={16} style={{ marginBottom: 4 }} />
-                <SkeletonLoader width="40%" height={14} style={{ marginBottom: 8 }} />
-                <SkeletonLoader width={80} height={32} borderRadius={6} />
-              </View>
-            </View>
+            <CartItemSkeleton key={item} />
           ))}
+          <View style={[styles.billDetails, { backgroundColor: colors.lightGray }]}>
+            <SkeletonLoader width="30%" height={18} style={{ marginBottom: 12 }} />
+            <View style={styles.billRow}>
+              <SkeletonLoader width="40%" height={14} />
+              <SkeletonLoader width="20%" height={14} />
+            </View>
+            <View style={styles.billRow}>
+              <SkeletonLoader width="35%" height={14} />
+              <SkeletonLoader width="15%" height={14} />
+            </View>
+            <View style={[styles.billRow, styles.totalRow]}>
+              <SkeletonLoader width="30%" height={16} />
+              <SkeletonLoader width="25%" height={16} />
+            </View>
+          </View>
         </ScrollView>
+        <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
+          <View style={styles.totalContainer}>
+            <SkeletonLoader width={80} height={18} style={{ marginBottom: 4 }} />
+            <SkeletonLoader width={40} height={12} />
+          </View>
+          <SkeletonLoader width={150} height={40} borderRadius={8} />
+        </View>
       </SafeAreaView>
     );
   }

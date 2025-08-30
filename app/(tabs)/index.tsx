@@ -3,7 +3,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { SectionCard } from '@/components/SectionCard';
 import { SectionCardSkeleton } from '@/components/SectionCardSkeleton';
 import { SectionHeader } from '@/components/SectionHeader';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { SkeletonLoader, ProductCardSkeleton, BannerSkeleton, SectionHeaderSkeleton } from '@/components/SkeletonLoader';
 import { mockProducts } from '@/data/products';
 import { featuredThisWeek } from '@/data/sections';
 import { useLocation } from '@/hooks/useLocation';
@@ -26,11 +26,13 @@ export default function HomeScreen() {
   const { items } = useSelector((state: RootState) => state.cart);
   const { colors } = useTheme();
   const { location, loading: locationLoading, error: locationError } = useLocation();
+  const [isInitialLoading, setIsInitialLoading] = React.useState(true);
 
 
   useEffect(() => {
     dispatch(setProducts([...mockProducts, ...featuredThisWeek]));
     dispatch(fetchCategories());
+    setTimeout(() => setIsInitialLoading(false), 500);
   }, [dispatch]);
 
   const filteredProducts = selectedCategory === 'All' 
@@ -83,20 +85,28 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={16}>
-        <BannerCarousel />
+        {isInitialLoading ? <BannerSkeleton /> : <BannerCarousel />}
         
-        <SectionHeader title="Featured this week" categoryName="Vegetables" />
+        {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Featured this week" categoryName="Vegetables" />}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productScroll}>
-          {featuredThisWeek.map((item) => (
-            <View key={item.id} style={styles.featuredCard}>
-              <ProductCard product={item} />
-            </View>
-          ))}
+          {isInitialLoading ? (
+            [1, 2, 3].map((item) => (
+              <View key={item} style={styles.featuredCard}>
+                <ProductCardSkeleton />
+              </View>
+            ))
+          ) : (
+            featuredThisWeek.map((item) => (
+              <View key={item.id} style={styles.featuredCard}>
+                <ProductCard product={item} />
+              </View>
+            ))
+          )}
         </ScrollView>
 
-        <SectionHeader title="Grocery & Kitchen" categoryName="Categories" />
+        {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Grocery & Kitchen" categoryName="Categories" />}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {categoriesLoading ? (
+          {isInitialLoading || categoriesLoading ? (
             [1, 2, 3, 4, 5, 6].map((item) => (
               <SectionCardSkeleton key={item} />
             ))
@@ -107,9 +117,9 @@ export default function HomeScreen() {
           )}
         </ScrollView>
 
-        <SectionHeader title="Beverages & Snacks" categoryName="Categories" />
+        {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Beverages & Snacks" categoryName="Categories" />}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {categoriesLoading ? (
+          {isInitialLoading || categoriesLoading ? (
             [1, 2, 3, 4, 5, 6].map((item) => (
               <SectionCardSkeleton key={item} />
             ))
@@ -120,9 +130,9 @@ export default function HomeScreen() {
           )}
         </ScrollView>
 
-        <SectionHeader title="Personal Care" categoryName="Categories" />
+        {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Personal Care" categoryName="Categories" />}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {categoriesLoading ? (
+          {isInitialLoading || categoriesLoading ? (
             [1, 2, 3, 4, 5, 6].map((item) => (
               <SectionCardSkeleton key={item} />
             ))
@@ -134,15 +144,22 @@ export default function HomeScreen() {
         </ScrollView>
         
         <View style={styles.productsContainer}>
-          <SectionHeader title="Popular Products" categoryName="Vegetables" />
-          <FlatList
-            data={filteredProducts}
-            renderItem={({ item }) => <ProductCard product={item} />}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            scrollEnabled={false}
-            columnWrapperStyle={styles.row}
-          />
+          {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Popular Products" categoryName="Vegetables" />}
+          {isInitialLoading ? (
+            <View style={styles.row}>
+              <ProductCardSkeleton />
+              <ProductCardSkeleton />
+            </View>
+          ) : (
+            <FlatList
+              data={filteredProducts}
+              renderItem={({ item }) => <ProductCard product={item} />}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              scrollEnabled={false}
+              columnWrapperStyle={styles.row}
+            />
+          )}
         </View>
       </ScrollView>
 
