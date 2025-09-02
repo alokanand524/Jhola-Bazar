@@ -19,7 +19,9 @@ interface PaymentMethod {
 interface UserState {
   name: string;
   phone: string;
-  // email?: string; // Email functionality disabled - will be enabled later
+  email?: string;
+  gender?: string;
+  dateOfBirth?: string;
   addresses: Address[];
   selectedAddress: Address | null;
   paymentMethods: PaymentMethod[];
@@ -29,7 +31,9 @@ interface UserState {
 const initialState: UserState = {
   name: '',
   phone: '',
-  // email: '', // Email functionality disabled - will be enabled later
+  email: '',
+  gender: '',
+  dateOfBirth: '',
   addresses: [],
   selectedAddress: null,
   paymentMethods: [],
@@ -40,10 +44,12 @@ const userSlice = createSlice({
   name: 'user',
   initialState,
   reducers: {
-    setUser: (state, action: PayloadAction<{ name: string; phone: string; email?: string }>) => {
+    setUser: (state, action: PayloadAction<{ name: string; phone: string; email?: string; gender?: string; dateOfBirth?: string }>) => {
       state.name = action.payload.name;
       state.phone = action.payload.phone;
-      // state.email = action.payload.email; // Email functionality disabled - will be enabled later
+      if (action.payload.email !== undefined) state.email = action.payload.email;
+      if (action.payload.gender !== undefined) state.gender = action.payload.gender;
+      if (action.payload.dateOfBirth !== undefined) state.dateOfBirth = action.payload.dateOfBirth;
       state.isLoggedIn = true;
     },
     addAddress: (state, action: PayloadAction<Address>) => {
@@ -64,7 +70,9 @@ const userSlice = createSlice({
     logout: (state) => {
       state.name = '';
       state.phone = '';
-      // state.email = ''; // Email functionality disabled - will be enabled later
+      state.email = '';
+      state.gender = '';
+      state.dateOfBirth = '';
       state.addresses = [];
       state.selectedAddress = null;
       state.paymentMethods = [];

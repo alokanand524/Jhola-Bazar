@@ -4,7 +4,8 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { Provider } from 'react-redux';
-import { store } from '@/store/store';
+import { PersistGate } from 'redux-persist/integration/react';
+import { store, persistor } from '@/store/store';
 import { useTheme } from '@/hooks/useTheme';
 
 function AppContent() {
@@ -47,7 +48,9 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
-      <AppContent />
+      <PersistGate loading={null} persistor={persistor}>
+        <AppContent />
+      </PersistGate>
     </Provider>
   );
 }

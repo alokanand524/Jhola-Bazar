@@ -37,11 +37,48 @@ export const categoryAPI = {
   }
 };
 
+export const authAPI = {
+  refreshToken: async (refreshToken: string) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) throw new Error('Failed to refresh token');
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  }
+};
+
 export const profileAPI = {
   getProfile: async () => {
-    const response = await fetch(`${API_BASE_URL}/profile`);
-    if (!response.ok) throw new Error('Failed to fetch profile');
-    return response.json();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/profile`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) throw new Error('Failed to fetch profile');
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
   },
   
   updateProfile: async (data: { firstName?: string; lastName?: string; gender?: string; dateOfBirth?: string; email?: string }) => {

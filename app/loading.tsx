@@ -1,10 +1,12 @@
 import { RootState } from '@/store/store';
+import { logout } from '@/store/slices/userSlice';
+import { authAPI } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 
 const { width, height } = Dimensions.get('window');
 
@@ -16,16 +18,30 @@ const images = [
 ];
 
 export default function LoadingScreen() {
-  const { isLoggedIn } = useSelector((state: RootState) => state.user);
+  const dispatch = useDispatch();
+  const { isLoggedIn, refreshToken } = useSelector((state: RootState) => state.user);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const slideAnim = useRef(new Animated.Value(width)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (isLoggedIn) {
-      router.replace('/(tabs)');
-      return;
-    }
+    const handleAppStart = async () => {
+      if (isLoggedIn && refreshToken) {
+        try {
+          await authAPI.refreshToken(refreshToken);
+          router.replace('/(tabs)');
+        } catch (error) {
+          console.error('Token refresh failed:', error);
+          dispatch(logout());
+        }
+        return;
+      } else if (isLoggedIn) {
+        router.replace('/(tabs)');
+        return;
+      }
+    };
+    
+    handleAppStart();
 
     // Start fade in animation
     Animated.timing(fadeAnim, {
@@ -55,8 +71,10 @@ export default function LoadingScreen() {
       });
     };
 
-    animateImages();
-  }, [isLoggedIn]);
+    if (!isLoggedIn) {
+      animateImages();
+    }
+  }, [isLoggedIn, refreshToken, dispatch]);
 
   const handleSkip = () => {
     router.replace('/(tabs)');

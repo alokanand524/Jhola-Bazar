@@ -9,7 +9,7 @@ import { fetchCategories } from '@/store/slices/categoriesSlice';
 import { ProductCard } from '@/components/ProductCard';
 import { CategoryCard } from '@/components/CategoryCard';
 import { ProductCardSkeleton, CategoryCardSkeleton } from '@/components/SkeletonLoader';
-import { hideTabBar } from './_layout';
+import { handleTabBarScroll } from './_layout';
 import { useTheme } from '@/hooks/useTheme';
 
 
@@ -86,7 +86,7 @@ export default function CategoriesScreen() {
 
       <ScrollView 
         style={styles.content}
-        onScroll={hideTabBar}
+        onScroll={handleTabBarScroll}
         scrollEventThrottle={16}
       >
         {/* Grocery & Kitchen Section */}

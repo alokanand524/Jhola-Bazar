@@ -19,7 +19,7 @@ import React, { useEffect } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import { hideTabBar } from './_layout';
+import { handleTabBarScroll } from './_layout';
 
 export default function HomeScreen() {
   const dispatch = useDispatch();
@@ -91,8 +91,8 @@ export default function HomeScreen() {
 
   const cartItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleScroll = () => {
-    hideTabBar();
+  const handleScroll = (event: any) => {
+    handleTabBarScroll(event);
   };
 
   return (

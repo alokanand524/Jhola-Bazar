@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, View } from 'react-native';
 
 interface SkeletonLoaderProps {
   width?: number | string;
@@ -23,12 +23,12 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
       Animated.sequence([
         Animated.timing(animatedValue, {
           toValue: 1,
-          duration: 1000,
+          duration: 400,
           useNativeDriver: false,
         }),
         Animated.timing(animatedValue, {
           toValue: 0,
-          duration: 1000,
+          duration: 400,
           useNativeDriver: false,
         }),
       ])

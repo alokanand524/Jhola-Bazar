@@ -1,4 +1,5 @@
-import { logout } from '@/store/slices/userSlice';
+import { logout, setUser } from '@/store/slices/userSlice';
+import { profileAPI } from '@/services/api';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -6,7 +7,7 @@ import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import { hideTabBar } from './_layout';
+import { handleTabBarScroll } from './_layout';
 import ThemeDropdown from '@/components/ThemeDropdown';
 import { useTheme } from '@/hooks/useTheme';
 import { SkeletonLoader, ProfileMenuSkeleton } from '@/components/SkeletonLoader';
@@ -26,8 +27,28 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
-    setTimeout(() => setIsLoading(false), 300);
-  }, []);
+    const fetchProfile = async () => {
+      if (isLoggedIn) {
+        try {
+          const profileData = await profileAPI.getProfile();
+          if (profileData.success) {
+            dispatch(setUser({
+              name: profileData.data.firstName || name,
+              phone: profileData.data.phone || phone,
+              email: profileData.data.email,
+              gender: profileData.data.gender,
+              dateOfBirth: profileData.data.dateOfBirth
+            }));
+          }
+        } catch (error) {
+          console.error('Failed to fetch profile:', error);
+        }
+      }
+      setTimeout(() => setIsLoading(false), 100);
+    };
+    
+    fetchProfile();
+  }, [isLoggedIn, dispatch]);
 
   const handleLogout = () => {
     Alert.alert(
@@ -78,7 +99,7 @@ export default function ProfileScreen() {
 
       <ScrollView 
         style={styles.content}
-        onScroll={hideTabBar}
+        onScroll={handleTabBarScroll}
         scrollEventThrottle={16}
       >
         {isLoggedIn ? (
