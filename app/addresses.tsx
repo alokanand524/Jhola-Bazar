@@ -1,36 +1,63 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { useTheme } from '@/hooks/useTheme';
+import { addressAPI } from '@/services/api';
 
 interface Address {
   id: string;
-  type: 'Home' | 'Work' | 'Other';
-  address: string;
+  type: 'home' | 'office' | 'other';
+  addressLine1: string;
+  addressLine2?: string;
   landmark?: string;
-  isDefault: boolean;
+  isDefault?: boolean;
 }
 
-const mockAddresses: Address[] = [
-  {
-    id: '1',
-    type: 'Home',
-    address: 'Kokar, Ranchi, 834001',
-    landmark: 'Near Statue',
-    isDefault: true,
-  },
-  {
-    id: '2',
-    type: 'Work',
-    address: 'Indian Park Park, India, 888888',
-    landmark: 'Test Mark',
-    isDefault: false,
-  },
-];
+const AddressCardSkeleton = () => {
+  const { colors } = useTheme();
+  
+  return (
+    <View style={[styles.addressCard, { backgroundColor: colors.background }]}>
+      <View style={styles.addressHeader}>
+        <View style={styles.addressTypeContainer}>
+          <SkeletonLoader width={20} height={20} style={{ marginRight: 8 }} />
+          <SkeletonLoader width={60} height={16} style={{ marginRight: 8 }} />
+          <SkeletonLoader width={50} height={20} borderRadius={10} />
+        </View>
+        <View style={styles.actionButtons}>
+          <SkeletonLoader width={16} height={16} style={{ marginLeft: 8 }} />
+          <SkeletonLoader width={16} height={16} style={{ marginLeft: 8 }} />
+        </View>
+      </View>
+      <SkeletonLoader width="90%" height={14} style={{ marginBottom: 8 }} />
+      <SkeletonLoader width="70%" height={12} style={{ marginBottom: 12 }} />
+      <SkeletonLoader width={100} height={24} borderRadius={16} />
+    </View>
+  );
+};
 
 export default function AddressesScreen() {
-  const [addresses, setAddresses] = useState(mockAddresses);
+  const { colors } = useTheme();
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  
+  const fetchAddresses = async () => {
+    try {
+      const response = await addressAPI.getAddresses();
+      setAddresses(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch addresses:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    fetchAddresses();
+  }, []);
 
   const handleDeleteAddress = (id: string) => {
     Alert.alert(
@@ -41,7 +68,15 @@ export default function AddressesScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => setAddresses(addresses.filter(addr => addr.id !== id))
+          onPress: async () => {
+            try {
+              await addressAPI.deleteAddress(id);
+              setAddresses(addresses.filter(addr => addr.id !== id));
+              Alert.alert('Success', 'Address deleted successfully');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete address');
+            }
+          }
         },
       ]
     );
@@ -56,8 +91,8 @@ export default function AddressesScreen() {
 
   const getAddressIcon = (type: string) => {
     switch (type) {
-      case 'Home': return 'home';
-      case 'Work': return 'business';
+      case 'home': return 'home';
+      case 'office': return 'business';
       default: return 'location';
     }
   };
@@ -67,7 +102,7 @@ export default function AddressesScreen() {
       <View style={styles.addressHeader}>
         <View style={styles.addressTypeContainer}>
           <Ionicons name={getAddressIcon(item.type) as any} size={20} color="#00B761" />
-          <Text style={styles.addressType}>{item.type}</Text>
+          <Text style={styles.addressType}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</Text>
           {item.isDefault && (
             <View style={styles.defaultBadge}>
               <Text style={styles.defaultText}>Default</Text>
@@ -90,7 +125,10 @@ export default function AddressesScreen() {
         </View>
       </View>
 
-      <Text style={styles.addressText}>{item.address}</Text>
+      <Text style={styles.addressText}>{item.addressLine1}</Text>
+      {item.addressLine2 && (
+        <Text style={styles.addressText}>{item.addressLine2}</Text>
+      )}
       {item.landmark && (
         <Text style={styles.landmarkText}>Landmark: {item.landmark}</Text>
       )}
@@ -106,13 +144,32 @@ export default function AddressesScreen() {
     </View>
   );
 
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.lightGray }]}>
+        <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+          <SkeletonLoader width={24} height={24} />
+          <SkeletonLoader width={120} height={18} style={{ marginLeft: 16 }} />
+        </View>
+        <View style={styles.addressesList}>
+          {[1, 2, 3].map((item) => (
+            <AddressCardSkeleton key={item} />
+          ))}
+        </View>
+        <View style={{ margin: 16 }}>
+          <SkeletonLoader width="100%" height={48} borderRadius={12} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.lightGray }]}>
+      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Addresses</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>My Addresses</Text>
       </View>
 
       <FlatList
@@ -124,7 +181,7 @@ export default function AddressesScreen() {
       />
 
       <TouchableOpacity 
-        style={styles.addButton}
+        style={[styles.addButton, { backgroundColor: colors.primary }]}
         onPress={() => router.push('/add-address' as any)}
       >
         <Ionicons name="add" size={24} color="#fff" />
@@ -137,7 +194,6 @@ export default function AddressesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
   },
   header: {
     flexDirection: 'row',
@@ -157,7 +213,6 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   addressCard: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,

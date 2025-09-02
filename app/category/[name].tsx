@@ -62,7 +62,7 @@ export default function CategoryScreen() {
         setSubCategories(categoryData[categoryName] || ['All']);
         setSubCategoriesData([]);
       } finally {
-        setTimeout(() => setIsLoading(false), 800);
+        setTimeout(() => setIsLoading(false), 300);
       }
     };
 
@@ -73,7 +73,7 @@ export default function CategoryScreen() {
 
   useEffect(() => {
     setIsLoadingProducts(true);
-    setTimeout(() => setIsLoadingProducts(false), 1000);
+    setTimeout(() => setIsLoadingProducts(false), 400);
   }, [selectedSubCategory]);
 
   const filteredProducts = products.filter(product => {

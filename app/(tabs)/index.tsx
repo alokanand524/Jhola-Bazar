@@ -3,10 +3,11 @@ import { ProductCard } from '@/components/ProductCard';
 import { SectionCard } from '@/components/SectionCard';
 import { SectionCardSkeleton } from '@/components/SectionCardSkeleton';
 import { SectionHeader } from '@/components/SectionHeader';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { BannerSkeleton, ProductCardSkeleton, SectionHeaderSkeleton, SkeletonLoader } from '@/components/SkeletonLoader';
 import { mockProducts } from '@/data/products';
 import { featuredThisWeek } from '@/data/sections';
 import { useLocation } from '@/hooks/useLocation';
+import * as Location from 'expo-location';
 import { useTheme } from '@/hooks/useTheme';
 import { fetchCategories } from '@/store/slices/categoriesSlice';
 import { setProducts } from '@/store/slices/productsSlice';
@@ -26,14 +27,54 @@ export default function HomeScreen() {
   const { items } = useSelector((state: RootState) => state.cart);
   const { colors } = useTheme();
   const { location, loading: locationLoading, error: locationError } = useLocation();
+  const [isInitialLoading, setIsInitialLoading] = React.useState(true);
+  const [userLocation, setUserLocation] = React.useState<string | null>(null);
 
 
   useEffect(() => {
     dispatch(setProducts([...mockProducts, ...featuredThisWeek]));
     dispatch(fetchCategories());
+    setTimeout(() => setIsInitialLoading(false), 500);
+    getCurrentLocation();
   }, [dispatch]);
 
-  const filteredProducts = selectedCategory === 'All' 
+  const getCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Location permission denied');
+        return;
+      }
+
+      const currentLocation = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = currentLocation.coords;
+      
+      const reverseGeocode = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude,
+      });
+      
+      if (reverseGeocode.length > 0) {
+        const address = reverseGeocode[0];
+        const pincode = address.postalCode && address.postalCode.length === 6 ? address.postalCode : null;
+        const city = address.city || address.subregion || '';
+        const state = address.region || '';
+        
+        let locationString = '';
+        if (pincode) {
+          locationString = `${address.street || ''} ${city} ${state} - ${pincode}`.trim();
+        } else {
+          locationString = `${address.street || ''} ${city} ${state}`.trim();
+        }
+        
+        setUserLocation(locationString || 'Current Location');
+      }
+    } catch (error) {
+      console.log('Error getting location:', error);
+    }
+  };
+
+  const filteredProducts = selectedCategory === 'All'
     ? products.slice(0, 6)
     : products.filter(product => product.category === selectedCategory).slice(0, 6);
 
@@ -56,10 +97,12 @@ export default function HomeScreen() {
           ) : locationError ? (
             <Text style={[styles.addressText, { color: colors.gray }]}>Location unavailable</Text>
           ) : (
-            <Text style={[styles.addressText, { color: colors.gray }]}>{location?.address || 'Location not found'}</Text>
+            <Text style={[styles.addressText, { color: colors.gray }]}>
+              {location?.address || userLocation || 'Location not found'}
+            </Text>
           )}
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.cartButton}
           onPress={() => router.push('/cart')}
         >
@@ -74,7 +117,7 @@ export default function HomeScreen() {
 
       <View style={[styles.searchContainer, { backgroundColor: colors.lightGray }]}>
         <Ionicons name="search" size={20} color={colors.gray} />
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.searchTouchable}
           onPress={() => router.push('/(tabs)/search')}
         >
@@ -83,20 +126,28 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={16}>
-        <BannerCarousel />
-        
-        <SectionHeader title="Featured this week" categoryName="Vegetables" />
+        {isInitialLoading ? <BannerSkeleton /> : <BannerCarousel />}
+
+        {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Featured this week" categoryName="Vegetables" />}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productScroll}>
-          {featuredThisWeek.map((item) => (
-            <View key={item.id} style={styles.featuredCard}>
-              <ProductCard product={item} />
-            </View>
-          ))}
+          {isInitialLoading ? (
+            [1, 2, 3].map((item) => (
+              <View key={item} style={styles.featuredCard}>
+                <ProductCardSkeleton />
+              </View>
+            ))
+          ) : (
+            featuredThisWeek.map((item) => (
+              <View key={item.id} style={styles.featuredCard}>
+                <ProductCard product={item} />
+              </View>
+            ))
+          )}
         </ScrollView>
 
-        <SectionHeader title="Grocery & Kitchen" categoryName="Categories" />
+        {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Grocery & Kitchen" categoryName="Categories" />}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {categoriesLoading ? (
+          {isInitialLoading || categoriesLoading ? (
             [1, 2, 3, 4, 5, 6].map((item) => (
               <SectionCardSkeleton key={item} />
             ))
@@ -107,9 +158,9 @@ export default function HomeScreen() {
           )}
         </ScrollView>
 
-        <SectionHeader title="Beverages & Snacks" categoryName="Categories" />
+        {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Beverages & Snacks" categoryName="Categories" />}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {categoriesLoading ? (
+          {isInitialLoading || categoriesLoading ? (
             [1, 2, 3, 4, 5, 6].map((item) => (
               <SectionCardSkeleton key={item} />
             ))
@@ -120,9 +171,9 @@ export default function HomeScreen() {
           )}
         </ScrollView>
 
-        <SectionHeader title="Personal Care" categoryName="Categories" />
+        {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Personal Care" categoryName="Categories" />}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {categoriesLoading ? (
+          {isInitialLoading || categoriesLoading ? (
             [1, 2, 3, 4, 5, 6].map((item) => (
               <SectionCardSkeleton key={item} />
             ))
@@ -132,17 +183,24 @@ export default function HomeScreen() {
             ))
           )}
         </ScrollView>
-        
+
         <View style={styles.productsContainer}>
-          <SectionHeader title="Popular Products" categoryName="Vegetables" />
-          <FlatList
-            data={filteredProducts}
-            renderItem={({ item }) => <ProductCard product={item} />}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            scrollEnabled={false}
-            columnWrapperStyle={styles.row}
-          />
+          {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Popular Products" categoryName="Vegetables" />}
+          {isInitialLoading ? (
+            <View style={styles.row}>
+              <ProductCardSkeleton />
+              <ProductCardSkeleton />
+            </View>
+          ) : (
+            <FlatList
+              data={filteredProducts}
+              renderItem={({ item }) => <ProductCard product={item} />}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              scrollEnabled={false}
+              columnWrapperStyle={styles.row}
+            />
+          )}
         </View>
       </ScrollView>
 

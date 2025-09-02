@@ -9,7 +9,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { hideTabBar } from './_layout';
 import ThemeDropdown from '@/components/ThemeDropdown';
 import { useTheme } from '@/hooks/useTheme';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { SkeletonLoader, ProfileMenuSkeleton } from '@/components/SkeletonLoader';
 
 const menuItems = [
   { id: '1', title: 'My Orders', icon: 'bag-outline', screen: 'orders' },
@@ -26,7 +26,7 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
-    setTimeout(() => setIsLoading(false), 1000);
+    setTimeout(() => setIsLoading(false), 300);
   }, []);
 
   const handleLogout = () => {
@@ -58,12 +58,13 @@ export default function ProfileScreen() {
               <SkeletonLoader width="80%" height={14} />
             </View>
           </View>
+          <ProfileMenuSkeleton />
           {[1, 2, 3, 4, 5].map((item) => (
-            <View key={item} style={[styles.menuItem, { borderBottomColor: colors.border }]}>
-              <SkeletonLoader width={24} height={24} style={{ marginRight: 16 }} />
-              <SkeletonLoader width="40%" height={16} />
-            </View>
+            <ProfileMenuSkeleton key={item} />
           ))}
+          <View style={styles.appInfo}>
+            <SkeletonLoader width={120} height={12} />
+          </View>
         </ScrollView>
       </SafeAreaView>
     );

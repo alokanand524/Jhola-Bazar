@@ -10,7 +10,7 @@ const supportOptions = [
     title: 'Call Customer Support',
     subtitle: '24/7 support available',
     icon: 'call',
-    action: () => Linking.openURL('tel:+911234567890'),
+    action: () => Linking.openURL('tel:+919262626392'),
   },
   {
     id: '2',
@@ -64,7 +64,7 @@ const faqs = [
   },
   {
     question: 'What payment methods do you accept?',
-    answer: 'We accept UPI, Credit/Debit Cards, Net Banking, and Digital Wallets.',
+    answer: 'We accept UPI, Credit/Debit Cards.',
   },
 ];
 
@@ -119,7 +119,7 @@ export default function SupportScreen() {
           </View>
           <View style={styles.infoItem}>
             <Text style={styles.infoLabel}>Last Updated</Text>
-            <Text style={styles.infoValue}>January 2024</Text>
+            <Text style={styles.infoValue}>August 2025</Text>
           </View>
         </View>
       </ScrollView>

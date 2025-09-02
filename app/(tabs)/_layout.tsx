@@ -27,7 +27,7 @@ export const hideTabBar = () => {
       duration: 300,
       useNativeDriver: true,
     }).start();
-  }, 700);
+  }, 300);
 };
 
 export default function TabLayout() {

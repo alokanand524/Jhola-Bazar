@@ -83,6 +83,54 @@ export const CategoryCardSkeleton: React.FC = () => {
   );
 };
 
+export const BannerSkeleton: React.FC = () => {
+  const { colors } = useTheme();
+  
+  return (
+    <View style={[styles.bannerContainer, { backgroundColor: colors.background }]}>
+      <SkeletonLoader width="100%" height={180} borderRadius={12} />
+    </View>
+  );
+};
+
+export const SectionHeaderSkeleton: React.FC = () => {
+  return (
+    <View style={styles.sectionHeaderContainer}>
+      <SkeletonLoader width="40%" height={20} style={{ marginBottom: 4 }} />
+      <SkeletonLoader width="25%" height={14} />
+    </View>
+  );
+};
+
+export const CartItemSkeleton: React.FC = () => {
+  const { colors } = useTheme();
+  
+  return (
+    <View style={[styles.cartItemContainer, { borderBottomColor: colors.border }]}>
+      <SkeletonLoader width={60} height={60} borderRadius={8} style={{ marginRight: 12 }} />
+      <View style={{ flex: 1 }}>
+        <SkeletonLoader width="80%" height={16} style={{ marginBottom: 4 }} />
+        <SkeletonLoader width="40%" height={14} style={{ marginBottom: 8 }} />
+        <SkeletonLoader width={80} height={32} borderRadius={6} />
+      </View>
+      <SkeletonLoader width={24} height={24} />
+    </View>
+  );
+};
+
+export const ProfileMenuSkeleton: React.FC = () => {
+  const { colors } = useTheme();
+  
+  return (
+    <View style={[styles.menuItemContainer, { borderBottomColor: colors.border }]}>
+      <SkeletonLoader width={24} height={24} style={{ marginRight: 16 }} />
+      <SkeletonLoader width="40%" height={16} />
+      <View style={{ flex: 1 }} />
+      <SkeletonLoader width={20} height={20} />
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   skeleton: {
     overflow: 'hidden',
@@ -105,5 +153,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 120,
     marginRight: 12,
+  },
+  bannerContainer: {
+    marginHorizontal: 16,
+    marginVertical: 8,
+  },
+  sectionHeaderContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  cartItemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  menuItemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
   },
 });

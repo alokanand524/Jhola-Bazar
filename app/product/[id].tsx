@@ -17,7 +17,7 @@ export default function ProductDetailScreen() {
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
-    setTimeout(() => setIsLoading(false), 1200);
+    setTimeout(() => setIsLoading(false), 400);
   }, []);
   
   const product = useSelector((state: RootState) => 

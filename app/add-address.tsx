@@ -1,98 +1,233 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '@/hooks/useTheme';
+import { addressAPI } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+interface Pincode {
+  id: string;
+  pincode: string;
+  area: string;
+}
 
 export default function AddAddressScreen() {
-  const [addressType, setAddressType] = useState<'Home' | 'Work' | 'Other'>('Home');
-  const [address, setAddress] = useState('');
+  const { colors } = useTheme();
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
   const [landmark, setLandmark] = useState('');
-  const [isDefault, setIsDefault] = useState(false);
+  const [selectedType, setSelectedType] = useState<'home' | 'office' | 'other'>('home');
+  const [pincodes, setPincodes] = useState<Pincode[]>([]);
+  const [selectedPincode, setSelectedPincode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [detectedPincode, setDetectedPincode] = useState('');
 
-  const handleSaveAddress = () => {
-    if (!address.trim()) {
-      Alert.alert('Error', 'Please enter a valid address');
+  useEffect(() => {
+    fetchPincodes();
+    getCurrentLocationData();
+  }, []);
+
+  const fetchPincodes = async () => {
+    try {
+      const response = await addressAPI.getPincodes();
+      setPincodes(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch pincodes:', error);
+    }
+  };
+
+  const getCurrentLocationData = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+
+      const currentLocation = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = currentLocation.coords;
+      
+      const reverseGeocode = await Location.reverseGeocodeAsync({ latitude, longitude });
+      
+      if (reverseGeocode.length > 0) {
+        const address = reverseGeocode[0];
+        const pincode = address.postalCode && address.postalCode.length === 6 ? address.postalCode : '';
+        const cityName = address.city || address.subregion || '';
+        const stateName = address.region || '';
+        
+        setDetectedPincode(pincode);
+        setCity(cityName);
+        setState(stateName);
+      }
+    } catch (error) {
+      console.log('Error getting location data:', error);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!addressLine1.trim() || !selectedPincode) {
+      Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
 
-    // In a real app, this would save to backend
-    Alert.alert('Success', 'Address saved successfully', [
-      { text: 'OK', onPress: () => router.back() }
-    ]);
+    setIsLoading(true);
+    try {
+      await addressAPI.createAddress({
+        addressLine1: addressLine1.trim(),
+        addressLine2: addressLine2.trim() || undefined,
+        landmark: landmark.trim() || undefined,
+        pincodeId: selectedPincode,
+        type: selectedType,
+      });
+      
+      Alert.alert('Success', 'Address added successfully!');
+      router.back();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add address');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add New Address</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Add Address</Text>
+        <TouchableOpacity onPress={handleSave} disabled={isLoading}>
+          <Text style={[styles.saveText, { color: colors.primary }]}>
+            {isLoading ? 'Saving...' : 'Save'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Address Type</Text>
-          <View style={styles.typeSelector}>
-            {(['Home', 'Work', 'Other'] as const).map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[styles.typeButton, addressType === type && styles.selectedType]}
-                onPress={() => setAddressType(type)}
-              >
-                <Ionicons 
-                  name={type === 'Home' ? 'home' : type === 'Work' ? 'business' : 'location'} 
-                  size={20} 
-                  color={addressType === type ? '#fff' : '#666'} 
-                />
-                <Text style={[styles.typeText, addressType === type && styles.selectedTypeText]}>
-                  {type}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        <View style={[styles.section, { backgroundColor: colors.lightGray }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Address Details</Text>
+          
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Address Line 1 *</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+              value={addressLine1}
+              onChangeText={setAddressLine1}
+              placeholder="House/Flat/Office No, Building Name"
+              placeholderTextColor={colors.gray}
+              multiline
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Address Line 2</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+              value={addressLine2}
+              onChangeText={setAddressLine2}
+              placeholder="Street, Area, Colony (Optional)"
+              placeholderTextColor={colors.gray}
+              multiline
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Landmark</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+              value={landmark}
+              onChangeText={setLandmark}
+              placeholder="Nearby landmark (Optional)"
+              placeholderTextColor={colors.gray}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>City</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+              value={city}
+              onChangeText={setCity}
+              placeholder="Enter city name"
+              placeholderTextColor={colors.gray}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>State</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+              value={state}
+              onChangeText={setState}
+              placeholder="Enter state name"
+              placeholderTextColor={colors.gray}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Pincode * (6 digits)</Text>
+            {detectedPincode && (
+              <Text style={[styles.detectedText, { color: colors.primary }]}>{detectedPincode}</Text>
+            )}
+            {/* <View style={styles.pincodeContainer}>
+              {pincodes.map((pincode) => (
+                <TouchableOpacity
+                  key={pincode.id}
+                  style={[
+                    styles.pincodeOption,
+                    { borderColor: colors.border },
+                    selectedPincode === pincode.id && { backgroundColor: colors.primary, borderColor: colors.primary }
+                  ]}
+                  onPress={() => setSelectedPincode(pincode.id)}
+                >
+                  <Text style={[
+                    styles.pincodeText,
+                    { color: colors.text },
+                    selectedPincode === pincode.id && { color: '#fff' }
+                  ]}>
+                    {pincode.pincode} - {pincode.area}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View> */}
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Address Type *</Text>
+            <View style={styles.typeContainer}>
+              {[
+                { key: 'home', label: 'Home', icon: 'home' },
+                { key: 'office', label: 'Office', icon: 'business' },
+                { key: 'other', label: 'Other', icon: 'location' }
+              ].map((type) => (
+                <TouchableOpacity
+                  key={type.key}
+                  style={[
+                    styles.typeOption,
+                    { borderColor: colors.border },
+                    selectedType === type.key && { backgroundColor: colors.primary, borderColor: colors.primary }
+                  ]}
+                  onPress={() => setSelectedType(type.key as any)}
+                >
+                  <Ionicons 
+                    name={type.icon as any} 
+                    size={20} 
+                    color={selectedType === type.key ? '#fff' : colors.gray} 
+                  />
+                  <Text style={[
+                    styles.typeText,
+                    { color: colors.text },
+                    selectedType === type.key && { color: '#fff' }
+                  ]}>
+                    {type.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
-
-        <View style={styles.section}>
-          <Text style={styles.inputLabel}>Complete Address *</Text>
-          <TextInput
-            style={styles.textArea}
-            placeholder="Enter your complete address"
-            value={address}
-            onChangeText={setAddress}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.inputLabel}>Landmark (Optional)</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="e.g., Near Metro Station"
-            value={landmark}
-            onChangeText={setLandmark}
-          />
-        </View>
-
-        <TouchableOpacity 
-          style={styles.defaultOption}
-          onPress={() => setIsDefault(!isDefault)}
-        >
-          <View style={styles.checkbox}>
-            {isDefault && <Ionicons name="checkmark" size={16} color="#00B761" />}
-          </View>
-          <Text style={styles.defaultText}>Set as default address</Text>
-        </TouchableOpacity>
       </ScrollView>
-
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSaveAddress}>
-          <Text style={styles.saveButtonText}>Save Address</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
@@ -100,124 +235,87 @@ export default function AddAddressScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   headerTitle: {
     fontSize: 18,
+    fontWeight: 'bold',
+  },
+  saveText: {
+    fontSize: 16,
     fontWeight: '600',
-    marginLeft: 16,
   },
   content: {
     flex: 1,
     padding: 16,
   },
   section: {
-    marginBottom: 24,
+    borderRadius: 12,
+    padding: 16,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  typeSelector: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  typeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  selectedType: {
-    backgroundColor: '#00B761',
-    borderColor: '#00B761',
-  },
-  typeText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  selectedTypeText: {
-    color: '#fff',
+  inputContainer: {
+    marginBottom: 16,
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
     marginBottom: 8,
   },
-  textInput: {
-    backgroundColor: '#fff',
+  input: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 16,
+    paddingVertical: 12,
     fontSize: 16,
+    minHeight: 44,
   },
-  textArea: {
-    backgroundColor: '#fff',
+  pincodeContainer: {
+    gap: 8,
+  },
+  pincodeOption: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 16,
-    fontSize: 16,
-    minHeight: 100,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
-  defaultOption: {
+  pincodeText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  typeContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 8,
+    justifyContent: 'space-between',
   },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 2,
-    borderColor: '#00B761',
-    borderRadius: 4,
-    marginRight: 12,
+  typeOption: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 12,
     alignItems: 'center',
+    marginHorizontal: 4,
+    flexDirection: 'row',
     justifyContent: 'center',
   },
-  defaultText: {
+  typeText: {
     fontSize: 14,
-    color: '#333',
+    fontWeight: '500',
+    marginLeft: 8,
   },
-  footer: {
-    padding: 16,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  saveButton: {
-    backgroundColor: '#00B761',
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  detectedText: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 8,
   },
 });

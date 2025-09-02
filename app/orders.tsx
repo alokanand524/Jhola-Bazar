@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { useTheme } from '@/hooks/useTheme';
 
 interface OrderItem {
   id: string;
@@ -57,7 +59,46 @@ const mockOrders: Order[] = [
   }
 ];
 
+const OrderCardSkeleton = () => {
+  const { colors } = useTheme();
+  
+  return (
+    <View style={[styles.orderCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+      <View style={styles.orderHeader}>
+        <View>
+          <SkeletonLoader width={100} height={16} style={{ marginBottom: 4 }} />
+          <SkeletonLoader width={80} height={12} />
+        </View>
+        <SkeletonLoader width={70} height={24} borderRadius={12} />
+      </View>
+      
+      <View style={styles.itemsPreview}>
+        {[1, 2, 3].map((item) => (
+          <SkeletonLoader key={item} width={40} height={40} borderRadius={8} style={{ marginRight: 8 }} />
+        ))}
+      </View>
+      
+      <View style={styles.orderFooter}>
+        <SkeletonLoader width={60} height={14} />
+        <SkeletonLoader width={50} height={16} />
+      </View>
+      
+      <View style={styles.addressContainer}>
+        <SkeletonLoader width={16} height={16} style={{ marginRight: 4 }} />
+        <SkeletonLoader width={120} height={12} />
+      </View>
+    </View>
+  );
+};
+
 export default function OrdersScreen() {
+  const { colors } = useTheme();
+  const [isLoading, setIsLoading] = React.useState(true);
+  
+  React.useEffect(() => {
+    setTimeout(() => setIsLoading(false), 400);
+  }, []);
+  
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'delivered': return '#00B761';
@@ -109,13 +150,29 @@ export default function OrdersScreen() {
     </TouchableOpacity>
   );
 
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <SkeletonLoader width={24} height={24} />
+          <SkeletonLoader width={100} height={18} style={{ marginLeft: 16 }} />
+        </View>
+        <View style={styles.ordersList}>
+          {[1, 2, 3].map((item) => (
+            <OrderCardSkeleton key={item} />
+          ))}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Orders</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>My Orders</Text>
       </View>
 
       <FlatList
@@ -132,7 +189,6 @@ export default function OrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -151,12 +207,10 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   orderCard: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
   },
   orderHeader: {
     flexDirection: 'row',

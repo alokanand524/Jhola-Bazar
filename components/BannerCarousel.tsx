@@ -16,7 +16,7 @@ export const BannerCarousel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setTimeout(() => setIsLoading(false), 1000);
+    setTimeout(() => setIsLoading(false), 300);
     
     const interval = setInterval(() => {
       currentIndex.current = (currentIndex.current + 1) % banners.length;
