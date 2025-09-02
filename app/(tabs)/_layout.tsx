@@ -20,11 +20,12 @@ export const hideTabBar = () => {
     duration: 200,
     useNativeDriver: true,
   }).start();
-  
+
+  // Bottom navigation bar
   scrollTimeout = setTimeout(() => {
     Animated.timing(tabBarTranslateY, {
       toValue: 0,
-      duration: 300,
+      duration: 150,
       useNativeDriver: true,
     }).start();
   }, 300);
@@ -51,6 +52,8 @@ export default function TabLayout() {
           transform: [{ translateY: tabBarTranslateY }],
         },
       }}>
+
+        {/* Home Tab - Bottom Navigation Bar List */}
       <Tabs.Screen
         name="index"
         options={{
@@ -79,6 +82,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />,
         }}
       />
+      {/* <Tabs.Screen
+        name="Chat"
+        options={{
+          title: 'Chat',
+          tabBarIcon: ({ color, size }) => <Ionicons name="chatbubbles" size={size} color={color} />,
+        }}
+      /> */}
     </Tabs>
   );
 }

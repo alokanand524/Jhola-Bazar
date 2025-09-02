@@ -11,6 +11,7 @@ import * as Location from 'expo-location';
 import { useTheme } from '@/hooks/useTheme';
 import { fetchCategories } from '@/store/slices/categoriesSlice';
 import { setProducts } from '@/store/slices/productsSlice';
+import { fetchDeliveryTime } from '@/store/slices/deliverySlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -25,6 +26,7 @@ export default function HomeScreen() {
   const { products, selectedCategory, loading: productsLoading } = useSelector((state: RootState) => state.products);
   const { categories, loading: categoriesLoading } = useSelector((state: RootState) => state.categories);
   const { items } = useSelector((state: RootState) => state.cart);
+  const { deliveryTime } = useSelector((state: RootState) => state.delivery);
   const { colors } = useTheme();
   const { location, loading: locationLoading, error: locationError } = useLocation();
   const [isInitialLoading, setIsInitialLoading] = React.useState(true);
@@ -37,6 +39,15 @@ export default function HomeScreen() {
     setTimeout(() => setIsInitialLoading(false), 500);
     getCurrentLocation();
   }, [dispatch]);
+
+  useEffect(() => {
+    if (location?.latitude && location?.longitude) {
+      dispatch(fetchDeliveryTime({
+        latitude: location.latitude.toString(),
+        longitude: location.longitude.toString()
+      }));
+    }
+  }, [location, dispatch]);
 
   const getCurrentLocation = async () => {
     try {
@@ -89,7 +100,7 @@ export default function HomeScreen() {
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.locationContainer}>
           <Ionicons name="location" size={20} color={colors.primary} />
-          <Text style={styles.locationText}>Deliver in 10 mins</Text>
+          <Text style={styles.locationText}>Deliver in {deliveryTime}</Text>
           {locationLoading ? (
             <View style={{ marginTop: 2 }}>
               <SkeletonLoader width="70%" height={12} />

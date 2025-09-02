@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { deliveryAPI } from '@/services/api';
 
 interface LocationData {
   latitude: number;
   longitude: number;
   address: string;
+  deliveryTime?: string;
 }
 
 export const useLocation = () => {
@@ -33,6 +35,19 @@ export const useLocation = () => {
     }
   };
 
+  const getDeliveryTime = async (latitude: number, longitude: number) => {
+    try {
+      const response = await deliveryAPI.getStoreDeliveryTime(
+        latitude.toString(),
+        longitude.toString()
+      );
+      return response.deliveryTime || '10 mins';
+    } catch (error) {
+      console.error('Failed to get delivery time:', error);
+      return '10 mins';
+    }
+  };
+
   const getCurrentLocation = async () => {
     try {
       setLoading(true);
@@ -54,10 +69,13 @@ export const useLocation = () => {
 
       const address = `${addressResult.name || ''}, ${addressResult.city || ''}, ${addressResult.region || ''}`.trim();
 
+      const deliveryTime = await getDeliveryTime(latitude, longitude);
+      
       const locationData: LocationData = {
         latitude,
         longitude,
         address,
+        deliveryTime,
       };
 
       setLocation(locationData);

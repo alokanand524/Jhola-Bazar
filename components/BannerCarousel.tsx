@@ -4,6 +4,7 @@ import { SkeletonLoader } from './SkeletonLoader';
 
 const { width } = Dimensions.get('window');
 
+// banner images - Carousel
 const banners = [
   'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=200&fit=crop',
   'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=200&fit=crop',

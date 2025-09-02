@@ -4,6 +4,7 @@ import productsReducer from './slices/productsSlice';
 import userReducer from './slices/userSlice';
 import uiReducer from './slices/uiSlice';
 import categoriesReducer from './slices/categoriesSlice';
+import deliveryReducer from './slices/deliverySlice';
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     user: userReducer,
     ui: uiReducer,
     categories: categoriesReducer,
+    delivery: deliveryReducer,
   },
 });
 
