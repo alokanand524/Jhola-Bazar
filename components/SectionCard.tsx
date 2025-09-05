@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { ImageWithLoading } from '@/components/ImageWithLoading';
 
@@ -20,30 +20,35 @@ export const SectionCard: React.FC<SectionCardProps> = ({ title, image, category
   };
 
   return (
-    <TouchableOpacity style={[styles.card, { backgroundColor: colors.lightGray, borderColor: colors.primary }]} onPress={handlePress}>
-      <ImageWithLoading 
-        source={{ uri: image }} 
-        width={50} 
-        height={50} 
-        borderRadius={25}
-      />
-      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+    <TouchableOpacity style={styles.container} onPress={handlePress}>
+      <View style={[styles.imageContainer, { backgroundColor: colors.lightGray }]}>
+        <ImageWithLoading 
+          source={{ uri: image }} 
+          width={60} 
+          height={60} 
+          borderRadius={0}
+        />
+      </View>
+      <Text style={[styles.title, { color: colors.text }]} numberOfLines={2} ellipsizeMode="tail">{title}</Text>
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 12,
-    padding: 12,
+  container: {
     alignItems: 'center',
-    width: 100,
-    marginRight: 12,
+    width: '100%',
   },
-
+  imageContainer: {
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
   title: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
     textAlign: 'center',
+    lineHeight: 14,
+    paddingHorizontal: 2,
   },
 });

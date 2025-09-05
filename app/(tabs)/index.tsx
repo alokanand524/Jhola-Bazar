@@ -7,13 +7,13 @@ import { BannerSkeleton, ProductCardSkeleton, SectionHeaderSkeleton, SkeletonLoa
 import { mockProducts } from '@/data/products';
 import { featuredThisWeek } from '@/data/sections';
 import { useLocation } from '@/hooks/useLocation';
-import * as Location from 'expo-location';
 import { useTheme } from '@/hooks/useTheme';
 import { fetchCategories } from '@/store/slices/categoriesSlice';
-import { setProducts } from '@/store/slices/productsSlice';
 import { fetchDeliveryTime } from '@/store/slices/deliverySlice';
+import { setProducts } from '@/store/slices/productsSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -100,7 +100,7 @@ export default function HomeScreen() {
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.locationContainer}>
           <Ionicons name="location" size={20} color={colors.primary} />
-          <Text style={styles.locationText}>Deliver in {deliveryTime}</Text>
+          <Text style={styles.locationText}>Delivered to</Text>
           {locationLoading ? (
             <View style={{ marginTop: 2 }}>
               <SkeletonLoader width="70%" height={12} />
@@ -108,9 +108,11 @@ export default function HomeScreen() {
           ) : locationError ? (
             <Text style={[styles.addressText, { color: colors.gray }]}>Location unavailable</Text>
           ) : (
-            <Text style={[styles.addressText, { color: colors.gray }]}>
-              {location?.address || userLocation || 'Location not found'}
-            </Text>
+            <TouchableOpacity onPress={() => router.push('/select-address')}>
+              <Text style={[styles.addressText, { color: colors.text, fontWeight: 'bold' }]}>
+                {location?.address || userLocation || 'Select Location'}
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
         <TouchableOpacity
@@ -156,44 +158,28 @@ export default function HomeScreen() {
           )}
         </ScrollView>
 
-        {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Grocery & Kitchen" categoryName="Categories" />}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
+        {isInitialLoading ? <SectionHeaderSkeleton /> : (
+          <View style={styles.categoryHeader}>
+            <Text style={[styles.categoryTitle, { color: colors.text }]}>Shop by category</Text>
+          </View>
+        )}
+        <View style={styles.categoriesContainer}>
           {isInitialLoading || categoriesLoading ? (
-            [1, 2, 3, 4, 5, 6].map((item) => (
-              <SectionCardSkeleton key={item} />
-            ))
+            <View style={styles.categoriesGrid}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((item) => (
+                <SectionCardSkeleton key={item} />
+              ))}
+            </View>
           ) : (
-            categories.slice(0, 6).map((category) => (
-              <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
-            ))
+            <View style={styles.categoriesGrid}>
+              {categories.map((category) => (
+                <View key={category.id} style={styles.categoryItem}>
+                  <SectionCard title={category.name} image={category.image} category={category.name} />
+                </View>
+              ))}
+            </View>
           )}
-        </ScrollView>
-
-        {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Beverages & Snacks" categoryName="Categories" />}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {isInitialLoading || categoriesLoading ? (
-            [1, 2, 3, 4, 5, 6].map((item) => (
-              <SectionCardSkeleton key={item} />
-            ))
-          ) : (
-            categories.slice(6, 12).map((category) => (
-              <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
-            ))
-          )}
-        </ScrollView>
-
-        {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Personal Care" categoryName="Categories" />}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sectionScroll}>
-          {isInitialLoading || categoriesLoading ? (
-            [1, 2, 3, 4, 5, 6].map((item) => (
-              <SectionCardSkeleton key={item} />
-            ))
-          ) : (
-            categories.slice(12, 18).map((category) => (
-              <SectionCard key={category.id} title={category.name} image={category.image} category={category.name} />
-            ))
-          )}
-        </ScrollView>
+        </View>
 
         <View style={styles.productsContainer}>
           {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Popular Products" categoryName="Vegetables" />}
@@ -309,5 +295,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
+  },
+  categoryHeader: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  categoryTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  categoriesContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  categoryItem: {
+    width: '23%',
+    marginBottom: 12,
   },
 });
