@@ -1,5 +1,5 @@
 import { useTheme } from '@/hooks/useTheme';
-import { addressAPI } from '@/services/api';
+import { addressService, Pincode } from '@/services/addressService';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
@@ -7,11 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-interface Pincode {
-  id: string;
-  pincode: string;
-  area: string;
-}
+
 
 export default function AddAddressScreen() {
   const { colors } = useTheme();
@@ -33,8 +29,8 @@ export default function AddAddressScreen() {
 
   const fetchPincodes = async () => {
     try {
-      const response = await addressAPI.getPincodes();
-      setPincodes(response.data || []);
+      const pincodeList = await addressService.getPincodes();
+      setPincodes(pincodeList);
     } catch (error) {
       console.error('Failed to fetch pincodes:', error);
     }
@@ -66,18 +62,30 @@ export default function AddAddressScreen() {
   };
 
   const handleSave = async () => {
-    if (!addressLine1.trim() || !selectedPincode) {
-      Alert.alert('Error', 'Please fill in all required fields');
+    if (!addressLine1.trim()) {
+      Alert.alert('Error', 'Please fill in address line 1');
+      return;
+    }
+
+    // Use detected pincode or find matching pincode
+    let pincodeId = selectedPincode;
+    if (!pincodeId && detectedPincode) {
+      const matchingPincode = pincodes.find(p => p.pincode === detectedPincode);
+      pincodeId = matchingPincode?.id || '';
+    }
+
+    if (!pincodeId) {
+      Alert.alert('Error', 'Please select a valid pincode');
       return;
     }
 
     setIsLoading(true);
     try {
-      await addressAPI.createAddress({
+      await addressService.createAddress({
         addressLine1: addressLine1.trim(),
         addressLine2: addressLine2.trim() || undefined,
         landmark: landmark.trim() || undefined,
-        pincodeId: selectedPincode,
+        pincodeId,
         type: selectedType,
       });
       
@@ -170,8 +178,8 @@ export default function AddAddressScreen() {
             {detectedPincode && (
               <Text style={[styles.detectedText, { color: colors.primary }]}>{detectedPincode}</Text>
             )}
-            {/* <View style={styles.pincodeContainer}>
-              {pincodes.map((pincode) => (
+            <View style={styles.pincodeContainer}>
+              {pincodes.slice(0, 5).map((pincode) => (
                 <TouchableOpacity
                   key={pincode.id}
                   style={[
@@ -186,11 +194,11 @@ export default function AddAddressScreen() {
                     { color: colors.text },
                     selectedPincode === pincode.id && { color: '#fff' }
                   ]}>
-                    {pincode.pincode} - {pincode.area}
+                    {pincode.pincode}
                   </Text>
                 </TouchableOpacity>
               ))}
-            </View> */}
+            </View>
           </View>
 
           <View style={styles.inputContainer}>

@@ -92,6 +92,67 @@ export const profileAPI = {
   },
 };
 
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  originalPrice?: number;
+  image: string;
+  images?: string[];
+  category: string;
+  description?: string;
+  unit?: string;
+  inStock?: boolean;
+  rating?: number;
+  deliveryTime?: string;
+  variants?: any[];
+}
+
+const transformProduct = (apiProduct: any): Product => {
+  const variant = apiProduct.variants?.[0];
+  const price = variant?.price;
+  
+  return {
+    id: apiProduct.id,
+    name: apiProduct.name,
+    price: price ? parseFloat(price.sellingPrice) : 0,
+    originalPrice: price ? parseFloat(price.basePrice) : undefined,
+    image: apiProduct.images?.[0] || '',
+    images: apiProduct.images || [],
+    category: apiProduct.category?.name || '',
+    description: apiProduct.description || '',
+    unit: variant ? `${variant.weight} ${variant.baseUnit}` : '',
+    inStock: variant?.stock?.status === 'AVAILABLE',
+    rating: 4.5,
+    deliveryTime: '10 mins',
+    variants: apiProduct.variants
+  };
+};
+
+export const productAPI = {
+  getAllProducts: async (): Promise<Product[]> => {
+    const response = await fetch(`${API_BASE_URL}/products`);
+    if (!response.ok) throw new Error('Failed to fetch products');
+    const data = await response.json();
+    return (data.data.products || []).map(transformProduct);
+  },
+
+  getProductsByCategory: async (categoryId: string): Promise<Product[]> => {
+    const url = categoryId ? `${API_BASE_URL}/products?categoryId=${categoryId}` : `${API_BASE_URL}/products`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch products');
+    const data = await response.json();
+    return (data.data.products || []).map(transformProduct);
+  },
+
+  getProductById: async (productId: string): Promise<Product> => {
+    const response = await fetch(`${API_BASE_URL}/products/${productId}`);
+    if (!response.ok) throw new Error('Failed to fetch product');
+    const data = await response.json();
+    return transformProduct(data.data.product);
+  },
+};
+
 export const addressAPI = {
   getAddresses: async () => {
     const response = await fetch(`${API_BASE_URL}/profile/addresses`);

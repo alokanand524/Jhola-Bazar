@@ -3,7 +3,7 @@ import { categoryImages } from '@/data/categoryImages';
 import { useTheme } from '@/hooks/useTheme';
 import { ProductCardSkeleton, SkeletonLoader } from '@/components/SkeletonLoader';
 import { RootState } from '@/store/store';
-import { categoryAPI } from '@/services/api';
+import { categoryAPI, productAPI, Product } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState, useEffect } from 'react';
@@ -39,47 +39,91 @@ export default function CategoryScreen() {
   const [subCategoriesData, setSubCategoriesData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
 
-  // Fetch subcategories when category changes
+  // Fetch subcategories and products when category changes
   useEffect(() => {
-    const fetchSubCategories = async () => {
+    const fetchCategoryData = async () => {
       setIsLoading(true);
+      setIsLoadingProducts(true);
       try {
         // Find the category by name
         const category = categories.find(cat => cat.name === categoryName);
         if (category) {
+          // Fetch subcategories
           const categoryData = await categoryAPI.getCategoryById(category.id);
           const subCats = ['All', ...categoryData.children.map(child => child.name)];
           setSubCategories(subCats);
           setSubCategoriesData([{ id: 'all', name: 'All', image: category.image }, ...categoryData.children]);
+          
+          // Fetch products for this category
+          let products: Product[];
+          if (selectedSubCategory === 'All') {
+            products = await productAPI.getProductsByCategory(category.id);
+          } else {
+            // For specific subcategory, find the subcategory ID
+            const subCategory = categoryData.children.find(child => child.name === selectedSubCategory);
+            if (subCategory) {
+              products = await productAPI.getProductsByCategory(subCategory.id);
+            } else {
+              products = await productAPI.getProductsByCategory(category.id);
+            }
+          }
+          setCategoryProducts(products);
         } else {
           // Fallback to static data if category not found
           setSubCategories(categoryData[categoryName] || ['All']);
           setSubCategoriesData([]);
+          setCategoryProducts([]);
         }
       } catch (error) {
-        console.error('Error fetching subcategories:', error);
+        console.error('Error fetching category data:', error);
         setSubCategories(categoryData[categoryName] || ['All']);
         setSubCategoriesData([]);
+        setCategoryProducts([]);
       } finally {
-        setTimeout(() => setIsLoading(false), 300);
+        setTimeout(() => {
+          setIsLoading(false);
+          setIsLoadingProducts(false);
+        }, 300);
       }
     };
 
     if (categoryName && categories.length > 0) {
-      fetchSubCategories();
+      fetchCategoryData();
     }
-  }, [categoryName, categories]);
+  }, [categoryName, categories, selectedSubCategory]);
 
-  useEffect(() => {
+  // Handle subcategory change
+  const handleSubCategoryChange = async (subCategoryName: string) => {
+    setSelectedSubCategory(subCategoryName);
     setIsLoadingProducts(true);
-    setTimeout(() => setIsLoadingProducts(false), 400);
-  }, [selectedSubCategory]);
+    
+    try {
+      const category = categories.find(cat => cat.name === categoryName);
+      if (category) {
+        let products: Product[];
+        if (subCategoryName === 'All') {
+          products = await productAPI.getProductsByCategory(category.id);
+        } else {
+          const categoryData = await categoryAPI.getCategoryById(category.id);
+          const subCategory = categoryData.children.find(child => child.name === subCategoryName);
+          if (subCategory) {
+            products = await productAPI.getProductsByCategory(subCategory.id);
+          } else {
+            products = await productAPI.getProductsByCategory(category.id);
+          }
+        }
+        setCategoryProducts(products);
+      }
+    } catch (error) {
+      console.error('Error fetching subcategory products:', error);
+    } finally {
+      setTimeout(() => setIsLoadingProducts(false), 300);
+    }
+  };
 
-  const filteredProducts = products.filter(product => {
-    if (categoryName === 'Favourites') return true;
-    return product.category === categoryName;
-  });
+  const filteredProducts = categoryProducts;
 
   const { items } = useSelector((state: RootState) => state.cart);
   const cartItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -208,7 +252,7 @@ export default function CategoryScreen() {
                     { borderBottomColor: colors.border },
                     selectedSubCategory === subCat.name && { backgroundColor: colors.background, borderRightColor: colors.primary }
                   ]}
-                  onPress={() => setSelectedSubCategory(subCat.name)}
+                  onPress={() => handleSubCategoryChange(subCat.name)}
                 >
                   <ImageWithLoading
                     source={{ uri: subCat.image }}

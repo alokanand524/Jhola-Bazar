@@ -5,16 +5,9 @@ import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useTheme } from '@/hooks/useTheme';
-import { addressAPI } from '@/services/api';
+import { addressService, Address } from '@/services/addressService';
 
-interface Address {
-  id: string;
-  type: 'home' | 'office' | 'other';
-  addressLine1: string;
-  addressLine2?: string;
-  landmark?: string;
-  isDefault?: boolean;
-}
+
 
 const AddressCardSkeleton = () => {
   const { colors } = useTheme();
@@ -46,8 +39,8 @@ export default function AddressesScreen() {
   
   const fetchAddresses = async () => {
     try {
-      const response = await addressAPI.getAddresses();
-      setAddresses(response.data || []);
+      const addressList = await addressService.getAddresses();
+      setAddresses(addressList);
     } catch (error) {
       console.error('Failed to fetch addresses:', error);
     } finally {
@@ -70,7 +63,7 @@ export default function AddressesScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await addressAPI.deleteAddress(id);
+              await addressService.deleteAddress(id);
               setAddresses(addresses.filter(addr => addr.id !== id));
               Alert.alert('Success', 'Address deleted successfully');
             } catch (error) {

@@ -1,6 +1,7 @@
 import { useTheme } from '@/hooks/useTheme';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { addToCart, updateQuantity } from '@/store/slices/cartSlice';
+import { fetchProductById } from '@/store/slices/productsSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -14,21 +15,19 @@ export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
   const dispatch = useDispatch();
   const { colors } = useTheme();
-  const [isLoading, setIsLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    setTimeout(() => setIsLoading(false), 400);
-  }, []);
   
-  const product = useSelector((state: RootState) => 
-    state.products.products.find(p => p.id === id)
-  );
-  
+  const { selectedProduct, productLoading } = useSelector((state: RootState) => state.products);
   const cartItem = useSelector((state: RootState) => 
     state.cart.items.find(item => item.id === id)
   );
 
-  if (isLoading) {
+  React.useEffect(() => {
+    if (id && typeof id === 'string') {
+      dispatch(fetchProductById(id));
+    }
+  }, [dispatch, id]);
+
+  if (productLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -52,7 +51,7 @@ export default function ProductDetailScreen() {
     );
   }
 
-  if (!product) {
+  if (!selectedProduct) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -68,16 +67,16 @@ export default function ProductDetailScreen() {
 
   const handleAddToCart = () => {
     dispatch(addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      category: product.category,
+      id: selectedProduct.id,
+      name: selectedProduct.name,
+      price: selectedProduct.price,
+      image: selectedProduct.image,
+      category: selectedProduct.category,
     }));
   };
 
   const handleUpdateQuantity = (quantity: number) => {
-    dispatch(updateQuantity({ id: product.id, quantity }));
+    dispatch(updateQuantity({ id: selectedProduct.id, quantity }));
   };
 
   return (
@@ -93,31 +92,31 @@ export default function ProductDetailScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        <ImageWithLoading source={{ uri: product.image }} height={300} style={styles.productImage} />
+        <ImageWithLoading source={{ uri: selectedProduct.image }} height={300} style={styles.productImage} />
         
         <View style={styles.productInfo}>
           <View style={[styles.categoryBadge, { backgroundColor: colors.primary }]}>
-            <Text style={styles.categoryText}>{product.category}</Text>
+            <Text style={styles.categoryText}>{selectedProduct.category}</Text>
           </View>
           
-          <Text style={[styles.productName, { color: colors.text }]}>{product.name}</Text>
-          <Text style={[styles.productUnit, { color: colors.gray }]}>{product.unit}</Text>
+          <Text style={[styles.productName, { color: colors.text }]}>{selectedProduct.name}</Text>
+          <Text style={[styles.productUnit, { color: colors.gray }]}>{selectedProduct.unit}</Text>
           
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={16} color="#FFD700" />
-            <Text style={[styles.rating, { color: colors.text }]}>{product.rating}</Text>
+            <Text style={[styles.rating, { color: colors.text }]}>{selectedProduct.rating}</Text>
             <Text style={[styles.deliveryTime, { color: colors.gray }]}>• 10 mins</Text>
           </View>
           
           <View style={styles.priceContainer}>
-            <Text style={[styles.price, { color: colors.text }]}>₹{product.price}</Text>
-            {product.originalPrice && (
-              <Text style={styles.originalPrice}>₹{product.originalPrice}</Text>
+            <Text style={[styles.price, { color: colors.text }]}>₹{selectedProduct.price}</Text>
+            {selectedProduct.originalPrice && (
+              <Text style={styles.originalPrice}>₹{selectedProduct.originalPrice}</Text>
             )}
-            {product.originalPrice && (
+            {selectedProduct.originalPrice && (
               <View style={styles.discountBadge}>
                 <Text style={styles.discountText}>
-                  {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+                  {Math.round(((selectedProduct.originalPrice - selectedProduct.price) / selectedProduct.originalPrice) * 100)}% OFF
                 </Text>
               </View>
             )}
@@ -125,7 +124,7 @@ export default function ProductDetailScreen() {
           
           <View style={styles.descriptionContainer}>
             <Text style={[styles.descriptionTitle, { color: colors.text }]}>Description</Text>
-            <Text style={[styles.description, { color: colors.gray }]}>{product.description}</Text>
+            <Text style={[styles.description, { color: colors.gray }]}>{selectedProduct.description}</Text>
           </View>
           
           {/* Weight Selection */}
@@ -164,8 +163,8 @@ export default function ProductDetailScreen() {
 
       <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
         <View style={styles.priceInfo}>
-          <Text style={[styles.footerPrice, { color: colors.text }]}>₹{product.price}</Text>
-          <Text style={[styles.footerUnit, { color: colors.gray }]}>{product.unit}</Text>
+          <Text style={[styles.footerPrice, { color: colors.text }]}>₹{selectedProduct.price}</Text>
+          <Text style={[styles.footerUnit, { color: colors.gray }]}>{selectedProduct.unit}</Text>
         </View>
         
         {cartItem ? (

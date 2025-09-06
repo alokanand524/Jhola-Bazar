@@ -181,10 +181,10 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: 12,
     marginBottom: 16,
-    flex: 1,
+    width: '48%',
     borderWidth: 1,
     overflow: 'hidden',
-    marginHorizontal: 4,
+    marginHorizontal: '1%',
   },
   imageContainer: {
     position: 'relative',
