@@ -2,8 +2,9 @@ import { setUser } from '@/store/slices/userSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Alert, Clipboard, Linking, Share, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, Modal } from 'react-native';
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '@/hooks/useTheme';
@@ -20,11 +21,48 @@ export default function EditProfileScreen() {
   const [gender, setGender] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [day, setDay] = useState('');
-  const [month, setMonth] = useState('');
-  const [year, setYear] = useState('');
-  const [referralCode] = useState(`JB${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedDay, setSelectedDay] = useState(new Date().getDate());
+  const [referralCode, setReferralCode] = useState(`JB${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
+  const [loading, setLoading] = useState(true);
   const referralLink = `https://jhola-bazar.app/ref/${referralCode}`;
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/profile');
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        const profile = data.data;
+        setFirstName(profile.firstName || '');
+        setLastName(profile.lastName || '');
+        setEmail(profile.email || '');
+        setGender(profile.gender || '');
+        if (profile.dateOfBirth) {
+          // Extract only the date part from ISO string (YYYY-MM-DD)
+          const dateOnly = profile.dateOfBirth.split('T')[0];
+          setDateOfBirth(dateOnly);
+          const date = new Date(dateOnly);
+          setSelectedYear(date.getFullYear());
+          setSelectedMonth(date.getMonth() + 1);
+          setSelectedDay(date.getDate());
+        }
+        if (profile.referralCode) {
+          setReferralCode(profile.referralCode);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -88,6 +126,12 @@ export default function EditProfileScreen() {
       </View>
 
       <ScrollView style={styles.content}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={[styles.loadingText, { color: colors.gray }]}>Loading profile...</Text>
+          </View>
+        ) : (
+          <>
         <View style={[styles.section, { backgroundColor: colors.lightGray }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Personal Information</Text>
           
@@ -185,7 +229,7 @@ export default function EditProfileScreen() {
               onPress={() => setShowDatePicker(true)}
             >
               <Text style={[{ color: dateOfBirth ? colors.text : colors.gray }]}>
-                {dateOfBirth || 'Select Date of Birth (YYYY-MM-DD)'}
+                {dateOfBirth || 'Select Date of Birth'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -264,6 +308,8 @@ export default function EditProfileScreen() {
             </TouchableOpacity>
           </View>
         </View>
+          </>
+        )}
       </ScrollView>
 
       <Modal visible={showDatePicker} transparent animationType="slide">
@@ -275,75 +321,79 @@ export default function EditProfileScreen() {
               </TouchableOpacity>
               <Text style={[styles.datePickerTitle, { color: colors.text }]}>Select Date of Birth</Text>
               <TouchableOpacity onPress={() => {
-                if (day && month && year) {
-                  const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                  setDateOfBirth(formattedDate);
-                  setShowDatePicker(false);
-                } else {
-                  Alert.alert('Error', 'Please select day, month and year');
-                }
+                const formattedDate = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-${selectedDay.toString().padStart(2, '0')}`;
+                setDateOfBirth(formattedDate);
+                setShowDatePicker(false);
               }}>
                 <Text style={[styles.datePickerButton, { color: colors.primary }]}>Done</Text>
               </TouchableOpacity>
             </View>
-            
-            <View style={styles.dateInputContainer}>
-              <View style={styles.dateInputGroup}>
-                <Text style={[styles.dateLabel, { color: colors.text }]}>Day</Text>
-                <TextInput
-                  style={[styles.dateInput, { backgroundColor: colors.lightGray, color: colors.text }]}
-                  value={day}
-                  onChangeText={(text) => {
-                    if (text.length <= 2 && /^\d*$/.test(text)) {
-                      const num = parseInt(text);
-                      if (text === '' || (num >= 1 && num <= 31)) {
-                        setDay(text);
-                      }
-                    }
-                  }}
-                  placeholder="DD"
-                  keyboardType="numeric"
-                  maxLength={2}
-                />
+            <View style={styles.pickersContainer}>
+              <View style={styles.pickerWrapper}>
+                <Text style={[styles.pickerLabel, { color: colors.text }]}>Year</Text>
+                <ScrollView style={styles.scrollPicker} showsVerticalScrollIndicator={false}>
+                  {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                    <TouchableOpacity
+                      key={year}
+                      style={[
+                        styles.pickerItem,
+                        { backgroundColor: selectedYear === year ? colors.primary : 'transparent' }
+                      ]}
+                      onPress={() => setSelectedYear(year)}
+                    >
+                      <Text style={[
+                        styles.pickerItemText,
+                        { color: selectedYear === year ? '#fff' : colors.text }
+                      ]}>
+                        {year}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
-              
-              <View style={styles.dateInputGroup}>
-                <Text style={[styles.dateLabel, { color: colors.text }]}>Month</Text>
-                <TextInput
-                  style={[styles.dateInput, { backgroundColor: colors.lightGray, color: colors.text }]}
-                  value={month}
-                  onChangeText={(text) => {
-                    if (text.length <= 2 && /^\d*$/.test(text)) {
-                      const num = parseInt(text);
-                      if (text === '' || (num >= 1 && num <= 12)) {
-                        setMonth(text);
-                      }
-                    }
-                  }}
-                  placeholder="MM"
-                  keyboardType="numeric"
-                  maxLength={2}
-                />
+              <View style={styles.pickerWrapper}>
+                <Text style={[styles.pickerLabel, { color: colors.text }]}>Month</Text>
+                <ScrollView style={styles.scrollPicker} showsVerticalScrollIndicator={false}>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                    <TouchableOpacity
+                      key={month}
+                      style={[
+                        styles.pickerItem,
+                        { backgroundColor: selectedMonth === month ? colors.primary : 'transparent' }
+                      ]}
+                      onPress={() => setSelectedMonth(month)}
+                    >
+                      <Text style={[
+                        styles.pickerItemText,
+                        { color: selectedMonth === month ? '#fff' : colors.text }
+                      ]}>
+                        {month}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
-              
-              <View style={styles.dateInputGroup}>
-                <Text style={[styles.dateLabel, { color: colors.text }]}>Year</Text>
-                <TextInput
-                  style={[styles.dateInput, { backgroundColor: colors.lightGray, color: colors.text }]}
-                  value={year}
-                  onChangeText={(text) => {
-                    if (text.length <= 4 && /^\d*$/.test(text)) {
-                      const num = parseInt(text);
-                      const currentYear = new Date().getFullYear();
-                      if (text === '' || (num >= 1900 && num <= currentYear)) {
-                        setYear(text);
-                      }
-                    }
-                  }}
-                  placeholder="YYYY"
-                  keyboardType="numeric"
-                  maxLength={4}
-                />
+              <View style={styles.pickerWrapper}>
+                <Text style={[styles.pickerLabel, { color: colors.text }]}>Day</Text>
+                <ScrollView style={styles.scrollPicker} showsVerticalScrollIndicator={false}>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                    <TouchableOpacity
+                      key={day}
+                      style={[
+                        styles.pickerItem,
+                        { backgroundColor: selectedDay === day ? colors.primary : 'transparent' }
+                      ]}
+                      onPress={() => setSelectedDay(day)}
+                    >
+                      <Text style={[
+                        styles.pickerItemText,
+                        { color: selectedDay === day ? '#fff' : colors.text }
+                      ]}>
+                        {day}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
             </View>
           </View>
@@ -480,6 +530,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  loadingText: {
+    fontSize: 16,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -508,24 +568,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  dateInputContainer: {
+  pickersContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
-  dateInputGroup: {
-    alignItems: 'center',
+  pickerWrapper: {
+    flex: 1,
+    marginHorizontal: 5,
   },
-  dateLabel: {
+  pickerLabel: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 8,
-  },
-  dateInput: {
-    width: 60,
-    height: 40,
-    borderRadius: 8,
+    marginBottom: 5,
     textAlign: 'center',
+  },
+  scrollPicker: {
+    height: 150,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+  },
+  pickerItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    borderRadius: 4,
+    marginVertical: 1,
+  },
+  pickerItemText: {
     fontSize: 16,
     fontWeight: '500',
   },
