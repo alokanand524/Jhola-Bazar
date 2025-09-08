@@ -26,12 +26,53 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   // Check if product has multiple size options
   const hasMultipleSizes = product.category === 'Vegetables' || product.category === 'Fruits';
 
-  const handleAddToCart = (selectedSize?: string) => {
+  const addToCartAPI = async (variantId: string, quantity: number) => {
+    try {
+      console.log('Adding to cart:', { variantId, quantity });
+      
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/cart/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          variantId,
+          quantity: quantity.toString()
+        })
+      });
+      
+      console.log('Response status:', response.status);
+      const responseText = await response.text();
+      console.log('Response body:', responseText);
+      
+      if (response.ok) {
+        console.log('Item added to cart successfully');
+        return true;
+      } else {
+        console.error('Failed to add item to cart. Status:', response.status, 'Body:', responseText);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      return false;
+    }
+  };
+
+  const handleAddToCart = async (selectedSize?: string) => {
     if (hasMultipleSizes && !cartItem && !selectedSize) {
       setShowSizeModal(true);
       return;
     }
     
+    // Get variantId from product (assuming it's in variants array)
+    const variantId = product.variants?.[0]?.id || product.id;
+    const quantity = cartItem ? cartItem.quantity + 1 : 1;
+    
+    // Try API first, fallback to local cart
+    const success = await addToCartAPI(variantId, quantity);
+    
+    // Update local state (for now, always update for better UX)
+    // TODO: Only update when API succeeds once API is working
     dispatch(addToCart({
       id: product.id,
       name: product.name,
@@ -45,7 +86,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }
   };
 
-  const handleUpdateQuantity = (quantity: number) => {
+  const handleUpdateQuantity = async (quantity: number) => {
+    if (quantity > 0) {
+      const variantId = product.variants?.[0]?.id || product.id;
+      await addToCartAPI(variantId, quantity);
+    }
+    // Always update local state for better UX
     dispatch(updateQuantity({ id: product.id, quantity }));
   };
 

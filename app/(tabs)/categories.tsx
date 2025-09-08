@@ -69,9 +69,8 @@ export default function CategoriesScreen() {
         scrollEventThrottle={16}
       >
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>All Categories</Text>
           <FlatList
-            data={[{ id: 'all', name: 'All', image: '' }, ...categories]}
+            data={categories}
             renderItem={({ item }) => (
               <CategoryCard
                 category={item.name}

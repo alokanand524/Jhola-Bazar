@@ -20,6 +20,7 @@ import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { handleTabBarScroll } from './_layout';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen() {
   const dispatch = useDispatch();
@@ -31,11 +32,70 @@ export default function HomeScreen() {
   const { location, loading: locationLoading, error: locationError } = useLocation();
   const [isInitialLoading, setIsInitialLoading] = React.useState(true);
   const [userLocation, setUserLocation] = React.useState<string | null>(null);
+  const [apiProducts, setApiProducts] = React.useState([]);
+  const [apiLoading, setApiLoading] = React.useState(true);
 
+
+  const fetchApiProducts = async () => {
+    try {
+      setApiLoading(true);
+      
+      // Check cache first
+      const cached = await AsyncStorage.getItem('products_cache');
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < 30 * 60 * 1000) { // 30 minutes
+          setApiProducts(data.slice(0, 6));
+          setApiLoading(false);
+          return;
+        }
+      }
+      
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/products');
+      const result = await response.json();
+      
+      const rawProducts = result.data?.products || [];
+      const transformedProducts = rawProducts.map(product => ({
+        id: product.id,
+        name: product.name,
+        image: product.images?.[0] || '',
+        price: product.variants?.[0]?.price?.sellingPrice || '0',
+        originalPrice: product.variants?.[0]?.price?.basePrice || '0',
+        category: product.category?.name || 'General',
+        description: product.description || product.shortDescription || '',
+        unit: `${product.variants?.[0]?.weight || '1'} ${product.variants?.[0]?.baseUnit || 'unit'}`,
+        inStock: product.variants?.[0]?.stock?.status === 'AVAILABLE',
+        rating: 4.5,
+        deliveryTime: '10 mins',
+        variants: product.variants
+      }));
+      
+      // Cache the result
+      await AsyncStorage.setItem('products_cache', JSON.stringify({
+        data: transformedProducts,
+        timestamp: Date.now()
+      }));
+      
+      setApiProducts(transformedProducts.slice(0, 6));
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      // Try cached data on error
+      const cached = await AsyncStorage.getItem('products_cache');
+      if (cached) {
+        const { data } = JSON.parse(cached);
+        setApiProducts(data.slice(0, 6));
+      } else {
+        setApiProducts([]);
+      }
+    } finally {
+      setApiLoading(false);
+    }
+  };
 
   useEffect(() => {
     dispatch(setProducts([...mockProducts, ...featuredThisWeek]));
     dispatch(fetchCategories());
+    fetchApiProducts();
     setTimeout(() => setIsInitialLoading(false), 500);
     getCurrentLocation();
   }, [dispatch]);
@@ -183,20 +243,24 @@ export default function HomeScreen() {
 
         <View style={styles.productsContainer}>
           {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Popular Products" categoryName="Vegetables" />}
-          {isInitialLoading ? (
+          {isInitialLoading || apiLoading ? (
             <View style={styles.row}>
               <ProductCardSkeleton />
               <ProductCardSkeleton />
             </View>
-          ) : (
+          ) : apiProducts.length > 0 ? (
             <FlatList
-              data={filteredProducts}
+              data={apiProducts}
               renderItem={({ item }) => <ProductCard product={item} />}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item, index) => item.id || item._id || `product-${index}`}
               numColumns={2}
               scrollEnabled={false}
               columnWrapperStyle={styles.row}
             />
+          ) : (
+            <View style={styles.noProductsContainer}>
+              <Text style={[styles.noProductsText, { color: colors.gray }]}>No products available</Text>
+            </View>
           )}
         </View>
       </ScrollView>
@@ -272,12 +336,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   productScroll: {
-    paddingLeft: 16,
+    paddingLeft: 8,
     marginBottom: 20,
   },
   featuredCard: {
-    width: 160,
-    marginRight: 12,
+    width: 300,
+    marginRight: -140,
   },
 
   productsContainer: {
@@ -316,5 +380,13 @@ const styles = StyleSheet.create({
   categoryItem: {
     width: '23%',
     marginBottom: 12,
+  },
+  noProductsContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noProductsText: {
+    fontSize: 16,
+    textAlign: 'center',
   },
 });
