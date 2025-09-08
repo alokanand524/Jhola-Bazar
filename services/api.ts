@@ -64,13 +64,42 @@ export const authAPI = {
 
 export const profileAPI = {
   getProfile: async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/profile`, {
-        signal: controller.signal
-      });
+      let token = await AsyncStorage.getItem('authToken');
+      
+      if (!token) {
+        throw new Error('No auth token found');
+      }
+      
+      const makeRequest = async (authToken: string) => {
+        return fetch(`${API_BASE_URL}/profile`, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          },
+          signal: controller.signal
+        });
+      };
+      
+      let response = await makeRequest(token);
+      
+      // If token expired, try to refresh
+      if (response.status === 401) {
+        const refreshToken = await AsyncStorage.getItem('refreshToken');
+        if (refreshToken) {
+          const refreshResponse = await authAPI.refreshToken(refreshToken);
+          await AsyncStorage.setItem('authToken', refreshResponse.accessToken);
+          await AsyncStorage.setItem('refreshToken', refreshResponse.refreshToken);
+          
+          token = refreshResponse.accessToken;
+          response = await makeRequest(token);
+        }
+      }
+      
       clearTimeout(timeoutId);
       
       if (!response.ok) throw new Error('Failed to fetch profile');

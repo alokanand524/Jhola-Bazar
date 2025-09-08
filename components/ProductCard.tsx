@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import { Image, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ImageWithLoading } from '@/components/ImageWithLoading';
 import { useDispatch, useSelector } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface ProductCardProps {
   product: Product;
@@ -26,20 +27,70 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   // Check if product has multiple size options
   const hasMultipleSizes = product.category === 'Vegetables' || product.category === 'Fruits';
 
+  const refreshToken = async () => {
+    try {
+      const refreshToken = await AsyncStorage.getItem('refreshToken');
+      if (!refreshToken) return false;
+      
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        await AsyncStorage.setItem('authToken', data.accessToken);
+        await AsyncStorage.setItem('refreshToken', data.refreshToken);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      return false;
+    }
+  };
+
   const addToCartAPI = async (variantId: string, quantity: number) => {
     try {
       console.log('Adding to cart:', { variantId, quantity });
       
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/cart/add', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          variantId,
-          quantity: quantity.toString()
-        })
-      });
+      let token = await AsyncStorage.getItem('authToken');
+      console.log('Token found:', token ? 'Yes' : 'No');
+      
+      if (!token) {
+        console.log('No auth token found, skipping API call');
+        return false;
+      }
+      
+      const makeRequest = async (authToken: string) => {
+        return fetch('https://jholabazar.onrender.com/api/v1/cart/add', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({
+            variantId,
+            quantity: quantity.toString()
+          })
+        });
+      };
+      
+      let response = await makeRequest(token);
+      
+      // If token expired, try to refresh and retry
+      if (response.status === 401) {
+        console.log('Token expired, attempting refresh...');
+        const refreshed = await refreshToken();
+        
+        if (refreshed) {
+          token = await AsyncStorage.getItem('authToken');
+          if (token) {
+            response = await makeRequest(token);
+          }
+        }
+      }
       
       console.log('Response status:', response.status);
       const responseText = await response.text();
