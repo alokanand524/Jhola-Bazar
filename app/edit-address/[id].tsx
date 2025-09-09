@@ -1,98 +1,80 @@
-import { useTheme } from '@/hooks/useTheme';
-import { addressService, Pincode } from '@/services/addressService';
-import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useTheme } from '@/hooks/useTheme';
+import { addressService, Address, Pincode } from '@/services/addressService';
 
-
-
-export default function AddAddressScreen() {
+export default function EditAddressScreen() {
   const { colors } = useTheme();
+  const { id } = useLocalSearchParams();
+  const [isLoading, setIsLoading] = useState(false);
+  const [address, setAddress] = useState<Address | null>(null);
+  const [pincodes, setPincodes] = useState<Pincode[]>([]);
+  
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
   const [landmark, setLandmark] = useState('');
-  const [selectedType, setSelectedType] = useState<'home' | 'office' | 'other'>('home');
-  const [pincodes, setPincodes] = useState<Pincode[]>([]);
   const [selectedPincode, setSelectedPincode] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [detectedPincode, setDetectedPincode] = useState('');
+  const [selectedType, setSelectedType] = useState<'home' | 'office' | 'other'>('home');
 
   useEffect(() => {
+    fetchAddress();
     fetchPincodes();
-    getCurrentLocationData();
   }, []);
+
+  const fetchAddress = async () => {
+    try {
+      const addresses = await addressService.getAddresses();
+      const foundAddress = addresses.find(addr => addr.id === id);
+      if (foundAddress) {
+        setAddress(foundAddress);
+        setAddressLine1(foundAddress.addressLine1);
+        setAddressLine2(foundAddress.addressLine2 || '');
+        setLandmark(foundAddress.landmark || '');
+        setSelectedPincode(foundAddress.pincodeId);
+        setSelectedType(foundAddress.type);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load address');
+    }
+  };
 
   const fetchPincodes = async () => {
     try {
       const pincodeList = await addressService.getPincodes();
       setPincodes(pincodeList);
     } catch (error) {
-      console.error('Failed to fetch pincodes:', error);
+      console.log('Error fetching pincodes:', error);
     }
   };
 
-  const getCurrentLocationData = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
-
-      const currentLocation = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = currentLocation.coords;
-      
-      const reverseGeocode = await Location.reverseGeocodeAsync({ latitude, longitude });
-      
-      if (reverseGeocode.length > 0) {
-        const address = reverseGeocode[0];
-        const pincode = address.postalCode && address.postalCode.length === 6 ? address.postalCode : '';
-        const cityName = address.city || address.subregion || '';
-        const stateName = address.region || '';
-        
-        setDetectedPincode(pincode);
-        setCity(cityName);
-        setState(stateName);
-      }
-    } catch (error) {
-      console.log('Error getting location data:', error);
-    }
-  };
-
-  const handleSave = async () => {
+  const handleUpdate = async () => {
     if (!addressLine1.trim()) {
       Alert.alert('Error', 'Please fill in address line 1');
       return;
     }
 
-    // Use detected pincode or find matching pincode
-    let pincodeId = selectedPincode;
-    if (!pincodeId && detectedPincode) {
-      const matchingPincode = pincodes.find(p => p.pincode === detectedPincode);
-      pincodeId = matchingPincode?.id || '';
-    }
-
-    if (!pincodeId) {
-      Alert.alert('Error', 'Please select a valid pincode');
+    if (!selectedPincode) {
+      Alert.alert('Error', 'Please select a pincode');
       return;
     }
 
     setIsLoading(true);
     try {
-      await addressService.createAddress({
+      await addressService.updateAddress(id as string, {
         addressLine1: addressLine1.trim(),
         addressLine2: addressLine2.trim() || undefined,
         landmark: landmark.trim() || undefined,
-        pincodeId,
+        pincodeId: selectedPincode,
         type: selectedType,
       });
       
-      Alert.alert('Success', 'Address added successfully!');
+      Alert.alert('Success', 'Address updated successfully!');
       router.back();
     } catch (error) {
-      Alert.alert('Error', 'Failed to add address');
+      Alert.alert('Error', 'Failed to update address');
     } finally {
       setIsLoading(false);
     }
@@ -104,10 +86,10 @@ export default function AddAddressScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Add Address</Text>
-        <TouchableOpacity onPress={handleSave} disabled={isLoading}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Edit Address</Text>
+        <TouchableOpacity onPress={handleUpdate} disabled={isLoading}>
           <Text style={[styles.saveText, { color: colors.primary }]}>
-            {isLoading ? 'Saving...' : 'Save'}
+            {isLoading ? 'Updating...' : 'Update'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -152,50 +134,25 @@ export default function AddAddressScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.text }]}>City</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
-              value={city}
-              onChangeText={setCity}
-              placeholder="Enter city name"
-              placeholderTextColor={colors.gray}
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.text }]}>State</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
-              value={state}
-              onChangeText={setState}
-              placeholder="Enter state name"
-              placeholderTextColor={colors.gray}
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
             <Text style={[styles.inputLabel, { color: colors.text }]}>Pincode *</Text>
-            {detectedPincode && (
-              <Text style={[styles.detectedText, { color: colors.primary }]}>{detectedPincode}</Text>
-            )}
             <View style={styles.pincodeContainer}>
               {pincodes.slice(0, 5).map((pincode) => (
                 <TouchableOpacity
                   key={pincode.id}
-                  // style={[
-                  //   styles.pincodeOption,
-                  //   { borderColor: colors.border },
-                  //   selectedPincode === pincode.id && { backgroundColor: colors.primary, borderColor: colors.primary }
-                  // ]}
-                  // onPress={() => setSelectedPincode(pincode.id)}
+                  style={[
+                    styles.pincodeOption,
+                    { borderColor: colors.border },
+                    selectedPincode === pincode.id && { backgroundColor: colors.primary, borderColor: colors.primary }
+                  ]}
+                  onPress={() => setSelectedPincode(pincode.id)}
                 >
-                  {/* <Text style={[
+                  <Text style={[
                     styles.pincodeText,
                     { color: colors.text },
                     selectedPincode === pincode.id && { color: '#fff' }
                   ]}>
                     {pincode.pincode}
-                  </Text> */}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -320,10 +277,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginLeft: 8,
-  },
-  detectedText: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 8,
   },
 });

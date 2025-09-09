@@ -1,4 +1,4 @@
-const BASE_URL = 'https://jholabazar.onrender.com/api/v1/profile';
+const BASE_URL = 'https://jholabazar.onrender.com/api/v1';
 
 export interface Address {
   id: string;
@@ -7,6 +7,7 @@ export interface Address {
   landmark?: string;
   pincodeId: string;
   type: 'home' | 'office' | 'other';
+  isDefault?: boolean;
 }
 
 export interface Pincode {
@@ -18,14 +19,14 @@ export interface Pincode {
 export const addressService = {
   // Get all user addresses
   getAddresses: async (): Promise<Address[]> => {
-    const response = await fetch(`${BASE_URL}/addresses`);
+    const response = await fetch(`${BASE_URL}/service-area/addresses`);
     const data = await response.json();
     return data.success ? data.data : [];
   },
 
   // Create new address
   createAddress: async (addressData: Omit<Address, 'id'>): Promise<Address> => {
-    const response = await fetch(`${BASE_URL}/addresses`, {
+    const response = await fetch(`${BASE_URL}/service-area/addresses`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -39,7 +40,7 @@ export const addressService = {
 
   // Update address
   updateAddress: async (id: string, addressData: Partial<Address>): Promise<Address> => {
-    const response = await fetch(`${BASE_URL}/addresses/${id}`, {
+    const response = await fetch(`${BASE_URL}/service-area/addresses/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -53,7 +54,7 @@ export const addressService = {
 
   // Delete address
   deleteAddress: async (id: string): Promise<void> => {
-    const response = await fetch(`${BASE_URL}/addresses/${id}`, {
+    const response = await fetch(`${BASE_URL}/service-area/addresses/${id}`, {
       method: 'DELETE',
     });
     const data = await response.json();
@@ -62,7 +63,7 @@ export const addressService = {
 
   // Get serviceable pincodes
   getPincodes: async (): Promise<Pincode[]> => {
-    const response = await fetch(`${BASE_URL}/pincodes`);
+    const response = await fetch(`${BASE_URL}/service-area/pincodes`);
     const data = await response.json();
     return data.success ? data.data : [];
   },

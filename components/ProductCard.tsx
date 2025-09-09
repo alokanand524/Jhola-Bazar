@@ -53,6 +53,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }
   };
 
+  const checkUserAddress = async () => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) return false;
+      
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/service-area/addresses', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.success && data.data && data.data.length > 0;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking addresses:', error);
+      return false;
+    }
+  };
+
   const addToCartAPI = async (variantId: string, quantity: number) => {
     try {
       console.log('Adding to cart:', { variantId, quantity });
@@ -62,6 +84,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       
       if (!token) {
         console.log('No auth token found, skipping API call');
+        return false;
+      }
+      
+      // Check if user has delivery address
+      const hasAddress = await checkUserAddress();
+      if (!hasAddress) {
+        console.log('No delivery address found, redirecting to add address');
+        router.push('/add-address');
         return false;
       }
       

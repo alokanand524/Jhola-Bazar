@@ -103,6 +103,27 @@ export default function HomeScreen() {
       const token = await AsyncStorage.getItem('authToken');
       if (token) {
         dispatch(fetchCart());
+        
+        // Check if user has delivery address
+        try {
+          const addressResponse = await fetch('https://jholabazar.onrender.com/api/v1/profile/addresses', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (addressResponse.ok) {
+            const addressData = await addressResponse.json();
+            if (!addressData.data || addressData.data.length === 0) {
+              // Show address prompt after initial loading
+              setTimeout(() => {
+                router.push('/select-address');
+              }, 2000);
+            }
+          }
+        } catch (error) {
+          console.error('Error checking addresses:', error);
+        }
       }
       
       setTimeout(() => setIsInitialLoading(false), 500);

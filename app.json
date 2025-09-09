@@ -2,7 +2,7 @@
   "expo": {
     "name": "Jhola Bazar",                
     "slug": "jhola-Bazar",                
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/jhola-bazar.png",   
     "scheme": "jholabazar",               
@@ -35,8 +35,8 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/jhola-bazar.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",                     
+          "imageWidth": 150,
+          "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
       ],
