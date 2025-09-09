@@ -20,6 +20,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const dispatch = useDispatch();
   const { colors } = useTheme();
   const [showSizeModal, setShowSizeModal] = useState(false);
+  const { isLoggedIn } = useSelector((state: RootState) => state.user);
   const cartItem = useSelector((state: RootState) => 
     state.cart.items.find(item => item.id === product.id)
   );
@@ -40,9 +41,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       
       if (response.ok) {
         const data = await response.json();
-        await AsyncStorage.setItem('authToken', data.accessToken);
-        await AsyncStorage.setItem('refreshToken', data.refreshToken);
-        return true;
+        if (data.data?.accessToken) {
+          await AsyncStorage.setItem('authToken', data.data.accessToken);
+          return true;
+        }
       }
       return false;
     } catch (error) {
@@ -79,9 +81,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       
       let response = await makeRequest(token);
       
-      // If token expired, try to refresh and retry
+      // If token expired, refresh and retry
       if (response.status === 401) {
-        console.log('Token expired, attempting refresh...');
+        console.log('Token expired, refreshing...');
         const refreshed = await refreshToken();
         
         if (refreshed) {
@@ -119,11 +121,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     const variantId = product.variants?.[0]?.id || product.id;
     const quantity = cartItem ? cartItem.quantity + 1 : 1;
     
-    // Try API first, fallback to local cart
-    const success = await addToCartAPI(variantId, quantity);
+    // Check token directly instead of Redux state
+    const token = await AsyncStorage.getItem('authToken');
+    if (token) {
+      await addToCartAPI(variantId, quantity);
+    }
     
-    // Update local state (for now, always update for better UX)
-    // TODO: Only update when API succeeds once API is working
+    // Always update local state for better UX
     dispatch(addToCart({
       id: product.id,
       name: product.name,
@@ -139,8 +143,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const handleUpdateQuantity = async (quantity: number) => {
     if (quantity > 0) {
-      const variantId = product.variants?.[0]?.id || product.id;
-      await addToCartAPI(variantId, quantity);
+      const token = await AsyncStorage.getItem('authToken');
+      if (token) {
+        const variantId = product.variants?.[0]?.id || product.id;
+        await addToCartAPI(variantId, quantity);
+      }
     }
     // Always update local state for better UX
     dispatch(updateQuantity({ id: product.id, quantity }));

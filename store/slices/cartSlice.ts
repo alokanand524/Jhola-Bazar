@@ -1,4 +1,5 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { cartAPI } from '@/services/api';
 
 export interface CartItem {
   id: string;
@@ -12,12 +13,28 @@ export interface CartItem {
 interface CartState {
   items: CartItem[];
   total: number;
+  loading: boolean;
+  error: string | null;
 }
 
 const initialState: CartState = {
   items: [],
   total: 0,
+  loading: false,
+  error: null,
 };
+
+export const fetchCart = createAsyncThunk(
+  'cart/fetchCart',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await cartAPI.getCart();
+      return response.data || [];
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch cart');
+    }
+  }
+);
 
 const cartSlice = createSlice({
   name: 'cart',
@@ -50,8 +67,28 @@ const cartSlice = createSlice({
       state.items = [];
       state.total = 0;
     },
+    setCartItems: (state, action: PayloadAction<CartItem[]>) => {
+      state.items = action.payload;
+      state.total = state.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchCart.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchCart.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload;
+        state.total = state.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      })
+      .addCase(fetchCart.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
   },
 });
 
-export const { addToCart, removeFromCart, updateQuantity, clearCart } = cartSlice.actions;
+export const { addToCart, removeFromCart, updateQuantity, clearCart, setCartItems } = cartSlice.actions;
 export default cartSlice.reducer;

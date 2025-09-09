@@ -6,6 +6,7 @@ import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'reac
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_BASE_URL = 'https://jholabazar.onrender.com/api/v1';
 
@@ -93,8 +94,16 @@ export default function LoginScreen() {
       const data = await response.json();
       
       if (response.ok) {
+        // Save tokens to AsyncStorage from data object
+        if (data.data?.accessToken) {
+          await AsyncStorage.setItem('authToken', data.data.accessToken);
+        }
+        if (data.data?.refreshToken) {
+          await AsyncStorage.setItem('refreshToken', data.data.refreshToken);
+        }
+        
         dispatch(setUser({
-          name: data.user?.name || 'User',
+          name: data.data?.customer?.firstName || 'User',
           phone: `${phoneNumber}`,
         }));
         router.replace('/referral');

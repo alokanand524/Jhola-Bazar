@@ -37,30 +37,7 @@ export const categoryAPI = {
   }
 };
 
-export const authAPI = {
-  refreshToken: async (refreshToken: string) => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ refreshToken }),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) throw new Error('Failed to refresh token');
-      return response.json();
-    } catch (error) {
-      clearTimeout(timeoutId);
-      throw error;
-    }
-  }
-};
+export const authAPI = {};
 
 export const profileAPI = {
   getProfile: async () => {
@@ -70,35 +47,18 @@ export const profileAPI = {
     const timeoutId = setTimeout(() => controller.abort(), 3000);
     
     try {
-      let token = await AsyncStorage.getItem('authToken');
+      const token = await AsyncStorage.getItem('authToken');
       
       if (!token) {
         throw new Error('No auth token found');
       }
       
-      const makeRequest = async (authToken: string) => {
-        return fetch(`${API_BASE_URL}/profile`, {
-          headers: {
-            'Authorization': `Bearer ${authToken}`
-          },
-          signal: controller.signal
-        });
-      };
-      
-      let response = await makeRequest(token);
-      
-      // If token expired, try to refresh
-      if (response.status === 401) {
-        const refreshToken = await AsyncStorage.getItem('refreshToken');
-        if (refreshToken) {
-          const refreshResponse = await authAPI.refreshToken(refreshToken);
-          await AsyncStorage.setItem('authToken', refreshResponse.accessToken);
-          await AsyncStorage.setItem('refreshToken', refreshResponse.refreshToken);
-          
-          token = refreshResponse.accessToken;
-          response = await makeRequest(token);
-        }
-      }
+      const response = await fetch(`${API_BASE_URL}/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        signal: controller.signal
+      });
       
       clearTimeout(timeoutId);
       
@@ -179,6 +139,51 @@ export const productAPI = {
     if (!response.ok) throw new Error('Failed to fetch product');
     const data = await response.json();
     return transformProduct(data.data.product);
+  },
+};
+
+export const cartAPI = {
+  getCart: async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    
+    let token = await AsyncStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('No auth token found');
+    }
+    
+    const makeRequest = async (authToken: string) => {
+      return fetch(`${API_BASE_URL}/cart`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+    };
+    
+    let response = await makeRequest(token);
+    
+    // If token expired, refresh and retry
+    if (response.status === 401) {
+      const refreshToken = await AsyncStorage.getItem('refreshToken');
+      if (refreshToken) {
+        const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken })
+        });
+        
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+          if (refreshData.data?.accessToken) {
+            await AsyncStorage.setItem('authToken', refreshData.data.accessToken);
+            token = refreshData.data.accessToken;
+            response = await makeRequest(token);
+          }
+        }
+      }
+    }
+    
+    if (!response.ok) throw new Error('Failed to fetch cart');
+    return response.json();
   },
 };
 

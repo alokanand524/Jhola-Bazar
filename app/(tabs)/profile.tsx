@@ -30,15 +30,20 @@ export default function ProfileScreen() {
     const fetchProfile = async () => {
       if (isLoggedIn) {
         try {
-          const profileData = await profileAPI.getProfile();
-          if (profileData.success) {
-            dispatch(setUser({
-              name: profileData.data.firstName || name,
-              phone: profileData.data.phone || phone,
-              email: profileData.data.email,
-              gender: profileData.data.gender,
-              dateOfBirth: profileData.data.dateOfBirth
-            }));
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          const token = await AsyncStorage.getItem('authToken');
+          
+          if (token) {
+            const profileData = await profileAPI.getProfile();
+            if (profileData.success) {
+              dispatch(setUser({
+                name: profileData.data.firstName || name,
+                phone: profileData.data.phone || phone,
+                email: profileData.data.email,
+                gender: profileData.data.gender,
+                dateOfBirth: profileData.data.dateOfBirth
+              }));
+            }
           }
         } catch (error) {
           console.error('Failed to fetch profile:', error);

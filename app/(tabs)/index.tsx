@@ -11,6 +11,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { fetchCategories } from '@/store/slices/categoriesSlice';
 import { fetchDeliveryTime } from '@/store/slices/deliverySlice';
 import { setProducts } from '@/store/slices/productsSlice';
+import { fetchCart } from '@/store/slices/cartSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -93,11 +94,22 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    dispatch(setProducts([...mockProducts, ...featuredThisWeek]));
-    dispatch(fetchCategories());
-    fetchApiProducts();
-    setTimeout(() => setIsInitialLoading(false), 500);
-    getCurrentLocation();
+    const initializeApp = async () => {
+      dispatch(setProducts([...mockProducts, ...featuredThisWeek]));
+      dispatch(fetchCategories());
+      fetchApiProducts();
+      
+      // Fetch cart for authenticated users
+      const token = await AsyncStorage.getItem('authToken');
+      if (token) {
+        dispatch(fetchCart());
+      }
+      
+      setTimeout(() => setIsInitialLoading(false), 500);
+      getCurrentLocation();
+    };
+    
+    initializeApp();
   }, [dispatch]);
 
   useEffect(() => {
