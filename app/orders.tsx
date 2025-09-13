@@ -96,7 +96,7 @@ export default function OrdersScreen() {
   const [isLoading, setIsLoading] = React.useState(true);
   
   React.useEffect(() => {
-    setTimeout(() => setIsLoading(false), 400);
+    setIsLoading(false);
   }, []);
   
   const getStatusColor = (status: string) => {

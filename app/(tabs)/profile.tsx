@@ -49,7 +49,7 @@ export default function ProfileScreen() {
           console.error('Failed to fetch profile:', error);
         }
       }
-      setTimeout(() => setIsLoading(false), 100);
+      setIsLoading(false);
     };
     
     fetchProfile();

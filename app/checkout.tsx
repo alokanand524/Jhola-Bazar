@@ -24,7 +24,7 @@ export default function CheckoutScreen() {
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
-    setTimeout(() => setIsLoading(false), 300);
+    setIsLoading(false);
   }, []);
   
   const [selectedPayment, setSelectedPayment] = useState('cod');

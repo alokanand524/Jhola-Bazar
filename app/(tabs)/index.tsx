@@ -22,6 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { handleTabBarScroll } from './_layout';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { behaviorTracker } from '@/services/behaviorTracker';
 
 export default function HomeScreen() {
   const dispatch = useDispatch();
@@ -95,9 +96,12 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const initializeApp = async () => {
+      await behaviorTracker.init();
       dispatch(setProducts([...mockProducts, ...featuredThisWeek]));
-      dispatch(fetchCategories());
-      fetchApiProducts();
+      await Promise.all([
+        dispatch(fetchCategories()),
+        fetchApiProducts()
+      ]);
       
       // Fetch cart for authenticated users
       const token = await AsyncStorage.getItem('authToken');
@@ -115,10 +119,7 @@ export default function HomeScreen() {
           if (addressResponse.ok) {
             const addressData = await addressResponse.json();
             if (!addressData.data || addressData.data.length === 0) {
-              // Show address prompt after initial loading
-              setTimeout(() => {
-                router.push('/select-address');
-              }, 2000);
+              router.push('/select-address');
             }
           }
         } catch (error) {
@@ -126,7 +127,7 @@ export default function HomeScreen() {
         }
       }
       
-      setTimeout(() => setIsInitialLoading(false), 500);
+      setIsInitialLoading(false);
       getCurrentLocation();
     };
     

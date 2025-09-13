@@ -10,11 +10,13 @@ import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { ImageWithLoading } from '@/components/ImageWithLoading';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
+import { behaviorTracker } from '@/services/behaviorTracker';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
   const dispatch = useDispatch();
   const { colors } = useTheme();
+  const [selectedVariant, setSelectedVariant] = React.useState(0);
   
   const { selectedProduct, productLoading } = useSelector((state: RootState) => state.products);
   const cartItem = useSelector((state: RootState) => 
@@ -26,6 +28,12 @@ export default function ProductDetailScreen() {
       dispatch(fetchProductById(id));
     }
   }, [dispatch, id]);
+
+  React.useEffect(() => {
+    if (selectedProduct) {
+      behaviorTracker.trackProductView(selectedProduct.id, selectedProduct.category);
+    }
+  }, [selectedProduct]);
 
   if (productLoading) {
     return (
@@ -66,10 +74,13 @@ export default function ProductDetailScreen() {
   }
 
   const handleAddToCart = () => {
+    const currentVariant = selectedProduct.variants?.[selectedVariant];
+    const price = currentVariant?.price?.sellingPrice || selectedProduct.price;
+    
     dispatch(addToCart({
       id: selectedProduct.id,
       name: selectedProduct.name,
-      price: selectedProduct.price,
+      price: parseFloat(price),
       image: selectedProduct.image,
       category: selectedProduct.category,
     }));
@@ -86,8 +97,16 @@ export default function ProductDetailScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Product Details</Text>
-        <TouchableOpacity onPress={() => router.push('/cart')}>
+        <TouchableOpacity 
+          style={styles.cartButton}
+          onPress={() => router.push('/cart')}
+        >
           <Ionicons name="bag-outline" size={24} color={colors.text} />
+          {cartItem && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{cartItem.quantity}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -104,21 +123,32 @@ export default function ProductDetailScreen() {
           
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={16} color="#FFD700" />
-            <Text style={[styles.rating, { color: colors.text }]}>{selectedProduct.rating}</Text>
-            <Text style={[styles.deliveryTime, { color: colors.gray }]}>• 10 mins</Text>
+            <Text style={[styles.rating, { color: colors.text }]}>{selectedProduct.rating || 4.5}</Text>
+            <Text style={[styles.deliveryTime, { color: colors.gray }]}>• {selectedProduct.deliveryTime || '10 mins'}</Text>
           </View>
           
           <View style={styles.priceContainer}>
-            <Text style={[styles.price, { color: colors.text }]}>₹{selectedProduct.price}</Text>
-            {selectedProduct.originalPrice && (
-              <Text style={styles.originalPrice}>₹{selectedProduct.originalPrice}</Text>
-            )}
-            {selectedProduct.originalPrice && (
-              <View style={styles.discountBadge}>
-                <Text style={styles.discountText}>
-                  {Math.round(((selectedProduct.originalPrice - selectedProduct.price) / selectedProduct.originalPrice) * 100)}% OFF
-                </Text>
-              </View>
+            {selectedProduct.variants && selectedProduct.variants[selectedVariant] ? (
+              <>
+                <Text style={[styles.price, { color: colors.text }]}>₹{selectedProduct.variants[selectedVariant].price?.sellingPrice}</Text>
+                {selectedProduct.variants[selectedVariant].price?.basePrice && (
+                  <Text style={styles.originalPrice}>₹{selectedProduct.variants[selectedVariant].price?.basePrice}</Text>
+                )}
+                {selectedProduct.variants[selectedVariant].price?.basePrice && (
+                  <View style={styles.discountBadge}>
+                    <Text style={styles.discountText}>
+                      {Math.round(((selectedProduct.variants[selectedVariant].price?.basePrice - selectedProduct.variants[selectedVariant].price?.sellingPrice) / selectedProduct.variants[selectedVariant].price?.basePrice) * 100)}% OFF
+                    </Text>
+                  </View>
+                )}
+              </>
+            ) : (
+              <>
+                <Text style={[styles.price, { color: colors.text }]}>₹{selectedProduct.price}</Text>
+                {selectedProduct.originalPrice && (
+                  <Text style={styles.originalPrice}>₹{selectedProduct.originalPrice}</Text>
+                )}
+              </>
             )}
           </View>
           
@@ -127,21 +157,35 @@ export default function ProductDetailScreen() {
             <Text style={[styles.description, { color: colors.gray }]}>{selectedProduct.description}</Text>
           </View>
           
-          {/* Weight Selection */}
-          <View style={styles.weightContainer}>
-            <Text style={[styles.weightTitle, { color: colors.text }]}>Select Weight</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.weightScroll}>
-              {['100g', '250g', '500g', '1kg', '2kg'].map((weight, index) => {
-                const prices = [25, 60, 120, 240, 480];
-                return (
-                  <TouchableOpacity key={weight} style={[styles.weightCard, { borderColor: colors.border }]}>
-                    <Text style={[styles.weightText, { color: colors.text }]}>{weight}</Text>
-                    <Text style={[styles.weightPrice, { color: colors.primary }]}>₹{prices[index]}</Text>
+          {/* Variant Selection */}
+          {selectedProduct.variants && selectedProduct.variants.length > 1 && (
+            <View style={styles.weightContainer}>
+              <Text style={[styles.weightTitle, { color: colors.text }]}>Select Variant</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.weightScroll}>
+                {selectedProduct.variants.map((variant, index) => (
+                  <TouchableOpacity 
+                    key={index} 
+                    style={[
+                      styles.weightCard, 
+                      { borderColor: selectedVariant === index ? colors.primary : colors.border },
+                      selectedVariant === index && { backgroundColor: colors.lightGray }
+                    ]}
+                    onPress={() => setSelectedVariant(index)}
+                  >
+                    <Text style={[styles.weightText, { color: colors.text }]}>
+                      {variant.weight} {variant.baseUnit}
+                    </Text>
+                    <Text style={[styles.weightPrice, { color: colors.primary }]}>
+                      ₹{variant.price?.sellingPrice}
+                    </Text>
+                    {variant.stock?.status !== 'AVAILABLE' && (
+                      <Text style={[styles.outOfStock, { color: 'red' }]}>Out of Stock</Text>
+                    )}
                   </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           <View style={styles.featuresContainer}>
             <Text style={[styles.featuresTitle, { color: colors.text }]}>Features</Text>
@@ -151,20 +195,33 @@ export default function ProductDetailScreen() {
             </View>
             <View style={styles.feature}>
               <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-              <Text style={[styles.featureText, { color: colors.gray }]}>Fast delivery in 10 minutes</Text>
+              <Text style={[styles.featureText, { color: colors.gray }]}>Fast delivery in {selectedProduct.deliveryTime || '10 minutes'}</Text>
             </View>
             <View style={styles.feature}>
               <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
               <Text style={[styles.featureText, { color: colors.gray }]}>Best price guaranteed</Text>
             </View>
+            {selectedProduct.variants?.[selectedVariant]?.stock?.status === 'AVAILABLE' && (
+              <View style={styles.feature}>
+                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                <Text style={[styles.featureText, { color: colors.gray }]}>In Stock</Text>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
 
       <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
         <View style={styles.priceInfo}>
-          <Text style={[styles.footerPrice, { color: colors.text }]}>₹{selectedProduct.price}</Text>
-          <Text style={[styles.footerUnit, { color: colors.gray }]}>{selectedProduct.unit}</Text>
+          <Text style={[styles.footerPrice, { color: colors.text }]}>
+            ₹{selectedProduct.variants?.[selectedVariant]?.price?.sellingPrice || selectedProduct.price}
+          </Text>
+          <Text style={[styles.footerUnit, { color: colors.gray }]}>
+            {selectedProduct.variants?.[selectedVariant] ? 
+              `${selectedProduct.variants[selectedVariant].weight} ${selectedProduct.variants[selectedVariant].baseUnit}` : 
+              selectedProduct.unit
+            }
+          </Text>
         </View>
         
         {cartItem ? (
@@ -184,8 +241,17 @@ export default function ProductDetailScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <TouchableOpacity style={[styles.addToCartButton, { backgroundColor: colors.primary }]} onPress={handleAddToCart}>
-            <Text style={styles.addToCartText}>Add to Jhola</Text>
+          <TouchableOpacity 
+            style={[
+              styles.addToCartButton, 
+              { backgroundColor: selectedProduct.variants?.[selectedVariant]?.stock?.status === 'AVAILABLE' ? colors.primary : colors.gray }
+            ]} 
+            onPress={handleAddToCart}
+            disabled={selectedProduct.variants?.[selectedVariant]?.stock?.status !== 'AVAILABLE'}
+          >
+            <Text style={styles.addToCartText}>
+              {selectedProduct.variants?.[selectedVariant]?.stock?.status === 'AVAILABLE' ? 'Add to Jhola' : 'Out of Stock'}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -380,5 +446,28 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginHorizontal: 16,
+  },
+  cartButton: {
+    position: 'relative',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: 'red',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  outOfStock: {
+    fontSize: 10,
+    marginTop: 2,
   },
 });

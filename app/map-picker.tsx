@@ -94,7 +94,9 @@ export default function MapPickerScreen() {
       <div class="center-marker">📍</div>
       
       <script>
-        var map = L.map('map').setView([${currentLocation.lat}, ${currentLocation.lng}], 15);
+        var map = L.map('map', {
+          zoomControl: false
+        }).setView([${currentLocation.lat}, ${currentLocation.lng}], 16);
         
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors'

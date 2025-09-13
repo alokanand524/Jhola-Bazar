@@ -39,10 +39,31 @@ export default function AddressesScreen() {
   
   const fetchAddresses = async () => {
     try {
-      const addressList = await addressService.getAddresses();
-      setAddresses(addressList);
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const token = await AsyncStorage.getItem('authToken');
+      
+      if (!token) {
+        console.error('No auth token found');
+        setIsLoading(false);
+        return;
+      }
+      
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/profile/addresses', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        setAddresses(data.data);
+      } else {
+        setAddresses([]);
+      }
     } catch (error) {
       console.error('Failed to fetch addresses:', error);
+      setAddresses([]);
     } finally {
       setIsLoading(false);
     }
@@ -63,9 +84,22 @@ export default function AddressesScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await addressService.deleteAddress(id);
-              setAddresses(addresses.filter(addr => addr.id !== id));
-              Alert.alert('Success', 'Address deleted successfully');
+              const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+              const token = await AsyncStorage.getItem('authToken');
+              
+              const response = await fetch(`https://jholabazar.onrender.com/api/v1/profile/addresses/${id}`, {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+              
+              if (response.ok) {
+                setAddresses(addresses.filter(addr => addr.id !== id));
+                Alert.alert('Success', 'Address deleted successfully');
+              } else {
+                Alert.alert('Error', 'Failed to delete address');
+              }
             } catch (error) {
               Alert.alert('Error', 'Failed to delete address');
             }

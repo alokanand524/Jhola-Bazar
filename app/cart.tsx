@@ -16,7 +16,7 @@ export default function CartScreen() {
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
-    setTimeout(() => setIsLoading(false), 300);
+    setIsLoading(false);
   }, []);
 
   const handleUpdateQuantity = (id: string, quantity: number) => {

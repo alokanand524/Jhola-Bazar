@@ -11,6 +11,7 @@ import { FlatList, Image, Modal, ScrollView, StyleSheet, Text, TextInput, Toucha
 import { ImageWithLoading } from '@/components/ImageWithLoading';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
+import { behaviorTracker } from '@/services/behaviorTracker';
 
 const categoryData: { [key: string]: string[] } = {
   'Favourites': ['All', 'Most Ordered', 'Recently Bought', 'Saved Items'],
@@ -47,6 +48,11 @@ export default function CategoryScreen() {
       setIsLoading(true);
       setIsLoadingProducts(true);
       try {
+        // Track category visit
+        if (categoryName) {
+          behaviorTracker.trackCategoryVisit(categoryName);
+        }
+        
         // Find the category by name
         const category = categories.find(cat => cat.name === categoryName);
         if (category) {
@@ -82,10 +88,8 @@ export default function CategoryScreen() {
         setSubCategoriesData([]);
         setCategoryProducts([]);
       } finally {
-        setTimeout(() => {
-          setIsLoading(false);
-          setIsLoadingProducts(false);
-        }, 300);
+        setIsLoading(false);
+        setIsLoadingProducts(false);
       }
     };
 
@@ -119,7 +123,7 @@ export default function CategoryScreen() {
     } catch (error) {
       console.error('Error fetching subcategory products:', error);
     } finally {
-      setTimeout(() => setIsLoadingProducts(false), 300);
+      setIsLoadingProducts(false);
     }
   };
 

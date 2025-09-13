@@ -24,9 +24,9 @@ export default function EditProfileScreen() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedDay, setSelectedDay] = useState(new Date().getDate());
-  const [referralCode, setReferralCode] = useState(`JB${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
+  // const [referralCode, setReferralCode] = useState(`JB${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
   const [loading, setLoading] = useState(true);
-  const referralLink = `https://jhola-bazar.app/ref/${referralCode}`;
+  // const referralLink = `https://jhola-bazar.app/ref/${referralCode}`;
 
   useEffect(() => {
     fetchUserProfile();
@@ -35,17 +35,35 @@ export default function EditProfileScreen() {
   const fetchUserProfile = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/profile');
-      const data = await response.json();
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const token = await AsyncStorage.getItem('authToken');
       
-      if (data.success && data.data) {
+      console.log('Token:', token ? 'Found' : 'Not found');
+      
+      if (!token) {
+        console.error('No auth token found');
+        setLoading(false);
+        return;
+      }
+      
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Response status:', response.status);
+      const data = await response.json();
+      console.log('Response data:', data);
+      
+      if (response.ok && data.success && data.data) {
         const profile = data.data;
         setFirstName(profile.firstName || '');
         setLastName(profile.lastName || '');
         setEmail(profile.email || '');
         setGender(profile.gender || '');
         if (profile.dateOfBirth) {
-          // Extract only the date part from ISO string (YYYY-MM-DD)
           const dateOnly = profile.dateOfBirth.split('T')[0];
           setDateOfBirth(dateOnly);
           const date = new Date(dateOnly);
@@ -53,9 +71,8 @@ export default function EditProfileScreen() {
           setSelectedMonth(date.getMonth() + 1);
           setSelectedDay(date.getDate());
         }
-        if (profile.referralCode) {
-          setReferralCode(profile.referralCode);
-        }
+      } else {
+        console.error('API Error:', data.message || 'Unknown error');
       }
     } catch (error) {
       console.error('Failed to fetch profile:', error);
@@ -83,35 +100,35 @@ export default function EditProfileScreen() {
     }
   };
 
-  const handleCopyLink = () => {
-    Clipboard.setString(referralLink);
-    Alert.alert('Copied!', 'Referral link copied to clipboard');
-  };
+  // const handleCopyLink = () => {
+  //   Clipboard.setString(referralLink);
+  //   Alert.alert('Copied!', 'Referral link copied to clipboard');
+  // };
 
-  const handleShare = async (platform: string) => {
-    const message = `Hey! Join Jhola-Bazar and get ₹50 off on your first order. Use my referral code: ${referralCode}\n\nDownload now: ${referralLink}`;
+  // const handleShare = async (platform: string) => {
+  //   const message = `Hey! Join Jhola-Bazar and get ₹50 off on your first order. Use my referral code: ${referralCode}\n\nDownload now: ${referralLink}`;
     
-    try {
-      switch (platform) {
-        case 'whatsapp':
-          await Linking.openURL(`whatsapp://send?text=${encodeURIComponent(message)}`);
-          break;
-        case 'telegram':
-          await Linking.openURL(`tg://msg?text=${encodeURIComponent(message)}`);
-          break;
-        case 'sms':
-          await Linking.openURL(`sms:?body=${encodeURIComponent(message)}`);
-          break;
-        case 'email':
-          await Linking.openURL(`mailto:?subject=Join Jhola-Bazar&body=${encodeURIComponent(message)}`);
-          break;
-        default:
-          await Share.share({ message });
-      }
-    } catch (error) {
-      await Share.share({ message });
-    }
-  };
+  //   try {
+  //     switch (platform) {
+  //       case 'whatsapp':
+  //         await Linking.openURL(`whatsapp://send?text=${encodeURIComponent(message)}`);
+  //         break;
+  //       case 'telegram':
+  //         await Linking.openURL(`tg://msg?text=${encodeURIComponent(message)}`);
+  //         break;
+  //       case 'sms':
+  //         await Linking.openURL(`sms:?body=${encodeURIComponent(message)}`);
+  //         break;
+  //       case 'email':
+  //         await Linking.openURL(`mailto:?subject=Join Jhola-Bazar&body=${encodeURIComponent(message)}`);
+  //         break;
+  //       default:
+  //         await Share.share({ message });
+  //     }
+  //   } catch (error) {
+  //     await Share.share({ message });
+  //   }
+  // };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -252,7 +269,7 @@ export default function EditProfileScreen() {
           </View>
         </View>
 
-        <View style={[styles.section, { backgroundColor: colors.lightGray }]}>
+        {/* <View style={[styles.section, { backgroundColor: colors.lightGray }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Referral Code</Text>
           
           <View style={[styles.referralCard, { backgroundColor: colors.background, borderColor: colors.primary }]}>
@@ -307,7 +324,7 @@ export default function EditProfileScreen() {
               <Text style={styles.shareButtonText}>Email</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </View> */}
           </>
         )}
       </ScrollView>

@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
+import { behaviorTracker } from '@/services/behaviorTracker';
 import { RootState } from '@/store/store';
 import { ProductCard } from '@/components/ProductCard';
 import { ProductCardSkeleton } from '@/components/SkeletonLoader';
@@ -15,15 +16,68 @@ export default function SearchScreen() {
   const { products } = useSelector((state: RootState) => state.products);
   const { colors } = useTheme();
 
-  const filteredProducts = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    setIsSearching(true);
-    setTimeout(() => setIsSearching(false), 500);
-    return products.filter(product =>
+  const [apiResults, setApiResults] = React.useState([]);
+  const [isApiSearching, setIsApiSearching] = React.useState(false);
+
+  const searchProducts = async (query: string) => {
+    if (!query.trim()) {
+      setApiResults([]);
+      return;
+    }
+
+    setIsApiSearching(true);
+    try {
+      const response = await fetch(`https://jholabazar.onrender.com/api/v1/products/search?q=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      
+      if (data.success && data.data?.products) {
+        const transformedProducts = data.data.products.map(product => ({
+          id: product.id,
+          name: product.name,
+          image: product.images?.[0] || '',
+          price: product.variants?.[0]?.price?.sellingPrice || '0',
+          originalPrice: product.variants?.[0]?.price?.basePrice || '0',
+          category: product.category?.name || 'General',
+          description: product.description || '',
+          unit: `${product.variants?.[0]?.weight || '1'} ${product.variants?.[0]?.baseUnit || 'unit'}`,
+          inStock: product.variants?.[0]?.stock?.status === 'AVAILABLE',
+          rating: 4.5,
+          deliveryTime: '10 mins'
+        }));
+        setApiResults(transformedProducts);
+      } else {
+        setApiResults([]);
+      }
+    } catch (error) {
+      console.error('Search API error:', error);
+      setApiResults([]);
+    } finally {
+      setIsApiSearching(false);
+    }
+  };
+
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery.trim()) {
+        behaviorTracker.trackSearch(searchQuery.trim());
+        searchProducts(searchQuery.trim());
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  const filteredProducts = apiResults.length > 0 ? apiResults : 
+    products.filter(product =>
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.category.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [products, searchQuery]);
+
+  const [searchSuggestions, setSearchSuggestions] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    setSearchSuggestions(behaviorTracker.getSearchSuggestions());
+  }, []);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -41,6 +95,25 @@ export default function SearchScreen() {
           onChangeText={setSearchQuery}
           autoFocus
         />
+      </View>
+
+      {searchQuery.trim() === '' && searchSuggestions.length > 0 && (
+        <View style={[styles.suggestionsContainer, { backgroundColor: colors.background }]}>
+          <Text style={[styles.suggestionsTitle, { color: colors.text }]}>Recent Searches</Text>
+          {searchSuggestions.map((suggestion, index) => (
+            <TouchableOpacity
+              key={index}
+              style={styles.suggestionItem}
+              onPress={() => setSearchQuery(suggestion)}
+            >
+              <Ionicons name="time-outline" size={16} color={colors.gray} />
+              <Text style={[styles.suggestionText, { color: colors.text }]}>{suggestion}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      <View style={styles.content}>
         {searchQuery.length > 0 && (
           <Ionicons 
             name="close-circle" 
@@ -49,15 +122,13 @@ export default function SearchScreen() {
             onPress={() => setSearchQuery('')}
           />
         )}
-      </View>
 
-      <View style={styles.content}>
         {searchQuery.trim() === '' ? (
           <View style={styles.emptyState}>
             <Ionicons name="search" size={64} color={colors.gray} />
             <Text style={[styles.emptyStateText, { color: colors.gray }]}>Start typing to search products</Text>
           </View>
-        ) : isSearching ? (
+        ) : (isSearching || isApiSearching) ? (
           <View style={styles.row}>
             <ProductCardSkeleton />
             <ProductCardSkeleton />
@@ -142,5 +213,23 @@ const styles = StyleSheet.create({
   },
   row: {
     justifyContent: 'space-between',
+  },
+  suggestionsContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  suggestionsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  suggestionText: {
+    fontSize: 14,
+    marginLeft: 8,
   },
 });

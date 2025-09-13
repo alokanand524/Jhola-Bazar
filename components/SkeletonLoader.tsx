@@ -23,12 +23,12 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
       Animated.sequence([
         Animated.timing(animatedValue, {
           toValue: 1,
-          duration: 400,
+          duration: 800,
           useNativeDriver: false,
         }),
         Animated.timing(animatedValue, {
           toValue: 0,
-          duration: 400,
+          duration: 800,
           useNativeDriver: false,
         }),
       ])
