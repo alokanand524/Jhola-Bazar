@@ -214,6 +214,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             style={styles.image}
           />
           
+          {/* Discount Badge on Image */}
+          {getDiscountPercentage() > 0 && (
+            <View style={styles.discountBadgeOnImage}>
+              <Text style={styles.discountText}>{getDiscountPercentage()}% OFF</Text>
+            </View>
+          )}
+          
           {/* Overlay Add Button */}
           <View style={styles.addButtonOverlay}>
             {cartItem ? (
@@ -258,17 +265,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           
           {/* Product Name */}
           {product.name && (
-            <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>{product.name}</Text>
+            <Text style={[styles.name, { color: colors.text }]} numberOfLines={2}>
+              {product.name.length > 10 ? `${product.name.substring(0, 10)}...` : product.name}
+            </Text>
           )}
           
 
           
-          {/* Discount Badge */}
-          {getDiscountPercentage() > 0 && (
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>{getDiscountPercentage()}% OFF</Text>
-            </View>
-          )}
+
           
           {/* Price Section */}
           <View style={styles.priceContainer}>
@@ -358,14 +362,14 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   weightRange: {
-    fontSize: 11,
+    fontSize: 10,
     marginBottom: 4,
   },
   name: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     marginBottom: 6,
-    lineHeight: 18,
+    lineHeight: 16,
   },
 
   priceContainer: {
@@ -373,21 +377,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   price: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
   },
   originalPrice: {
-    fontSize: 12,
+    fontSize: 11,
     textDecorationLine: 'line-through',
     marginLeft: 6,
   },
-  discountBadge: {
+  discountBadgeOnImage: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
     backgroundColor: '#FF3B30',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    alignSelf: 'flex-start',
-    marginBottom: 4,
   },
   discountText: {
     color: '#fff',

@@ -23,41 +23,7 @@ interface Order {
   deliveryAddress: string;
 }
 
-const mockOrders: Order[] = [
-  {
-    id: '1',
-    date: '2024-01-15',
-    status: 'delivered',
-    total: 245,
-    deliveryAddress: 'Home - New Delhi',
-    items: [
-      { id: '1', name: 'Fresh Tomatoes', quantity: 2, price: 40, image: 'https://images5.alphacoders.com/368/368817.jpg?w=300' },
-      { id: '2', name: 'Bananas', quantity: 1, price: 60, image: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300' },
-      { id: '3', name: 'Milk', quantity: 3, price: 28, image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300' },
-    ]
-  },
-  {
-    id: '2',
-    date: '2024-01-12',
-    status: 'delivered',
-    total: 180,
-    deliveryAddress: 'Work - Gurgaon',
-    items: [
-      { id: '4', name: 'Bread', quantity: 2, price: 25, image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=300' },
-      { id: '5', name: 'Coca Cola', quantity: 2, price: 40, image: 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?w=300' },
-    ]
-  },
-  {
-    id: '3',
-    date: '2024-01-10',
-    status: 'cancelled',
-    total: 95,
-    deliveryAddress: 'Home - New Delhi',
-    items: [
-      { id: '6', name: 'Shampoo', quantity: 1, price: 180, image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=300' },
-    ]
-  }
-];
+
 
 const OrderCardSkeleton = () => {
   const { colors } = useTheme();
@@ -114,13 +80,13 @@ export default function OrdersScreen() {
 
   const renderOrderItem = ({ item }: { item: Order }) => (
     <TouchableOpacity 
-      style={styles.orderCard}
+      style={[styles.orderCard, { backgroundColor: colors.background, borderColor: colors.border }]}
       onPress={() => router.push(`/order-details/${item.id}` as any)}
     >
       <View style={styles.orderHeader}>
         <View>
-          <Text style={styles.orderId}>Order #{item.id}</Text>
-          <Text style={styles.orderDate}>{new Date(item.date).toLocaleDateString()}</Text>
+          <Text style={[styles.orderId, { color: colors.text }]}>Order #{item.id}</Text>
+          <Text style={[styles.orderDate, { color: colors.gray }]}>{new Date(item.date).toLocaleDateString()}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
           <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
@@ -132,20 +98,20 @@ export default function OrdersScreen() {
           <Image key={orderItem.id} source={{ uri: orderItem.image }} style={styles.itemImage} />
         ))}
         {item.items.length > 3 && (
-          <View style={styles.moreItems}>
-            <Text style={styles.moreItemsText}>+{item.items.length - 3}</Text>
+          <View style={[styles.moreItems, { backgroundColor: colors.lightGray }]}>
+            <Text style={[styles.moreItemsText, { color: colors.gray }]}>+{item.items.length - 3}</Text>
           </View>
         )}
       </View>
 
       <View style={styles.orderFooter}>
-        <Text style={styles.itemCount}>{item.items.length} items</Text>
-        <Text style={styles.orderTotal}>₹{item.total}</Text>
+        <Text style={[styles.itemCount, { color: colors.gray }]}>{item.items.length} items</Text>
+        <Text style={[styles.orderTotal, { color: colors.text }]}>₹{item.total}</Text>
       </View>
 
       <View style={styles.addressContainer}>
-        <Ionicons name="location-outline" size={16} color="#666" />
-        <Text style={styles.addressText}>{item.deliveryAddress}</Text>
+        <Ionicons name="location-outline" size={16} color={colors.gray} />
+        <Text style={[styles.addressText, { color: colors.gray }]}>{item.deliveryAddress}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -175,13 +141,12 @@ export default function OrdersScreen() {
         <Text style={[styles.headerTitle, { color: colors.text }]}>My Orders</Text>
       </View>
 
-      <FlatList
-        data={mockOrders}
-        renderItem={renderOrderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.ordersList}
-        showsVerticalScrollIndicator={false}
-      />
+      {/* Empty state */}
+      <View style={styles.emptyState}>
+        <Ionicons name="bag-outline" size={80} color={colors.gray} />
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>No Orders Yet</Text>
+        <Text style={[styles.emptySubtitle, { color: colors.gray }]}>Your order history will appear here</Text>
+      </View>
     </SafeAreaView>
   );
 }
@@ -221,11 +186,9 @@ const styles = StyleSheet.create({
   orderId: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
   },
   orderDate: {
     fontSize: 12,
-    color: '#666',
     marginTop: 2,
   },
   statusBadge: {
@@ -252,13 +215,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
   },
   moreItemsText: {
     fontSize: 12,
-    color: '#666',
     fontWeight: '500',
   },
   orderFooter: {
@@ -269,12 +230,10 @@ const styles = StyleSheet.create({
   },
   itemCount: {
     fontSize: 14,
-    color: '#666',
   },
   orderTotal: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
   },
   addressContainer: {
     flexDirection: 'row',
@@ -282,7 +241,22 @@ const styles = StyleSheet.create({
   },
   addressText: {
     fontSize: 12,
-    color: '#666',
     marginLeft: 4,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });

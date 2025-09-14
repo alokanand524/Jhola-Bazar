@@ -189,7 +189,44 @@ export const cartAPI = {
 
 export const addressAPI = {
   getAddresses: async () => {
-    const response = await fetch(`${API_BASE_URL}/profile/addresses`);
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    
+    let token = await AsyncStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('No auth token found');
+    }
+    
+    const makeRequest = async (authToken: string) => {
+      return fetch(`${API_BASE_URL}/profile/addresses`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+    };
+    
+    let response = await makeRequest(token);
+    
+    // If token expired, refresh and retry
+    if (response.status === 401) {
+      const refreshToken = await AsyncStorage.getItem('refreshToken');
+      if (refreshToken) {
+        const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken })
+        });
+        
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+          if (refreshData.data?.accessToken) {
+            await AsyncStorage.setItem('authToken', refreshData.data.accessToken);
+            token = refreshData.data.accessToken;
+            response = await makeRequest(token);
+          }
+        }
+      }
+    }
+    
     if (!response.ok) throw new Error('Failed to fetch addresses');
     return response.json();
   },
@@ -215,9 +252,45 @@ export const addressAPI = {
   },
   
   deleteAddress: async (id: string) => {
-    const response = await fetch(`${API_BASE_URL}/profile/addresses/${id}`, {
-      method: 'DELETE',
-    });
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    
+    let token = await AsyncStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('No auth token found');
+    }
+    
+    const makeRequest = async (authToken: string) => {
+      return fetch(`${API_BASE_URL}/profile/addresses/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+    };
+    
+    let response = await makeRequest(token);
+    
+    // If token expired, refresh and retry
+    if (response.status === 401) {
+      const refreshToken = await AsyncStorage.getItem('refreshToken');
+      if (refreshToken) {
+        const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken })
+        });
+        
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+          if (refreshData.data?.accessToken) {
+            await AsyncStorage.setItem('authToken', refreshData.data.accessToken);
+            token = refreshData.data.accessToken;
+            response = await makeRequest(token);
+          }
+        }
+      }
+    }
+    
     if (!response.ok) throw new Error('Failed to delete address');
     return response.json();
   },

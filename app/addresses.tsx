@@ -5,7 +5,16 @@ import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useTheme } from '@/hooks/useTheme';
-import { addressService, Address } from '@/services/addressService';
+import { addressAPI } from '@/services/api';
+
+interface Address {
+  id: string;
+  type: 'home' | 'office' | 'other';
+  addressLine1: string;
+  addressLine2?: string;
+  landmark?: string;
+  isDefault: boolean;
+}
 
 
 
@@ -41,29 +50,24 @@ export default function AddressesScreen() {
     try {
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       const token = await AsyncStorage.getItem('authToken');
-      
-      if (!token) {
-        console.error('No auth token found');
-        setIsLoading(false);
+      const isAuth = !!token;
+      if (!isAuth) {
+        setAddresses([]);
         return;
       }
       
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/profile/addresses', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      const data = await response.json();
-      
-      if (data.success && data.data) {
-        setAddresses(data.data);
+      const response = await addressAPI.getAddresses();
+      if (response.success && response.data) {
+        setAddresses(response.data);
       } else {
         setAddresses([]);
       }
     } catch (error) {
-      console.error('Failed to fetch addresses:', error);
-      setAddresses([]);
+      if (error.message.includes('401') || error.message.includes('auth')) {
+        router.push('/login');
+      } else {
+        setAddresses([]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -84,24 +88,16 @@ export default function AddressesScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-              const token = await AsyncStorage.getItem('authToken');
-              
-              const response = await fetch(`https://jholabazar.onrender.com/api/v1/profile/addresses/${id}`, {
-                method: 'DELETE',
-                headers: {
-                  'Authorization': `Bearer ${token}`
-                }
-              });
-              
-              if (response.ok) {
+              const response = await addressAPI.deleteAddress(id);
+              if (response.success) {
                 setAddresses(addresses.filter(addr => addr.id !== id));
-                Alert.alert('Success', 'Address deleted successfully');
+                Alert.alert('Success', response.message || 'Address deleted successfully');
               } else {
-                Alert.alert('Error', 'Failed to delete address');
+                Alert.alert('Error', response.message || 'Failed to delete address');
               }
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete address');
+              const message = error instanceof ApiError ? error.message : 'Failed to delete address';
+              Alert.alert('Error', message);
             }
           }
         },
@@ -125,13 +121,13 @@ export default function AddressesScreen() {
   };
 
   const renderAddressItem = ({ item }: { item: Address }) => (
-    <View style={styles.addressCard}>
+    <View style={[styles.addressCard, { backgroundColor: colors.background }]}>
       <View style={styles.addressHeader}>
         <View style={styles.addressTypeContainer}>
-          <Ionicons name={getAddressIcon(item.type) as any} size={20} color="#00B761" />
-          <Text style={styles.addressType}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</Text>
+          <Ionicons name={getAddressIcon(item.type) as any} size={20} color={colors.primary} />
+          <Text style={[styles.addressType, { color: colors.text }]}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</Text>
           {item.isDefault && (
-            <View style={styles.defaultBadge}>
+            <View style={[styles.defaultBadge, { backgroundColor: colors.primary }]}>
               <Text style={styles.defaultText}>Default</Text>
             </View>
           )}
@@ -141,7 +137,7 @@ export default function AddressesScreen() {
             style={styles.actionButton}
             onPress={() => router.push(`/edit-address/${item.id}` as any)}
           >
-            <Ionicons name="pencil" size={16} color="#666" />
+            <Ionicons name="pencil" size={16} color={colors.gray} />
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.actionButton}
@@ -152,20 +148,20 @@ export default function AddressesScreen() {
         </View>
       </View>
 
-      <Text style={styles.addressText}>{item.addressLine1}</Text>
+      <Text style={[styles.addressText, { color: colors.text }]}>{item.addressLine1}</Text>
       {item.addressLine2 && (
-        <Text style={styles.addressText}>{item.addressLine2}</Text>
+        <Text style={[styles.addressText, { color: colors.text }]}>{item.addressLine2}</Text>
       )}
       {item.landmark && (
-        <Text style={styles.landmarkText}>Landmark: {item.landmark}</Text>
+        <Text style={[styles.landmarkText, { color: colors.gray }]}>Landmark: {item.landmark}</Text>
       )}
 
       {!item.isDefault && (
         <TouchableOpacity 
-          style={styles.setDefaultButton}
+          style={[styles.setDefaultButton, { borderColor: colors.primary }]}
           onPress={() => handleSetDefault(item.id)}
         >
-          <Text style={styles.setDefaultText}>Set as Default</Text>
+          <Text style={[styles.setDefaultText, { color: colors.primary }]}>Set as Default</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -199,13 +195,21 @@ export default function AddressesScreen() {
         <Text style={[styles.headerTitle, { color: colors.text }]}>My Addresses</Text>
       </View>
 
-      <FlatList
-        data={addresses}
-        renderItem={renderAddressItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.addressesList}
-        showsVerticalScrollIndicator={false}
-      />
+      {addresses.length > 0 ? (
+        <FlatList
+          data={addresses}
+          renderItem={renderAddressItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.addressesList}
+          showsVerticalScrollIndicator={false}
+        />
+      ) : (
+        <View style={styles.emptyState}>
+          <Ionicons name="location-outline" size={80} color={colors.gray} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>No Addresses</Text>
+          <Text style={[styles.emptySubtitle, { color: colors.gray }]}>Add your delivery addresses</Text>
+        </View>
+      )}
 
       <TouchableOpacity 
         style={[styles.addButton, { backgroundColor: colors.primary }]}
@@ -258,11 +262,9 @@ const styles = StyleSheet.create({
   addressType: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginLeft: 8,
   },
   defaultBadge: {
-    backgroundColor: '#00B761',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -282,13 +284,11 @@ const styles = StyleSheet.create({
   },
   addressText: {
     fontSize: 14,
-    color: '#333',
     lineHeight: 20,
     marginBottom: 8,
   },
   landmarkText: {
     fontSize: 12,
-    color: '#666',
     marginBottom: 12,
   },
   setDefaultButton: {
@@ -296,19 +296,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#00B761',
     borderRadius: 16,
   },
   setDefaultText: {
-    color: '#00B761',
     fontSize: 12,
     fontWeight: '500',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00B761',
     margin: 16,
     paddingVertical: 16,
     borderRadius: 12,

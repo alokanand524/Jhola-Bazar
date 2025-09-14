@@ -1,34 +1,81 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Dimensions, Image, ScrollView, StyleSheet, View } from 'react-native';
+import { Dimensions, Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SkeletonLoader } from './SkeletonLoader';
 
 const { width } = Dimensions.get('window');
 
-// banner images - Carousel
-const banners = [
-  'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=200&fit=crop',
-  'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=200&fit=crop',
-  'https://images.unsplash.com/photo-1506617564039-2f3b650b7010?w=400&h=200&fit=crop',
-];
+interface Banner {
+  id: string;
+  imageUrl: string;
+  title: string;
+}
 
 export const BannerCarousel: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);
   const currentIndex = useRef(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [banners, setBanners] = useState<Banner[]>([]);
+
+  const handleBannerClick = async (bannerId: string) => {
+    try {
+      await fetch(`https://jholabazar.onrender.com/api/v1/scroller/${bannerId}/click`, {
+        method: 'POST'
+      });
+    } catch (error) {
+      console.error('Error tracking banner click:', error);
+    }
+  };
+
+  const fetchBanners = async () => {
+    try {
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/scroller/');
+      const result = await response.json();
+      
+      if (result.success && result.data && result.data.scrollers) {
+        const bannerData = result.data.scrollers.map((item: any) => ({
+          id: item.id,
+          imageUrl: item.imageUrl,
+          title: item.title
+        }));
+        setBanners(bannerData.filter((banner: Banner) => banner.imageUrl));
+      } else {
+        // Fallback to default banners
+        setBanners([
+          { id: '1', imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=200&fit=crop', title: 'Banner 1' },
+          { id: '2', imageUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=200&fit=crop', title: 'Banner 2' },
+          { id: '3', imageUrl: 'https://images.unsplash.com/photo-1506617564039-2f3b650b7010?w=400&h=200&fit=crop', title: 'Banner 3' },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching banners:', error);
+      // Fallback to default banners
+      setBanners([
+        { id: '1', imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=200&fit=crop', title: 'Banner 1' },
+        { id: '2', imageUrl: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=200&fit=crop', title: 'Banner 2' },
+        { id: '3', imageUrl: 'https://images.unsplash.com/photo-1506617564039-2f3b650b7010?w=400&h=200&fit=crop', title: 'Banner 3' },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setTimeout(() => setIsLoading(false), 300);
-    
-    const interval = setInterval(() => {
-      currentIndex.current = (currentIndex.current + 1) % banners.length;
-      scrollRef.current?.scrollTo({
-        x: currentIndex.current * width * 0.9,
-        animated: true,
-      });
-    }, 3000);
-
-    return () => clearInterval(interval);
+    fetchBanners();
   }, []);
+
+  useEffect(() => {
+    if (banners.length > 0) {
+      const interval = setInterval(() => {
+        currentIndex.current = (currentIndex.current + 1) % banners.length;
+        scrollRef.current?.scrollTo({
+          x: currentIndex.current * width * 0.9,
+          animated: true,
+        });
+      }, 3000);
+
+      return () => clearInterval(interval);
+    }
+  }, [banners]);
 
   if (isLoading) {
     return (
@@ -50,7 +97,9 @@ export const BannerCarousel: React.FC = () => {
         style={styles.scrollView}
       >
         {banners.map((banner, index) => (
-          <Image key={index} source={{ uri: banner }} style={styles.banner} />
+          <TouchableOpacity key={banner.id} onPress={() => handleBannerClick(banner.id)}>
+            <Image source={{ uri: banner.imageUrl }} style={styles.banner} />
+          </TouchableOpacity>
         ))}
       </ScrollView>
     </View>

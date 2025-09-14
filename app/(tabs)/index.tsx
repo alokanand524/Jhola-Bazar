@@ -8,12 +8,14 @@ import { mockProducts } from '@/data/products';
 import { featuredThisWeek } from '@/data/sections';
 import { useLocation } from '@/hooks/useLocation';
 import { useTheme } from '@/hooks/useTheme';
+import { behaviorTracker } from '@/services/behaviorTracker';
+import { fetchCart } from '@/store/slices/cartSlice';
 import { fetchCategories } from '@/store/slices/categoriesSlice';
 import { fetchDeliveryTime } from '@/store/slices/deliverySlice';
 import { setProducts } from '@/store/slices/productsSlice';
-import { fetchCart } from '@/store/slices/cartSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
@@ -21,8 +23,6 @@ import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { handleTabBarScroll } from './_layout';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { behaviorTracker } from '@/services/behaviorTracker';
 
 export default function HomeScreen() {
   const dispatch = useDispatch();
@@ -36,22 +36,13 @@ export default function HomeScreen() {
   const [userLocation, setUserLocation] = React.useState<string | null>(null);
   const [apiProducts, setApiProducts] = React.useState([]);
   const [apiLoading, setApiLoading] = React.useState(true);
+  const [featuredProducts, setFeaturedProducts] = React.useState([]);
+  const [featuredLoading, setFeaturedLoading] = React.useState(true);
 
 
   const fetchApiProducts = async () => {
     try {
       setApiLoading(true);
-      
-      // Check cache first
-      const cached = await AsyncStorage.getItem('products_cache');
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < 30 * 60 * 1000) { // 30 minutes
-          setApiProducts(data.slice(0, 6));
-          setApiLoading(false);
-          return;
-        }
-      }
       
       const response = await fetch('https://jholabazar.onrender.com/api/v1/products');
       const result = await response.json();
@@ -72,25 +63,44 @@ export default function HomeScreen() {
         variants: product.variants
       }));
       
-      // Cache the result
-      await AsyncStorage.setItem('products_cache', JSON.stringify({
-        data: transformedProducts,
-        timestamp: Date.now()
-      }));
-      
       setApiProducts(transformedProducts.slice(0, 6));
     } catch (error) {
       console.error('Error fetching products:', error);
-      // Try cached data on error
-      const cached = await AsyncStorage.getItem('products_cache');
-      if (cached) {
-        const { data } = JSON.parse(cached);
-        setApiProducts(data.slice(0, 6));
-      } else {
-        setApiProducts([]);
-      }
+      setApiProducts([]);
     } finally {
       setApiLoading(false);
+    }
+  };
+
+  const fetchFeaturedProducts = async () => {
+    try {
+      setFeaturedLoading(true);
+      
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/products/featured');
+      const result = await response.json();
+      
+      const rawProducts = result.data?.products || [];
+      const transformedProducts = rawProducts.map(product => ({
+        id: product.id,
+        name: product.name,
+        image: product.images?.[0] || '',
+        price: product.variants?.[0]?.price?.sellingPrice || '0',
+        originalPrice: product.variants?.[0]?.price?.basePrice || '0',
+        category: product.category?.name || 'General',
+        description: product.description || product.shortDescription || '',
+        unit: `${product.variants?.[0]?.weight || '1'} ${product.variants?.[0]?.baseUnit || 'unit'}`,
+        inStock: product.variants?.[0]?.stock?.status === 'AVAILABLE',
+        rating: 4.5,
+        deliveryTime: '10 mins',
+        variants: product.variants
+      }));
+      
+      setFeaturedProducts(transformedProducts);
+    } catch (error) {
+      console.error('Error fetching featured products:', error);
+      setFeaturedProducts([]);
+    } finally {
+      setFeaturedLoading(false);
     }
   };
 
@@ -100,7 +110,8 @@ export default function HomeScreen() {
       dispatch(setProducts([...mockProducts, ...featuredThisWeek]));
       await Promise.all([
         dispatch(fetchCategories()),
-        fetchApiProducts()
+        fetchApiProducts(),
+        fetchFeaturedProducts()
       ]);
       
       // Fetch cart for authenticated users
@@ -237,18 +248,22 @@ export default function HomeScreen() {
 
         {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Featured this week" categoryName="Vegetables" />}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productScroll}>
-          {isInitialLoading ? (
+          {isInitialLoading || featuredLoading ? (
             [1, 2, 3].map((item) => (
               <View key={item} style={styles.featuredCard}>
                 <ProductCardSkeleton />
               </View>
             ))
-          ) : (
-            featuredThisWeek.map((item) => (
+          ) : featuredProducts.length > 0 ? (
+            featuredProducts.map((item) => (
               <View key={item.id} style={styles.featuredCard}>
                 <ProductCard product={item} />
               </View>
             ))
+          ) : (
+            <View style={styles.noProductsContainer}>
+              <Text style={[styles.noProductsText, { color: colors.gray }]}>No featured products available</Text>
+            </View>
           )}
         </ScrollView>
 
@@ -375,6 +390,7 @@ const styles = StyleSheet.create({
   },
   featuredCard: {
     width: 300,
+    height: 230,
     marginRight: -140,
   },
 

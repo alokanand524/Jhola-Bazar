@@ -30,19 +30,20 @@ export default function SearchScreen() {
       const response = await fetch(`https://jholabazar.onrender.com/api/v1/products/search?q=${encodeURIComponent(query)}`);
       const data = await response.json();
       
-      if (data.success && data.data?.products) {
-        const transformedProducts = data.data.products.map(product => ({
+      if (data.success && data.data?.results) {
+        const transformedProducts = data.data.results.map(product => ({
           id: product.id,
           name: product.name,
-          image: product.images?.[0] || '',
-          price: product.variants?.[0]?.price?.sellingPrice || '0',
-          originalPrice: product.variants?.[0]?.price?.basePrice || '0',
-          category: product.category?.name || 'General',
-          description: product.description || '',
-          unit: `${product.variants?.[0]?.weight || '1'} ${product.variants?.[0]?.baseUnit || 'unit'}`,
-          inStock: product.variants?.[0]?.stock?.status === 'AVAILABLE',
+          image: product.image || '',
+          price: '0',
+          originalPrice: '0',
+          category: product.category || 'General',
+          description: '',
+          unit: '1 unit',
+          inStock: true,
           rating: 4.5,
-          deliveryTime: '10 mins'
+          deliveryTime: '10 mins',
+          brand: product.brand
         }));
         setApiResults(transformedProducts);
       } else {
