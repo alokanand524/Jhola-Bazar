@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '@/store/store';
-import { setThemeMode, ThemeMode } from '@/store/slices/uiSlice';
 import { useTheme } from '@/hooks/useTheme';
+import { setThemeMode, ThemeMode } from '@/store/slices/uiSlice';
+import { RootState } from '@/store/store';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
 
 const themeOptions = [
   { value: 'light' as ThemeMode, label: 'Light', icon: 'sunny-outline' },
@@ -14,6 +14,7 @@ const themeOptions = [
 
 export default function ThemeDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownLayout, setDropdownLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const dispatch = useDispatch();
   const themeMode = useSelector((state: RootState) => state.ui.themeMode);
   const { colors } = useTheme();
@@ -27,7 +28,14 @@ export default function ThemeDropdown() {
 
   return (
     <View>
-      <TouchableOpacity style={styles.dropdown} onPress={() => setIsOpen(true)}>
+      <TouchableOpacity 
+        style={styles.dropdown} 
+        onPress={() => setIsOpen(true)}
+        onLayout={(event) => {
+          const { x, y, width, height } = event.nativeEvent.layout;
+          setDropdownLayout({ x, y, width, height });
+        }}
+      >
         <View style={styles.dropdownContent}>
           <Ionicons name={currentTheme?.icon as any} size={24} color={colors.gray} />
           <Text style={[styles.dropdownText, { color: colors.text }]}>{currentTheme?.label}</Text>
@@ -46,7 +54,15 @@ export default function ThemeDropdown() {
           activeOpacity={1} 
           onPress={() => setIsOpen(false)}
         >
-          <View style={[styles.modal, { backgroundColor: colors.background }]}>
+          <View style={[
+            styles.modal, 
+            { 
+              backgroundColor: colors.background,
+              position: 'absolute',
+              top: dropdownLayout.y + dropdownLayout.height + 4,
+              right: 16,
+            }
+          ]}>
             {themeOptions.map((option) => (
               <TouchableOpacity
                 key={option.value}
@@ -98,8 +114,6 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   modal: {
     borderRadius: 12,
@@ -110,6 +124,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
+    marginTop: 220,
   },
   option: {
     flexDirection: 'row',
