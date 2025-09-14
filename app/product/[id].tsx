@@ -1,5 +1,4 @@
 import { useTheme } from '@/hooks/useTheme';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { addToCart, updateQuantity } from '@/store/slices/cartSlice';
 import { fetchProductById } from '@/store/slices/productsSlice';
 import { RootState } from '@/store/store';
@@ -35,29 +34,7 @@ export default function ProductDetailScreen() {
     }
   }, [selectedProduct]);
 
-  if (productLoading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <SkeletonLoader width={24} height={24} />
-          <SkeletonLoader width={120} height={18} />
-          <SkeletonLoader width={24} height={24} />
-        </View>
-        <ScrollView style={styles.content}>
-          <SkeletonLoader width="100%" height={300} />
-          <View style={{ padding: 16 }}>
-            <SkeletonLoader width={80} height={20} borderRadius={12} style={{ marginBottom: 12 }} />
-            <SkeletonLoader width="90%" height={24} style={{ marginBottom: 4 }} />
-            <SkeletonLoader width="60%" height={16} style={{ marginBottom: 12 }} />
-            <SkeletonLoader width={100} height={16} style={{ marginBottom: 16 }} />
-            <SkeletonLoader width="100%" height={28} style={{ marginBottom: 20 }} />
-            <SkeletonLoader width="70%" height={18} style={{ marginBottom: 8 }} />
-            <SkeletonLoader width="100%" height={60} />
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
+
 
   if (!selectedProduct) {
     return (
