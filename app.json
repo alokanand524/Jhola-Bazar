@@ -11,11 +11,11 @@
 
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.alok524.jholabazar"   
+      "bundleIdentifier": "com.jholabazar"   
     },
 
     "android": {
-      "package": "com.alok524.jholabazar",           
+      "package": "com.jholabazar",           
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/jhola-bazar.png",  
         "backgroundColor": "#FFCC00"

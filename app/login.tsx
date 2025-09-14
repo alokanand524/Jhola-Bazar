@@ -1,12 +1,12 @@
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { setUser } from '@/store/slices/userSlice';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_BASE_URL = 'https://jholabazar.onrender.com/api/v1';
 
@@ -158,7 +158,7 @@ export default function LoginScreen() {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>Welcome to Jhola-Bazar</Text>
+        <Text style={styles.title}>Welcome to Jhola Bazar</Text>
         <Text style={styles.subtitle}>Login to continue</Text>
 
         {!showOtp ? (

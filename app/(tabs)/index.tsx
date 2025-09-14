@@ -204,21 +204,21 @@ export default function HomeScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.locationContainer}>
-          <Ionicons name="location" size={20} color={colors.primary} />
-          <Text style={styles.locationText}>Delivered to</Text>
-          {locationLoading ? (
-            <View style={{ marginTop: 2 }}>
+          <View style={styles.locationRow}>
+            <Ionicons name="location" size={20} color={colors.primary} />
+            <Text style={[styles.locationText, { color: colors.gray }]}>Delivery to</Text>
+            {locationLoading ? (
               <SkeletonLoader width="70%" height={12} />
-            </View>
-          ) : locationError ? (
-            <Text style={[styles.addressText, { color: colors.gray }]}>Location unavailable</Text>
-          ) : (
-            <TouchableOpacity onPress={() => router.push('/select-address')}>
-              <Text style={[styles.addressText, { color: colors.text, fontWeight: 'bold' }]}>
-                {location?.address || userLocation || 'Select Location'}
-              </Text>
-            </TouchableOpacity>
-          )}
+            ) : locationError ? (
+              <Text style={[styles.addressText, { color: colors.gray }]}>Location unavailable</Text>
+            ) : (
+              <TouchableOpacity onPress={() => router.push('/select-address')}>
+                <Text style={[styles.addressText, { color: colors.text, fontWeight: 'bold' }]}>
+                  {location?.address || userLocation || 'Select Location'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
         <TouchableOpacity
           style={styles.cartButton}
@@ -334,14 +334,18 @@ const styles = StyleSheet.create({
   locationContainer: {
     flex: 1,
   },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   locationText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#00B761',
+    fontWeight: '400',
   },
   addressText: {
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   cartButton: {
     position: 'relative',

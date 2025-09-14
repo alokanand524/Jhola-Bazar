@@ -1,5 +1,8 @@
-import { logout, setUser } from '@/store/slices/userSlice';
+import { ProfileMenuSkeleton, SkeletonLoader } from '@/components/SkeletonLoader';
+import ThemeDropdown from '@/components/ThemeDropdown';
+import { useTheme } from '@/hooks/useTheme';
 import { profileAPI } from '@/services/api';
+import { logout, setUser } from '@/store/slices/userSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -8,9 +11,6 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { handleTabBarScroll } from './_layout';
-import ThemeDropdown from '@/components/ThemeDropdown';
-import { useTheme } from '@/hooks/useTheme';
-import { SkeletonLoader, ProfileMenuSkeleton } from '@/components/SkeletonLoader';
 
 const menuItems = [
   { id: '1', title: 'My Orders', icon: 'bag-outline', screen: 'orders' },
@@ -168,7 +168,7 @@ export default function ProfileScreen() {
         )}
 
         <View style={styles.appInfo}>
-          <Text style={styles.appVersion}>Jhola-Bazar  v1.0.0</Text>
+          <Text style={styles.appVersion}>Jhola Bazar  v1.0.0</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

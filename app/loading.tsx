@@ -1,12 +1,12 @@
-import { RootState } from '@/store/store';
-import { logout } from '@/store/slices/userSlice';
 import { authAPI } from '@/services/api';
+import { logout } from '@/store/slices/userSlice';
+import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 const { width, height } = Dimensions.get('window');
 
@@ -108,10 +108,10 @@ export default function LoadingScreen() {
         <View style={styles.loginContent}>
           <View style={styles.logoContainer}>
             <Ionicons name="storefront" size={40} color="#00B761" />
-            <Text style={styles.appName}>Jhola-Bazar</Text>
+            <Text style={styles.appName}>Jhola Bazar</Text>
           </View>
           
-          <Text style={styles.welcomeText}>Welcome to Jhola-Bazar</Text>
+          <Text style={styles.welcomeText}>Welcome to Jhola Bazar</Text>
           <Text style={styles.subtitle}>Get groceries delivered in 10 minutes</Text>
           
           <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
