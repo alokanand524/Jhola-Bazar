@@ -301,3 +301,35 @@ export const addressAPI = {
     return response.json();
   },
 };
+
+export const deliveryAPI = {
+  getStoreDeliveryTime: async (latitude: string, longitude: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/delivery-timing/stores`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latitude, longitude }),
+      });
+      
+      if (!response.ok) {
+        // If no stores found for location, return default
+        return { deliveryTime: '' };
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.data?.stores?.length > 0) {
+        const store = data.data.stores[0];
+        const deliveryMinutes = store.delivery?.estimatedDeliveryMinutes;
+        
+        if (deliveryMinutes) {
+          return { deliveryTime: `${deliveryMinutes} mins` };
+        }
+      }
+      
+      return { deliveryTime: '30 mins' };
+    } catch (error) {
+      return { deliveryTime: '30 mins' };
+    }
+  },
+};

@@ -68,7 +68,7 @@ export const BannerCarousel: React.FC = () => {
       const interval = setInterval(() => {
         currentIndex.current = (currentIndex.current + 1) % banners.length;
         scrollRef.current?.scrollTo({
-          x: currentIndex.current * width * 0.9,
+          x: currentIndex.current * width,
           animated: true,
         });
       }, 3000);
@@ -94,12 +94,16 @@ export const BannerCarousel: React.FC = () => {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        snapToInterval={width}
+        decelerationRate="fast"
         style={styles.scrollView}
       >
         {banners.map((banner, index) => (
-          <TouchableOpacity key={banner.id} onPress={() => handleBannerClick(banner.id)}>
-            <Image source={{ uri: banner.imageUrl }} style={styles.banner} />
-          </TouchableOpacity>
+          <View key={banner.id} style={styles.bannerContainer}>
+            <TouchableOpacity onPress={() => handleBannerClick(banner.id)}>
+              <Image source={{ uri: banner.imageUrl }} style={styles.banner} />
+            </TouchableOpacity>
+          </View>
         ))}
       </ScrollView>
     </View>
@@ -110,14 +114,19 @@ const styles = StyleSheet.create({
   container: {
     height: 180,
     marginVertical: 16,
-  },
-  scrollView: {
     paddingHorizontal: 16,
   },
+  scrollView: {
+    flex: 1,
+  },
+  bannerContainer: {
+    width: width,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   banner: {
-    width: width * 0.9,
+    width: width - 32,
     height: 180,
     borderRadius: 12,
-    marginRight: 16,
   },
 });

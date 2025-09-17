@@ -172,18 +172,23 @@ export default function HomeScreen() {
       
       if (reverseGeocode.length > 0) {
         const address = reverseGeocode[0];
-        const pincode = address.postalCode && address.postalCode.length === 6 ? address.postalCode : null;
-        const city = address.city || address.subregion || '';
-        const state = address.region || '';
+        const place = address.district || address.subregion || '';
+        const city = address.city || '';
+        const pincode = address.postalCode || '';
         
-        let locationString = '';
-        if (pincode) {
-          locationString = `${address.street || ''} ${city} ${state} - ${pincode}`.trim();
-        } else {
-          locationString = `${address.street || ''} ${city} ${state}`.trim();
-        }
+        let locationParts = [];
+        if (place) locationParts.push(place);
+        if (city && city !== place) locationParts.push(city);
+        if (pincode) locationParts.push(pincode);
         
+        const locationString = locationParts.join(', ');
         setUserLocation(locationString || 'Current Location');
+        
+        // Fetch delivery time with current coordinates
+        dispatch(fetchDeliveryTime({
+          latitude: latitude.toString(),
+          longitude: longitude.toString()
+        }));
       }
     } catch (error) {
       console.log('Error getting location:', error);
@@ -204,6 +209,11 @@ export default function HomeScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.locationContainer}>
+          {deliveryTime && (
+            <Text style={[styles.deliveryTimeText, { color: colors.primary }]}>
+              Delivery in {deliveryTime}
+            </Text>
+          )}
           <View style={styles.locationRow}>
             <Ionicons name="location" size={20} color={colors.primary} />
             <Text style={[styles.locationText, { color: colors.gray }]}>Delivery to</Text>
@@ -214,7 +224,7 @@ export default function HomeScreen() {
             ) : (
               <TouchableOpacity onPress={() => router.push('/select-address')}>
                 <Text style={[styles.addressText, { color: colors.text, fontWeight: 'bold' }]}>
-                  {location?.address || userLocation || 'Select Location'}
+                  {userLocation || 'Select Location'}
                 </Text>
               </TouchableOpacity>
             )}
@@ -333,6 +343,11 @@ const styles = StyleSheet.create({
   },
   locationContainer: {
     flex: 1,
+  },
+  deliveryTimeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 2,
   },
   locationRow: {
     flexDirection: 'row',

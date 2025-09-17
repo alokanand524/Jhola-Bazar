@@ -24,8 +24,8 @@ export const SectionCard: React.FC<SectionCardProps> = ({ title, image, category
       <View style={[styles.imageContainer, { backgroundColor: colors.lightGray }]}>
         <ImageWithLoading 
           source={{ uri: image }} 
-          width={60} 
-          height={60} 
+          width={45} 
+          height={45} 
           borderRadius={0}
         />
       </View>
@@ -40,9 +40,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   imageContainer: {
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 6,
   },
   title: {
     fontSize: 11,
