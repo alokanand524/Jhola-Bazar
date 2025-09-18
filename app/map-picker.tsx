@@ -50,8 +50,8 @@ export default function MapPickerScreen() {
         return {
           latitude: lat,
           longitude: lng,
-          locality: address.subregion || address.city || '',
-          district: address.region || '',
+          locality: address.district || address.city || address.subregion || '',
+          district: address.city || address.region || '',
           pincode: address.postalCode || '',
         };
       }
@@ -126,6 +126,9 @@ export default function MapPickerScreen() {
           0% { transform: scale(0.8); opacity: 1; }
           100% { transform: scale(2.5); opacity: 0; }
         }
+        .leaflet-control-attribution {
+          display: none !important;
+        }
       </style>
     </head>
     <body>
@@ -143,7 +146,7 @@ export default function MapPickerScreen() {
         }).setView([${currentLocation.lat}, ${currentLocation.lng}], 16);
         
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors'
+          attribution: ''
         }).addTo(map);
 
         var currentLocationMarker = L.divIcon({
@@ -232,14 +235,11 @@ export default function MapPickerScreen() {
         <View style={[styles.locationInfo, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
           <View style={styles.locationDetails}>
             <Text style={[styles.locationTitle, { color: colors.text }]}>Selected Location</Text>
-            <Text style={[styles.locationText, { color: colors.gray }]}>
-              {selectedLocation.locality}, {selectedLocation.district}
+            <Text style={[styles.locationText, { color: colors.text }]}>
+              {selectedLocation.locality && `${selectedLocation.locality}, `}
+              {selectedLocation.district && `${selectedLocation.district}, `}
+              {selectedLocation.pincode && selectedLocation.pincode}
             </Text>
-            {selectedLocation.pincode && (
-              <Text style={[styles.locationText, { color: colors.gray }]}>
-                Pincode: {selectedLocation.pincode}
-              </Text>
-            )}
           </View>
           <TouchableOpacity
             style={[styles.confirmButton, { backgroundColor: colors.primary }]}
