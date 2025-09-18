@@ -197,7 +197,7 @@ export const addressAPI = {
     }
     
     const makeRequest = async (authToken: string) => {
-      return fetch(`${API_BASE_URL}/profile/addresses`, {
+      return fetch(`${API_BASE_URL}/service-area/addresses`, {
         headers: {
           'Authorization': `Bearer ${authToken}`
         }

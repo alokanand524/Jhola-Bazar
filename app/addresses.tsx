@@ -14,6 +14,13 @@ interface Address {
   addressLine2?: string;
   landmark?: string;
   isDefault: boolean;
+  fullAddress?: string;
+  pincode?: {
+    code: string;
+    city: string;
+    state: string;
+    deliveryCharge: string;
+  };
 }
 
 
@@ -58,7 +65,17 @@ export default function AddressesScreen() {
       
       const response = await addressAPI.getAddresses();
       if (response.success && response.data) {
-        setAddresses(response.data);
+        const transformedAddresses = response.data.map((addr: any) => ({
+          id: addr.id,
+          type: addr.type,
+          addressLine1: addr.addressLine1,
+          addressLine2: addr.addressLine2,
+          landmark: addr.landmark,
+          isDefault: addr.isDefault,
+          fullAddress: addr.fullAddress,
+          pincode: addr.pincode
+        }));
+        setAddresses(transformedAddresses);
       } else {
         setAddresses([]);
       }
@@ -148,12 +165,16 @@ export default function AddressesScreen() {
         </View>
       </View>
 
-      <Text style={[styles.addressText, { color: colors.text }]}>{item.addressLine1}</Text>
-      {item.addressLine2 && (
-        <Text style={[styles.addressText, { color: colors.text }]}>{item.addressLine2}</Text>
-      )}
+      <Text style={[styles.addressText, { color: colors.text }]}>
+        {item.fullAddress || `${item.addressLine1}${item.addressLine2 ? ', ' + item.addressLine2 : ''}`}
+      </Text>
       {item.landmark && (
         <Text style={[styles.landmarkText, { color: colors.gray }]}>Landmark: {item.landmark}</Text>
+      )}
+      {item.pincode && (
+        <Text style={[styles.landmarkText, { color: colors.gray }]}>
+          {item.pincode.city}, {item.pincode.state} - {item.pincode.code}
+        </Text>
       )}
 
       {!item.isDefault && (

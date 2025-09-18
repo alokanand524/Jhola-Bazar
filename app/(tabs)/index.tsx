@@ -19,7 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
-import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { handleTabBarScroll } from './_layout';
@@ -322,9 +322,16 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
+
+        {/* Footer Section */}
+        <View style={styles.footerSection}>
+          <Image 
+            source={require('../../assets/images/jhola-bajar-footer.png')} 
+            style={styles.footerImage}
+            resizeMode="contain"
+          />
+        </View>
       </ScrollView>
-
-
     </SafeAreaView>
   );
 }
@@ -457,5 +464,14 @@ const styles = StyleSheet.create({
   noProductsText: {
     fontSize: 16,
     textAlign: 'center',
+  },
+  footerSection: {
+    marginTop: 20,
+    paddingBottom: 20,
+  },
+  footerImage: {
+    width: '100%',
+    height: 300,
+    backgroundColor: 'darken',
   },
 });

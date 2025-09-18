@@ -114,15 +114,17 @@ const styles = StyleSheet.create({
   container: {
     height: 180,
     marginVertical: 16,
-    paddingHorizontal: 16,
   },
   scrollView: {
     flex: 1,
+    paddingHorizontal: 16,
   },
   bannerContainer: {
-    width: width,
+    // width: width - 32,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 25,
+    marginLeft: 5,
   },
   banner: {
     width: width - 32,
@@ -130,3 +132,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
 });
+
+
+

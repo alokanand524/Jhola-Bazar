@@ -23,6 +23,9 @@ function AppContent() {
         <Stack.Screen name="order-details/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="addresses" options={{ headerShown: false }} />
         <Stack.Screen name="add-address" options={{ headerShown: false }} />
+        <Stack.Screen name="edit-address/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="select-address" options={{ headerShown: false }} />
+        <Stack.Screen name="map-picker" options={{ headerShown: false }} />
         <Stack.Screen name="payments" options={{ headerShown: false }} />
         <Stack.Screen name="support" options={{ headerShown: false }} />
         <Stack.Screen name="about" options={{ headerShown: false }} />
