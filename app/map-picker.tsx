@@ -70,7 +70,29 @@ export default function MapPickerScreen() {
 
   const handleLocationSelect = async () => {
     if (selectedLocation) {
-      // Save location and navigate back
+      // Save location to localStorage
+      try {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        const existingLocations = await AsyncStorage.getItem('savedLocations');
+        const locations = existingLocations ? JSON.parse(existingLocations) : [];
+        
+        const newLocation = {
+          id: Date.now().toString(),
+          locality: selectedLocation.locality,
+          district: selectedLocation.district,
+          pincode: selectedLocation.pincode,
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude,
+          fullAddress: `${selectedLocation.locality}, ${selectedLocation.district}, ${selectedLocation.pincode}`,
+          timestamp: new Date().toISOString()
+        };
+        
+        locations.unshift(newLocation);
+        await AsyncStorage.setItem('savedLocations', JSON.stringify(locations));
+      } catch (error) {
+        console.log('Error saving location:', error);
+      }
+      
       router.back();
     }
   };
