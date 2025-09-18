@@ -17,7 +17,7 @@ import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import React, { useEffect } from 'react';
 import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -34,6 +34,7 @@ export default function HomeScreen() {
   const { location, loading: locationLoading, error: locationError } = useLocation();
   const [isInitialLoading, setIsInitialLoading] = React.useState(true);
   const [userLocation, setUserLocation] = React.useState<string | null>(null);
+  const [selectedAddress, setSelectedAddress] = React.useState<any>(null);
   const [apiProducts, setApiProducts] = React.useState([]);
   const [apiLoading, setApiLoading] = React.useState(true);
   const [featuredProducts, setFeaturedProducts] = React.useState([]);
@@ -104,6 +105,17 @@ export default function HomeScreen() {
     }
   };
 
+  const loadSelectedAddress = async () => {
+    try {
+      const address = await AsyncStorage.getItem('selectedDeliveryAddress');
+      if (address) {
+        setSelectedAddress(JSON.parse(address));
+      }
+    } catch (error) {
+      console.log('Error loading selected address:', error);
+    }
+  };
+
   useEffect(() => {
     const initializeApp = async () => {
       await behaviorTracker.init();
@@ -140,10 +152,17 @@ export default function HomeScreen() {
       
       setIsInitialLoading(false);
       getCurrentLocation();
+      loadSelectedAddress();
     };
     
     initializeApp();
   }, [dispatch]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadSelectedAddress();
+    }, [])
+  );
 
   useEffect(() => {
     if (location?.latitude && location?.longitude) {
@@ -223,9 +242,22 @@ export default function HomeScreen() {
               <Text style={[styles.addressText, { color: colors.gray }]}>Location unavailable</Text>
             ) : (
               <TouchableOpacity onPress={() => router.push('/select-address')}>
-                <Text style={[styles.addressText, { color: colors.text, fontWeight: 'bold' }]}>
-                  {userLocation || 'Select Location'}
-                </Text>
+                {selectedAddress ? (
+                  <View>
+                    <Text style={[styles.addressText, { color: colors.text, fontWeight: 'bold' }]}>
+                      {selectedAddress.address.split(',')[0]}
+                    </Text>
+                    {selectedAddress.address.split(',').length > 1 && (
+                      <Text style={[styles.addressSubText, { color: colors.gray }]}>
+                        {selectedAddress.address.split(',').slice(1).join(',').trim()}
+                      </Text>
+                    )}
+                  </View>
+                ) : (
+                  <Text style={[styles.addressText, { color: colors.text, fontWeight: 'bold' }]}>
+                    {userLocation || 'Select Location'}
+                  </Text>
+                )}
               </TouchableOpacity>
             )}
           </View>
@@ -368,6 +400,8 @@ const styles = StyleSheet.create({
   addressText: {
     fontSize: 14,
     fontWeight: 'bold',
+    flexWrap: 'wrap',
+    flex: 1,
   },
   cartButton: {
     position: 'relative',
@@ -473,5 +507,10 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 300,
     backgroundColor: 'darken',
+  },
+  addressSubText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginTop: 2,
   },
 });

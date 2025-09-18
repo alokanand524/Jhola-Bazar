@@ -9,6 +9,8 @@ interface LocationSuggestion {
   id: string;
   name: string;
   address: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface SavedLocation {
@@ -25,16 +27,43 @@ export default function SelectAddressScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   
   React.useEffect(() => {
     loadSavedLocations();
+    loadSavedAddresses();
   }, []);
   
   useFocusEffect(
     React.useCallback(() => {
       loadSavedLocations();
+      loadSavedAddresses();
     }, [])
   );
+  
+  const loadSavedAddresses = async () => {
+    try {
+      const { addressAPI } = require('@/services/api');
+      const response = await addressAPI.getAddresses();
+      if (response.success && response.data) {
+        const transformedAddresses = response.data.map((addr: any) => ({
+          id: addr.id,
+          type: addr.type,
+          addressLine1: addr.addressLine1,
+          addressLine2: addr.addressLine2,
+          landmark: addr.landmark,
+          isDefault: addr.isDefault,
+          fullAddress: addr.fullAddress,
+          pincode: addr.pincode
+        }));
+        setSavedAddresses(transformedAddresses);
+      }
+    } catch (error) {
+      console.log('Error loading saved addresses:', error);
+      setSavedAddresses([]);
+    }
+  };
   
   const loadSavedLocations = async () => {
     try {
@@ -59,21 +88,60 @@ export default function SelectAddressScreen() {
     }
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    // Mock suggestions - replace with actual API call
-    if (query.length > 2) {
-      setSuggestions([
-        { id: '1', name: 'Connaught Place', address: 'Connaught Place, New Delhi, Delhi 110001' },
-        { id: '2', name: 'India Gate', address: 'India Gate, New Delhi, Delhi 110003' },
-        { id: '3', name: 'Red Fort', address: 'Red Fort, New Delhi, Delhi 110006' },
-      ]);
-    } else {
+  const searchLocations = async (query: string) => {
+    if (query.length < 3) {
       setSuggestions([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      // Using Nominatim API for geocoding
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=in`
+      );
+      const data = await response.json();
+      
+      const searchResults = data.map((item: any, index: number) => ({
+        id: `search-${index}`,
+        name: item.display_name.split(',')[0],
+        address: item.display_name,
+        latitude: parseFloat(item.lat),
+        longitude: parseFloat(item.lon)
+      }));
+      
+      setSuggestions(searchResults);
+    } catch (error) {
+      console.log('Search error:', error);
+      setSuggestions([]);
+    } finally {
+      setIsSearching(false);
     }
   };
 
-  const handleLocationSelect = (location: LocationSuggestion) => {
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    
+    // Debounce search
+    const timeoutId = setTimeout(() => {
+      searchLocations(query);
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  };
+
+  const handleLocationSelect = async (location: LocationSuggestion) => {
+    try {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const selectedAddress = {
+        name: location.name,
+        address: location.address,
+        timestamp: new Date().toISOString()
+      };
+      await AsyncStorage.setItem('selectedDeliveryAddress', JSON.stringify(selectedAddress));
+    } catch (error) {
+      console.log('Error saving selected address:', error);
+    }
     router.back();
   };
 
@@ -111,6 +179,39 @@ export default function SelectAddressScreen() {
           <Text style={[styles.currentLocationText, { color: colors.text }]}>Your Current Location</Text>
         </TouchableOpacity>
 
+        {savedAddresses.length > 0 && (
+          <View>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Saved Addresses</Text>
+              <TouchableOpacity onPress={() => router.push('/add-address')}>
+                <Text style={[styles.addAddressText, { color: colors.primary }]}>+ Add Address</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={savedAddresses}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.suggestionItem, { borderBottomColor: colors.border, backgroundColor: colors.lightGray, borderRadius: 10, marginBottom: 8 }]}
+                  onPress={() => handleLocationSelect({ 
+                    id: item.id, 
+                    name: item.type.charAt(0).toUpperCase() + item.type.slice(1), 
+                    address: `${item.landmark ? item.landmark + ', ' : ''}${item.pincode ? item.pincode.city + ', ' + item.pincode.code : ''}` 
+                  })}
+                >
+                  <Ionicons name={item.type === 'home' ? 'home' : item.type === 'office' ? 'business' : 'location'} size={16} color={colors.primary} />
+                  <View style={styles.suggestionContent}>
+                    <Text style={[styles.suggestionName, { color: colors.text }]}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</Text>
+                    <Text style={[styles.suggestionAddress, { color: colors.gray }]}>
+                      {item.landmark ? item.landmark + ', ' : ''}{item.pincode ? item.pincode.city + ', ' + item.pincode.code : ''}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        )}
+
         {savedLocations.length > 0 && (
           <View>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Locations</Text>
@@ -141,6 +242,12 @@ export default function SelectAddressScreen() {
           </View>
         )}
 
+        {isSearching && searchQuery.length > 2 && (
+          <View style={styles.searchingContainer}>
+            <Text style={[styles.searchingText, { color: colors.gray }]}>Searching...</Text>
+          </View>
+        )}
+
         {suggestions.length > 0 && (
           <View>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Search Results</Text>
@@ -152,7 +259,7 @@ export default function SelectAddressScreen() {
                   style={[styles.suggestionItem, { borderBottomColor: colors.border }]}
                   onPress={() => handleLocationSelect(item)}
                 >
-                  <Ionicons name="location-outline" size={16} color={colors.gray} />
+                  <Ionicons name="search" size={16} color={colors.primary} />
                   <View style={styles.suggestionContent}>
                     <Text style={[styles.suggestionName, { color: colors.text }]}>{item.name}</Text>
                     <Text style={[styles.suggestionAddress, { color: colors.gray }]}>{item.address}</Text>
@@ -250,5 +357,23 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 8,
+  },
+  searchingContainer: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  searchingText: {
+    fontSize: 14,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  addAddressText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
