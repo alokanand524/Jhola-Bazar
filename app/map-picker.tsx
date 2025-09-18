@@ -87,11 +87,55 @@ export default function MapPickerScreen() {
           font-size: 30px;
           color: #00B761;
         }
+        .current-location-btn {
+          position: absolute;
+          bottom: 120px;
+          left: 20px;
+          width: 50px;
+          height: 50px;
+          background: white;
+          border-radius: 25px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          z-index: 1000;
+        }
+        .user-location {
+          width: 16px;
+          height: 16px;
+          background: #4285F4;
+          border-radius: 50%;
+          box-shadow: 0 0 20px rgba(66, 133, 244, 0.9), 0 0 40px rgba(66, 133, 244, 0.6), 0 0 60px rgba(173, 216, 255, 0.4);
+          position: relative;
+        }
+        .user-location::before {
+          content: '';
+          position: absolute;
+          top: -12px;
+          left: -12px;
+          width: 36px;
+          height: 36px;
+          border: 2px solid rgba(173, 216, 255, 0.4);
+          border-radius: 50%;
+          animation: ripple 2s infinite;
+        }
+
+        @keyframes ripple {
+          0% { transform: scale(0.8); opacity: 1; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
       </style>
     </head>
     <body>
       <div id="map"></div>
       <div class="center-marker">📍</div>
+      <div class="current-location-btn" onclick="goToCurrentLocation()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" fill="#666"/>
+        </svg>
+      </div>
       
       <script>
         var map = L.map('map', {
@@ -102,12 +146,42 @@ export default function MapPickerScreen() {
           attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
+        var currentLocationMarker = L.divIcon({
+          html: '<div class="user-location"></div>',
+          className: 'custom-div-icon',
+          iconSize: [26, 26],
+          iconAnchor: [13, 13]
+        });
+        
+        var userMarker = L.marker([${currentLocation.lat}, ${currentLocation.lng}], {
+          icon: currentLocationMarker
+        }).addTo(map);
+
+        function goToCurrentLocation() {
+          map.flyTo([${currentLocation.lat}, ${currentLocation.lng}], 16, {
+            animate: true,
+            duration: 1.5
+          });
+          userMarker.setLatLng([${currentLocation.lat}, ${currentLocation.lng}]);
+        }
+
         map.on('moveend', function() {
           var center = map.getCenter();
           window.ReactNativeWebView.postMessage(JSON.stringify({
             type: 'locationChanged',
             latitude: center.lat,
             longitude: center.lng
+          }));
+        });
+
+        navigator.geolocation.getCurrentPosition(function(position) {
+          var lat = position.coords.latitude;
+          var lng = position.coords.longitude;
+          userMarker.setLatLng([lat, lng]);
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'currentLocationUpdated',
+            latitude: lat,
+            longitude: lng
           }));
         });
       </script>
@@ -123,6 +197,11 @@ export default function MapPickerScreen() {
         if (locationData) {
           setSelectedLocation(locationData);
         }
+      } else if (data.type === 'currentLocationUpdated') {
+        setCurrentLocation({
+          lat: data.latitude,
+          lng: data.longitude
+        });
       }
     } catch (error) {
       console.log('Error parsing message:', error);
