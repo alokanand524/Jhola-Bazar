@@ -242,22 +242,12 @@ export default function HomeScreen() {
               <Text style={[styles.addressText, { color: colors.gray }]}>Location unavailable</Text>
             ) : (
               <TouchableOpacity onPress={() => router.push('/select-address')}>
-                {selectedAddress ? (
-                  <View>
-                    <Text style={[styles.addressText, { color: colors.text, fontWeight: 'bold' }]}>
-                      {selectedAddress.address.split(',')[0]}
-                    </Text>
-                    {selectedAddress.address.split(',').length > 1 && (
-                      <Text style={[styles.addressSubText, { color: colors.gray }]}>
-                        {selectedAddress.address.split(',').slice(1).join(',').trim()}
-                      </Text>
-                    )}
-                  </View>
-                ) : (
-                  <Text style={[styles.addressText, { color: colors.text, fontWeight: 'bold' }]}>
-                    {userLocation || 'Select Location'}
-                  </Text>
-                )}
+                <Text style={[styles.addressText, { color: colors.text, fontWeight: 'bold' }]}>
+                  {selectedAddress ? 
+                    (selectedAddress.address.length > 28 ? selectedAddress.address.substring(0, 28) + '...' : selectedAddress.address) : 
+                    ((userLocation || 'Select Location').length > 28 ? (userLocation || 'Select Location').substring(0, 28) + '...' : (userLocation || 'Select Location'))
+                  }
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -507,10 +497,5 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 300,
     backgroundColor: 'darken',
-  },
-  addressSubText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginTop: 2,
   },
 });
