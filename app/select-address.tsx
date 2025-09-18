@@ -11,6 +11,7 @@ interface LocationSuggestion {
   address: string;
   latitude?: number;
   longitude?: number;
+  distance?: number;
 }
 
 interface SavedLocation {
@@ -29,11 +30,49 @@ export default function SelectAddressScreen() {
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [showAllResults, setShowAllResults] = useState(false);
   
   React.useEffect(() => {
     loadSavedLocations();
     loadSavedAddresses();
+    getCurrentUserLocation();
+    
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
   }, []);
+  
+  const getCurrentUserLocation = async () => {
+    try {
+      const Location = require('expo-location');
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({});
+        setUserLocation({
+          lat: location.coords.latitude,
+          lng: location.coords.longitude
+        });
+      }
+    } catch (error) {
+      console.log('Error getting user location:', error);
+    }
+  };
+  
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // Radius of the Earth in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distance in kilometers
+  };
   
   useFocusEffect(
     React.useCallback(() => {
@@ -96,21 +135,100 @@ export default function SelectAddressScreen() {
 
     setIsSearching(true);
     try {
-      // Using Nominatim API for geocoding
+      // Use Nominatim (same as Leaflet) with proper headers and parameters
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=in`
+        `https://nominatim.openstreetmap.org/search?` +
+        `format=json&` +
+        `q=${encodeURIComponent(query)}&` +
+        `countrycodes=in&` +
+        `limit=8&` +
+        `addressdetails=1&` +
+        `extratags=1&` +
+        `namedetails=1`,
+        {
+          headers: {
+            'User-Agent': 'JholaBazar/1.0 (React Native App)',
+            'Accept': 'application/json',
+          }
+        }
       );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
       const data = await response.json();
       
-      const searchResults = data.map((item: any, index: number) => ({
-        id: `search-${index}`,
-        name: item.display_name.split(',')[0],
-        address: item.display_name,
-        latitude: parseFloat(item.lat),
-        longitude: parseFloat(item.lon)
-      }));
+      if (data && data.length > 0) {
+        let searchResults = data.map((item: any, index: number) => {
+          // Extract meaningful location name
+          let locationName = '';
+          
+          if (item.namedetails && item.namedetails.name) {
+            locationName = item.namedetails.name;
+          } else if (item.address) {
+            locationName = item.address.neighbourhood || 
+                          item.address.suburb || 
+                          item.address.village || 
+                          item.address.town || 
+                          item.address.city || 
+                          item.address.state_district || 
+                          item.display_name.split(',')[0];
+          } else {
+            locationName = item.display_name.split(',')[0];
+          }
+          
+          // Create formatted address
+          let formattedAddress = '';
+          if (item.address) {
+            const parts = [];
+            if (item.address.house_number && item.address.road) {
+              parts.push(`${item.address.house_number} ${item.address.road}`);
+            } else if (item.address.road) {
+              parts.push(item.address.road);
+            }
+            if (item.address.neighbourhood) parts.push(item.address.neighbourhood);
+            if (item.address.suburb) parts.push(item.address.suburb);
+            if (item.address.city || item.address.town || item.address.village) {
+              parts.push(item.address.city || item.address.town || item.address.village);
+            }
+            if (item.address.state) parts.push(item.address.state);
+            if (item.address.postcode) parts.push(item.address.postcode);
+            
+            formattedAddress = parts.join(', ') || item.display_name;
+          } else {
+            formattedAddress = item.display_name;
+          }
+          
+          const lat = parseFloat(item.lat);
+          const lng = parseFloat(item.lon);
+          let distance = 0;
+          
+          // Calculate distance from user location if available
+          if (userLocation) {
+            distance = calculateDistance(userLocation.lat, userLocation.lng, lat, lng);
+          }
+          
+          return {
+            id: `search-${index}`,
+            name: locationName.trim(),
+            address: formattedAddress,
+            latitude: lat,
+            longitude: lng,
+            distance: distance
+          };
+        });
+        
+        // Sort by distance if user location is available
+        if (userLocation) {
+          searchResults.sort((a, b) => a.distance - b.distance);
+        }
+        
+        setSuggestions(searchResults);
+      } else {
+        setSuggestions([]);
+      }
       
-      setSuggestions(searchResults);
     } catch (error) {
       console.log('Search error:', error);
       setSuggestions([]);
@@ -121,13 +239,21 @@ export default function SelectAddressScreen() {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
+    setShowAllResults(false); // Reset to show only top 3 results
     
-    // Debounce search
-    const timeoutId = setTimeout(() => {
-      searchLocations(query);
-    }, 500);
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
     
-    return () => clearTimeout(timeoutId);
+    if (query.length >= 3) {
+      const timeoutId = setTimeout(() => {
+        searchLocations(query);
+      }, 500);
+      setSearchTimeout(timeoutId);
+    } else {
+      setSuggestions([]);
+      setIsSearching(false);
+    }
   };
 
   const handleLocationSelect = async (location: LocationSuggestion) => {
@@ -168,6 +294,9 @@ export default function SelectAddressScreen() {
             placeholderTextColor={colors.gray}
             value={searchQuery}
             onChangeText={handleSearch}
+            autoFocus={false}
+            editable={true}
+            selectTextOnFocus={true}
           />
         </View>
 
@@ -178,6 +307,50 @@ export default function SelectAddressScreen() {
           <Ionicons name="location" size={20} color={colors.primary} />
           <Text style={[styles.currentLocationText, { color: colors.text }]}>Your Current Location</Text>
         </TouchableOpacity>
+
+        {isSearching && searchQuery.length > 2 && (
+          <View style={styles.searchingContainer}>
+            <Text style={[styles.searchingText, { color: colors.gray }]}>Searching...</Text>
+          </View>
+        )}
+
+        {suggestions.length > 0 && (
+          <View>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Search Results</Text>
+            <FlatList
+              data={showAllResults ? suggestions : suggestions.slice(0, 3)}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.suggestionItem, { borderBottomColor: colors.border }]}
+                  onPress={() => handleLocationSelect(item)}
+                >
+                  <Ionicons name="search" size={16} color={colors.primary} />
+                  <View style={styles.suggestionContent}>
+                    <Text style={[styles.suggestionName, { color: colors.text }]}>{item.name}</Text>
+                    <Text style={[styles.suggestionAddress, { color: colors.gray }]}>{item.address}</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+              scrollEnabled={showAllResults}
+            />
+            {suggestions.length > 3 && (
+              <TouchableOpacity
+                style={[styles.viewMoreButton, { backgroundColor: colors.lightGray }]}
+                onPress={() => setShowAllResults(!showAllResults)}
+              >
+                <Text style={[styles.viewMoreText, { color: colors.primary }]}>
+                  {showAllResults ? `Show Less (${suggestions.length - 3} hidden)` : `View More (${suggestions.length - 3} more)`}
+                </Text>
+                <Ionicons 
+                  name={showAllResults ? "chevron-up" : "chevron-down"} 
+                  size={16} 
+                  color={colors.primary} 
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {savedAddresses.length > 0 && (
           <View>
@@ -241,34 +414,6 @@ export default function SelectAddressScreen() {
             />
           </View>
         )}
-
-        {isSearching && searchQuery.length > 2 && (
-          <View style={styles.searchingContainer}>
-            <Text style={[styles.searchingText, { color: colors.gray }]}>Searching...</Text>
-          </View>
-        )}
-
-        {suggestions.length > 0 && (
-          <View>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Search Results</Text>
-            <FlatList
-              data={suggestions}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.suggestionItem, { borderBottomColor: colors.border }]}
-                  onPress={() => handleLocationSelect(item)}
-                >
-                  <Ionicons name="search" size={16} color={colors.primary} />
-                  <View style={styles.suggestionContent}>
-                    <Text style={[styles.suggestionName, { color: colors.text }]}>{item.name}</Text>
-                    <Text style={[styles.suggestionAddress, { color: colors.gray }]}>{item.address}</Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        )}
       </View>
     </SafeAreaView>
   );
@@ -324,6 +469,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
   },
   suggestionContent: {
@@ -375,5 +521,19 @@ const styles = StyleSheet.create({
   addAddressText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  viewMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 8,
+  },
+  viewMoreText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginRight: 4,
   },
 });

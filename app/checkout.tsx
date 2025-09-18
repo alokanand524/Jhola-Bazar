@@ -1,7 +1,6 @@
-import { useTheme } from '@/hooks/useTheme';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { useTheme } from '@/hooks/useTheme';
 import { clearCart } from '@/store/slices/cartSlice';
-import { setSelectedAddress } from '@/store/slices/userSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -24,8 +23,58 @@ export default function CheckoutScreen() {
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
+    loadDeliveryAddress();
+    loadSavedAddresses();
+    loadRecentLocations();
     setIsLoading(false);
   }, []);
+  
+  const loadDeliveryAddress = async () => {
+    try {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const address = await AsyncStorage.getItem('selectedDeliveryAddress');
+      if (address) {
+        setSelectedDeliveryAddress(JSON.parse(address));
+      }
+    } catch (error) {
+      console.log('Error loading delivery address:', error);
+    }
+  };
+  
+  const loadSavedAddresses = async () => {
+    try {
+      const { addressAPI } = require('@/services/api');
+      const response = await addressAPI.getAddresses();
+      if (response.success && response.data) {
+        const transformedAddresses = response.data.map((addr: any) => ({
+          id: addr.id,
+          type: addr.type,
+          addressLine1: addr.addressLine1,
+          addressLine2: addr.addressLine2,
+          landmark: addr.landmark,
+          isDefault: addr.isDefault,
+          fullAddress: addr.fullAddress,
+          pincode: addr.pincode
+        }));
+        setSavedAddresses(transformedAddresses);
+      }
+    } catch (error) {
+      console.log('Error loading saved addresses:', error);
+      setSavedAddresses([]);
+    }
+  };
+  
+  const loadRecentLocations = async () => {
+    try {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const locations = await AsyncStorage.getItem('savedLocations');
+      if (locations) {
+        setRecentLocations(JSON.parse(locations));
+      }
+    } catch (error) {
+      console.log('Error loading recent locations:', error);
+    }
+  };
   
   const [selectedPayment, setSelectedPayment] = useState('cod');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -34,12 +83,9 @@ export default function CheckoutScreen() {
   const [isReferralApplied, setIsReferralApplied] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
-
-  const mockAddresses = [
-    { id: '1', type: 'Home' as const, address: 'New Delhi, India', landmark: 'Near Metro Station', isDefault: true },
-    { id: '2', type: 'Work' as const, address: 'Gurgaon, Haryana', landmark: 'Cyber City', isDefault: false },
-    { id: '3', type: 'Other' as const, address: 'Noida, UP', landmark: 'Sector 18', isDefault: false },
-  ];
+  const [selectedDeliveryAddress, setSelectedDeliveryAddress] = useState<any>(null);
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [recentLocations, setRecentLocations] = useState<any[]>([]);
 
   const deliveryFee = 25;
   const finalTotal = total + deliveryFee - referralDiscount;
@@ -123,9 +169,14 @@ export default function CheckoutScreen() {
           <View style={[styles.addressCard, { backgroundColor: colors.lightGray }]}>
             <Ionicons name="location" size={20} color={colors.primary} />
             <View style={styles.addressInfo}>
-              <Text style={[styles.addressType, { color: colors.text }]}>{selectedAddress?.type || 'Home'}</Text>
+              <Text style={[styles.addressType, { color: colors.text }]}>Delivery to</Text>
               <Text style={[styles.addressText, { color: colors.gray }]}>
-                {selectedAddress?.address || 'New Delhi, India'}
+                {selectedDeliveryAddress ? 
+                  (selectedDeliveryAddress.address.length > 40 ? 
+                    selectedDeliveryAddress.address.substring(0, 40) + '...' : 
+                    selectedDeliveryAddress.address) : 
+                  'Select delivery address'
+                }
               </Text>
             </View>
             <TouchableOpacity onPress={() => setShowAddressModal(true)}>
@@ -172,7 +223,7 @@ export default function CheckoutScreen() {
 
         {/* Referral Code */}
         <View style={[styles.section, { borderBottomColor: colors.lightGray }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Have a Referral Code?</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Have a Coupon Code?</Text>
           {!isReferralApplied ? (
             <View style={styles.referralContainer}>
               <TextInput
@@ -184,7 +235,7 @@ export default function CheckoutScreen() {
                     color: colors.text
                   }
                 ]}
-                placeholder="Enter referral code"
+                placeholder="Enter coupon code"
                 placeholderTextColor={colors.gray}
                 value={referralCode}
                 onChangeText={setReferralCode}
@@ -273,27 +324,77 @@ export default function CheckoutScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Select Delivery Address</Text>
-            {mockAddresses.map((address) => (
-              <TouchableOpacity
-                key={address.id}
-                style={styles.modalOption}
-                onPress={() => {
-                  dispatch(setSelectedAddress(address));
-                  setShowAddressModal(false);
-                }}
-              >
-                <View style={styles.modalOptionLeft}>
-                  <Ionicons name="location" size={24} color={colors.text} />
-                  <View>
-                    <Text style={[styles.modalOptionText, { color: colors.text }]}>{address.type}</Text>
-                    <Text style={[styles.modalOptionSubtext, { color: colors.gray }]}>{address.address}</Text>
-                  </View>
-                </View>
-                {selectedAddress?.id === address.id && (
-                  <Ionicons name="checkmark" size={20} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
+            
+            {savedAddresses.length > 0 && (
+              <View>
+                <Text style={[styles.modalSectionTitle, { color: colors.text }]}>Saved Addresses</Text>
+                {savedAddresses.map((address) => (
+                  <TouchableOpacity
+                    key={address.id}
+                    style={styles.modalOption}
+                    onPress={() => {
+                      const selectedAddr = {
+                        name: address.type.charAt(0).toUpperCase() + address.type.slice(1),
+                        address: `${address.landmark ? address.landmark + ', ' : ''}${address.pincode ? address.pincode.city + ', ' + address.pincode.code : ''}`,
+                        timestamp: new Date().toISOString()
+                      };
+                      setSelectedDeliveryAddress(selectedAddr);
+                      setShowAddressModal(false);
+                    }}
+                  >
+                    <View style={styles.modalOptionLeft}>
+                      <Ionicons name={address.type === 'home' ? 'home' : address.type === 'office' ? 'business' : 'location'} size={24} color={colors.primary} />
+                      <View>
+                        <Text style={[styles.modalOptionText, { color: colors.text }]}>{address.type.charAt(0).toUpperCase() + address.type.slice(1)}</Text>
+                        <Text style={[styles.modalOptionSubtext, { color: colors.gray }]}>
+                          {address.landmark ? address.landmark + ', ' : ''}{address.pincode ? address.pincode.city + ', ' + address.pincode.code : ''}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            
+            {recentLocations.length > 0 && (
+              <View>
+                <Text style={[styles.modalSectionTitle, { color: colors.text }]}>Recent Locations</Text>
+                {recentLocations.slice(0, 3).map((location) => (
+                  <TouchableOpacity
+                    key={location.id}
+                    style={styles.modalOption}
+                    onPress={() => {
+                      const selectedAddr = {
+                        name: location.locality,
+                        address: location.fullAddress,
+                        timestamp: new Date().toISOString()
+                      };
+                      setSelectedDeliveryAddress(selectedAddr);
+                      setShowAddressModal(false);
+                    }}
+                  >
+                    <View style={styles.modalOptionLeft}>
+                      <Ionicons name="location" size={24} color={colors.primary} />
+                      <View>
+                        <Text style={[styles.modalOptionText, { color: colors.text }]}>{location.locality}</Text>
+                        <Text style={[styles.modalOptionSubtext, { color: colors.gray }]}>{location.fullAddress}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            
+            <TouchableOpacity 
+              style={[styles.addNewAddress, { backgroundColor: colors.lightGray }]}
+              onPress={() => {
+                setShowAddressModal(false);
+                router.push('/select-address');
+              }}
+            >
+              <Ionicons name="add" size={20} color={colors.primary} />
+              <Text style={[styles.addNewAddressText, { color: colors.primary }]}>Add New Address</Text>
+            </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.modalClose, { backgroundColor: colors.primary }]}
               onPress={() => setShowAddressModal(false)}
@@ -582,6 +683,26 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  modalSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+    color: '#666',
+  },
+  addNewAddress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 8,
+  },
+  addNewAddressText: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 8,
   },
   disabledButton: {
     backgroundColor: '#ccc',
