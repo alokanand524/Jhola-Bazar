@@ -33,10 +33,17 @@ export default function MapPickerScreen() {
       }
 
       const location = await Location.getCurrentPositionAsync({});
-      setCurrentLocation({
+      const newLocation = {
         lat: location.coords.latitude,
         lng: location.coords.longitude,
-      });
+      };
+      setCurrentLocation(newLocation);
+      
+      // Update selected location immediately with current location
+      const locationData = await reverseGeocode(newLocation.lat, newLocation.lng);
+      if (locationData) {
+        setSelectedLocation(locationData);
+      }
     } catch (error) {
       console.log('Error getting location:', error);
     }
@@ -168,13 +175,17 @@ export default function MapPickerScreen() {
           userMarker.setLatLng([${currentLocation.lat}, ${currentLocation.lng}]);
         }
 
-        map.on('moveend', function() {
-          var center = map.getCenter();
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'locationChanged',
-            latitude: center.lat,
-            longitude: center.lng
-          }));
+        var debounceTimer;
+        map.on('move', function() {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(function() {
+            var center = map.getCenter();
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'locationChanged',
+              latitude: center.lat,
+              longitude: center.lng
+            }));
+          }, 300);
         });
 
         navigator.geolocation.getCurrentPosition(function(position) {
@@ -231,24 +242,27 @@ export default function MapPickerScreen() {
         />
       </View>
 
-      {selectedLocation && (
-        <View style={[styles.locationInfo, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
-          <View style={styles.locationDetails}>
-            <Text style={[styles.locationTitle, { color: colors.text }]}>Selected Location</Text>
+      <View style={[styles.locationInfo, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+        <View style={styles.locationDetails}>
+          <Text style={[styles.locationTitle, { color: colors.text }]}>Selected Location</Text>
+          {selectedLocation ? (
             <Text style={[styles.locationText, { color: colors.text }]}>
               {selectedLocation.locality && `${selectedLocation.locality}, `}
               {selectedLocation.district && `${selectedLocation.district}, `}
               {selectedLocation.pincode && selectedLocation.pincode}
             </Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.confirmButton, { backgroundColor: colors.primary }]}
-            onPress={handleLocationSelect}
-          >
-            <Text style={styles.confirmButtonText}>Confirm Location</Text>
-          </TouchableOpacity>
+          ) : (
+            <Text style={[styles.locationText, { color: colors.gray }]}>Loading location...</Text>
+          )}
         </View>
-      )}
+        <TouchableOpacity
+          style={[styles.confirmButton, { backgroundColor: selectedLocation ? colors.primary : colors.gray }]}
+          onPress={handleLocationSelect}
+          disabled={!selectedLocation}
+        >
+          <Text style={styles.confirmButtonText}>Confirm Location</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
