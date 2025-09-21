@@ -5,17 +5,27 @@ import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, Alert } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { ImageWithLoading } from '@/components/ImageWithLoading';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { behaviorTracker } from '@/services/behaviorTracker';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
   const dispatch = useDispatch();
   const { colors } = useTheme();
   const [selectedVariant, setSelectedVariant] = React.useState(0);
+  const [showElements, setShowElements] = React.useState({
+    image: false,
+    name: false,
+    price: false,
+    description: false,
+    variants: false,
+    features: false
+  });
   
   const { selectedProduct, productLoading } = useSelector((state: RootState) => state.products);
   const cartItem = useSelector((state: RootState) => 
@@ -31,21 +41,42 @@ export default function ProductDetailScreen() {
   React.useEffect(() => {
     if (selectedProduct) {
       behaviorTracker.trackProductView(selectedProduct.id, selectedProduct.category);
+      
+      // Progressive loading animation
+      const delays = [0, 150, 300, 450, 600, 750];
+      const elements = ['image', 'name', 'price', 'description', 'variants', 'features'];
+      
+      elements.forEach((element, index) => {
+        setTimeout(() => {
+          setShowElements(prev => ({ ...prev, [element]: true }));
+        }, delays[index]);
+      });
     }
   }, [selectedProduct]);
 
 
 
-  if (!selectedProduct) {
+  if (productLoading || !selectedProduct) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Product Not Found</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Product Details</Text>
           <View style={{ width: 24 }} />
         </View>
+        <ScrollView style={styles.content}>
+          <SkeletonLoader width="100%" height={300} />
+          <View style={styles.productInfo}>
+            <SkeletonLoader width={80} height={24} style={{ marginBottom: 12 }} />
+            <SkeletonLoader width="70%" height={28} style={{ marginBottom: 4 }} />
+            <SkeletonLoader width="40%" height={16} style={{ marginBottom: 12 }} />
+            <SkeletonLoader width={120} height={16} style={{ marginBottom: 16 }} />
+            <SkeletonLoader width={150} height={32} style={{ marginBottom: 20 }} />
+            <SkeletonLoader width="100%" height={80} style={{ marginBottom: 20 }} />
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -53,6 +84,13 @@ export default function ProductDetailScreen() {
   const handleAddToCart = () => {
     const currentVariant = selectedProduct.variants?.[selectedVariant];
     const price = currentVariant?.price?.sellingPrice || selectedProduct.price;
+    const minQty = currentVariant?.minOrderQty || 1;
+    
+    if (currentVariant?.stock?.availableQty === 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Out of Stock', 'This product is currently out of stock');
+      return;
+    }
     
     dispatch(addToCart({
       id: selectedProduct.id,
@@ -60,10 +98,27 @@ export default function ProductDetailScreen() {
       price: parseFloat(price),
       image: selectedProduct.image,
       category: selectedProduct.category,
+      quantity: minQty
     }));
   };
 
   const handleUpdateQuantity = (quantity: number) => {
+    const currentVariant = selectedProduct.variants?.[selectedVariant];
+    const minQty = currentVariant?.minOrderQty || 1;
+    const maxQty = currentVariant?.maxOrderQty || 10;
+    const incrementQty = currentVariant?.incrementQty || 1;
+    
+    if (quantity < minQty) {
+      dispatch(updateQuantity({ id: selectedProduct.id, quantity: 0 }));
+      return;
+    }
+    
+    if (quantity > maxQty) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Max Order Limit', `You can order maximum ${maxQty} units of this product`);
+      return;
+    }
+    
     dispatch(updateQuantity({ id: selectedProduct.id, quantity }));
   };
 
@@ -88,23 +143,56 @@ export default function ProductDetailScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        <ImageWithLoading source={{ uri: selectedProduct.image }} height={300} style={styles.productImage} />
+        {showElements.image ? (
+          selectedProduct.images && selectedProduct.images.length > 1 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
+              {selectedProduct.images.map((image, index) => (
+                <ImageWithLoading 
+                  key={index}
+                  source={{ uri: image }} 
+                  height={300} 
+                  style={[styles.productImage, { width: 300, marginRight: 10 }]} 
+                />
+              ))}
+            </ScrollView>
+          ) : (
+            <ImageWithLoading source={{ uri: selectedProduct.image || selectedProduct.images?.[0] }} height={300} style={styles.productImage} />
+          )
+        ) : (
+          <SkeletonLoader width="100%" height={300} />
+        )}
         
         <View style={styles.productInfo}>
-          <View style={[styles.categoryBadge, { backgroundColor: colors.primary }]}>
-            <Text style={styles.categoryText}>{selectedProduct.category}</Text>
-          </View>
+          {showElements.name ? (
+            <>
+              <View style={[styles.categoryBadge, { backgroundColor: colors.primary }]}>
+                <Text style={styles.categoryText}>{selectedProduct.category?.name || selectedProduct.category}</Text>
+              </View>
+              
+              {selectedProduct.brand && (
+                <Text style={[styles.brandText, { color: colors.gray }]}>{selectedProduct.brand.name}</Text>
+              )}
+              
+              <Text style={[styles.productName, { color: colors.text }]}>{selectedProduct.name}</Text>
+              <Text style={[styles.productUnit, { color: colors.gray }]}>{selectedProduct.shortDescription}</Text>
+              
+              <View style={styles.ratingContainer}>
+                <Ionicons name="star" size={16} color="#FFD700" />
+                <Text style={[styles.rating, { color: colors.text }]}>{selectedProduct.rating || 4.5}</Text>
+                <Text style={[styles.deliveryTime, { color: colors.gray }]}>• {selectedProduct.deliveryTime || '10 mins'}</Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <SkeletonLoader width={80} height={24} style={{ marginBottom: 12 }} />
+              <SkeletonLoader width="70%" height={28} style={{ marginBottom: 4 }} />
+              <SkeletonLoader width="40%" height={16} style={{ marginBottom: 12 }} />
+              <SkeletonLoader width={120} height={16} style={{ marginBottom: 16 }} />
+            </>
+          )}
           
-          <Text style={[styles.productName, { color: colors.text }]}>{selectedProduct.name}</Text>
-          <Text style={[styles.productUnit, { color: colors.gray }]}>{selectedProduct.unit}</Text>
-          
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={16} color="#FFD700" />
-            <Text style={[styles.rating, { color: colors.text }]}>{selectedProduct.rating || 4.5}</Text>
-            <Text style={[styles.deliveryTime, { color: colors.gray }]}>• {selectedProduct.deliveryTime || '10 mins'}</Text>
-          </View>
-          
-          <View style={styles.priceContainer}>
+          {showElements.price ? (
+            <View style={styles.priceContainer}>
             {selectedProduct.variants && selectedProduct.variants[selectedVariant] ? (
               <>
                 <Text style={[styles.price, { color: colors.text }]}>₹{selectedProduct.variants[selectedVariant].price?.sellingPrice}</Text>
@@ -127,64 +215,61 @@ export default function ProductDetailScreen() {
                 )}
               </>
             )}
-          </View>
-          
-          <View style={styles.descriptionContainer}>
-            <Text style={[styles.descriptionTitle, { color: colors.text }]}>Description</Text>
-            <Text style={[styles.description, { color: colors.gray }]}>{selectedProduct.description}</Text>
-          </View>
+            </View>
+          ) : (
+            <SkeletonLoader width={150} height={32} style={{ marginBottom: 20 }} />
+          )}
           
           {/* Variant Selection */}
-          {selectedProduct.variants && selectedProduct.variants.length > 1 && (
+          {showElements.variants && selectedProduct.variants && selectedProduct.variants.length > 0 && (
             <View style={styles.weightContainer}>
-              <Text style={[styles.weightTitle, { color: colors.text }]}>Select Variant</Text>
+              <Text style={[styles.weightTitle, { color: colors.text }]}>Available Variants</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.weightScroll}>
                 {selectedProduct.variants.map((variant, index) => (
                   <TouchableOpacity 
-                    key={index} 
+                    key={variant.id} 
                     style={[
-                      styles.weightCard, 
+                      styles.variantCard, 
                       { borderColor: selectedVariant === index ? colors.primary : colors.border },
                       selectedVariant === index && { backgroundColor: colors.lightGray }
                     ]}
                     onPress={() => setSelectedVariant(index)}
                   >
+                    {variant.images && variant.images[0] && (
+                      <ImageWithLoading 
+                        source={{ uri: variant.images[0] }} 
+                        height={60} 
+                        style={styles.variantImage}
+                      />
+                    )}
                     <Text style={[styles.weightText, { color: colors.text }]}>
                       {variant.weight} {variant.baseUnit}
                     </Text>
                     <Text style={[styles.weightPrice, { color: colors.primary }]}>
                       ₹{variant.price?.sellingPrice}
                     </Text>
-                    {variant.stock?.status !== 'AVAILABLE' && (
-                      <Text style={[styles.outOfStock, { color: 'red' }]}>Out of Stock</Text>
+                    {variant.price?.basePrice && variant.price.basePrice !== variant.price.sellingPrice && (
+                      <Text style={[styles.variantOriginalPrice, { color: colors.gray }]}>
+                        ₹{variant.price.basePrice}
+                      </Text>
                     )}
+                    <Text style={[styles.stockText, { color: variant.stock?.availableQty === 0 ? 'red' : 'green' }]}>
+                      {variant.stock?.availableQty === 0 ? 'Out of Stock' : `${variant.stock?.availableQty} in stock`}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
             </View>
           )}
-
-          <View style={styles.featuresContainer}>
-            <Text style={[styles.featuresTitle, { color: colors.text }]}>Features</Text>
-            <View style={styles.feature}>
-              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-              <Text style={[styles.featureText, { color: colors.gray }]}>Fresh and high quality</Text>
+          
+          {showElements.description ? (
+            <View style={styles.descriptionContainer}>
+              <Text style={[styles.descriptionTitle, { color: colors.text }]}>Description</Text>
+              <Text style={[styles.description, { color: colors.gray }]}>{selectedProduct.description}</Text>
             </View>
-            <View style={styles.feature}>
-              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-              <Text style={[styles.featureText, { color: colors.gray }]}>Fast delivery in {selectedProduct.deliveryTime || '10 minutes'}</Text>
-            </View>
-            <View style={styles.feature}>
-              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-              <Text style={[styles.featureText, { color: colors.gray }]}>Best price guaranteed</Text>
-            </View>
-            {selectedProduct.variants?.[selectedVariant]?.stock?.status === 'AVAILABLE' && (
-              <View style={styles.feature}>
-                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                <Text style={[styles.featureText, { color: colors.gray }]}>In Stock</Text>
-              </View>
-            )}
-          </View>
+          ) : (
+            <SkeletonLoader width="100%" height={80} style={{ marginBottom: 20 }} />
+          )}
         </View>
       </ScrollView>
 
@@ -205,14 +290,22 @@ export default function ProductDetailScreen() {
           <View style={[styles.quantityContainer, { backgroundColor: colors.primary }]}>
             <TouchableOpacity 
               style={styles.quantityButton}
-              onPress={() => handleUpdateQuantity(cartItem.quantity - 1)}
+              onPress={() => {
+                const currentVariant = selectedProduct.variants?.[selectedVariant];
+                const incrementQty = currentVariant?.incrementQty || 1;
+                handleUpdateQuantity(cartItem.quantity - incrementQty);
+              }}
             >
               <Ionicons name="remove" size={20} color="#ffffffff" />
             </TouchableOpacity>
             <Text style={styles.quantity}>{cartItem.quantity}</Text>
             <TouchableOpacity 
               style={styles.quantityButton}
-              onPress={() => handleUpdateQuantity(cartItem.quantity + 1)}
+              onPress={() => {
+                const currentVariant = selectedProduct.variants?.[selectedVariant];
+                const incrementQty = currentVariant?.incrementQty || 1;
+                handleUpdateQuantity(cartItem.quantity + incrementQty);
+              }}
             >
               <Ionicons name="add" size={20} color="#ffffffff" />
             </TouchableOpacity>
@@ -221,13 +314,13 @@ export default function ProductDetailScreen() {
           <TouchableOpacity 
             style={[
               styles.addToCartButton, 
-              { backgroundColor: selectedProduct.variants?.[selectedVariant]?.stock?.status === 'AVAILABLE' ? colors.primary : colors.gray }
+              { backgroundColor: selectedProduct.variants?.[selectedVariant]?.stock?.availableQty === 0 ? colors.gray : colors.primary }
             ]} 
             onPress={handleAddToCart}
-            disabled={selectedProduct.variants?.[selectedVariant]?.stock?.status !== 'AVAILABLE'}
+            disabled={selectedProduct.variants?.[selectedVariant]?.stock?.availableQty === 0}
           >
             <Text style={styles.addToCartText}>
-              {selectedProduct.variants?.[selectedVariant]?.stock?.status === 'AVAILABLE' ? 'Add to Jhola' : 'Out of Stock'}
+              {selectedProduct.variants?.[selectedVariant]?.stock?.availableQty === 0 ? 'Out of Stock' : 'Add to Jhola'}
             </Text>
           </TouchableOpacity>
         )}
@@ -446,5 +539,37 @@ const styles = StyleSheet.create({
   outOfStock: {
     fontSize: 10,
     marginTop: 2,
+  },
+  imageScroll: {
+    paddingHorizontal: 10,
+  },
+  brandText: {
+    fontSize: 14,
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  variantCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 12,
+    alignItems: 'center',
+    minWidth: 100,
+  },
+  variantImage: {
+    width: 60,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  variantOriginalPrice: {
+    fontSize: 12,
+    textDecorationLine: 'line-through',
+    marginTop: 2,
+  },
+  stockText: {
+    fontSize: 10,
+    marginTop: 4,
+    fontWeight: '500',
   },
 });

@@ -64,8 +64,6 @@ export default function TabLayout() {
           borderTopColor: colors.border,
           height: 70,
           paddingBottom: 16,
-          position: 'absolute',
-          transform: [{ translateY: tabBarTranslateY }],
         },
       }}>
 

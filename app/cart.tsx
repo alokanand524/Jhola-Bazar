@@ -3,7 +3,8 @@ import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
-import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '@/hooks/useTheme';
@@ -19,7 +20,24 @@ export default function CartScreen() {
     setIsLoading(false);
   }, []);
 
-  const handleUpdateQuantity = (id: string, quantity: number) => {
+  const handleUpdateQuantity = (id: string, quantity: number, item: any) => {
+    // For cart items, we need to get product data from API or use default values
+    // Since cart items don't have variant data, we'll use reasonable defaults
+    const minQty = 1; // Default minimum
+    const maxQty = 10; // Default maximum (can be made dynamic later)
+    const incrementQty = 1; // Default increment
+    
+    if (quantity < minQty) {
+      dispatch(updateQuantity({ id, quantity: 0 }));
+      return;
+    }
+    
+    if (quantity > maxQty) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Max Order Limit', `You can order maximum ${maxQty} units of this product`);
+      return;
+    }
+    
     dispatch(updateQuantity({ id, quantity }));
   };
 
@@ -117,14 +135,14 @@ export default function CartScreen() {
                 <View style={[styles.quantityContainer, { backgroundColor: colors.primary }]}>
                   <TouchableOpacity 
                     style={styles.quantityButton}
-                    onPress={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                    onPress={() => handleUpdateQuantity(item.id, item.quantity - 1, item)}
                   >
                     <Ionicons name="remove" size={16} color="#ffffffff" />
                   </TouchableOpacity>
                   <Text style={styles.quantity}>{item.quantity}</Text>
                   <TouchableOpacity 
                     style={styles.quantityButton}
-                    onPress={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                    onPress={() => handleUpdateQuantity(item.id, item.quantity + 1, item)}
                   >
                     <Ionicons name="add" size={16} color="#ffffffff" />
                   </TouchableOpacity>
