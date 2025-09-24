@@ -87,7 +87,8 @@ export default function CheckoutScreen() {
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const [recentLocations, setRecentLocations] = useState<any[]>([]);
 
-  const deliveryFee = 25;
+  // const deliveryFee = 25;
+  const deliveryFee = 0; // Delivery fee disabled
   const finalTotal = total + deliveryFee - referralDiscount;
 
   const handleApplyReferral = () => {
@@ -108,24 +109,87 @@ export default function CheckoutScreen() {
   };
 
   const handlePlaceOrder = async () => {
+    if (!selectedDeliveryAddress || !selectedDeliveryAddress.id) {
+      Alert.alert('Error', 'Please select a delivery address');
+      return;
+    }
+
+    console.log('Selected address:', selectedDeliveryAddress);
     setIsPlacingOrder(true);
     
-    // Simulate order placement
-    setTimeout(() => {
-      setIsPlacingOrder(false);
-      dispatch(clearCart());
+    try {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const token = await AsyncStorage.getItem('authToken');
       
-      Alert.alert(
-        'Order Placed Successfully!',
-        'Your order will be delivered in 10 minutes.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.push('/(tabs)/' as any),
-          },
-        ]
-      );
-    }, 2000);
+      if (!token) {
+        Alert.alert('Error', 'Please login to place order');
+        setIsPlacingOrder(false);
+        return;
+      }
+
+      // Get cart items for the order
+      const cartResponse = await fetch('https://jholabazar.onrender.com/api/v1/cart/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const cartData = await cartResponse.json();
+      const cartItems = cartData.data?.carts?.[0]?.items || [];
+      
+      console.log('Cart items:', JSON.stringify(cartItems, null, 2));
+      
+      const orderItems = cartItems.map(item => {
+        const variantId = (item.variant?.id || item.variantId)?.toString().trim();
+        console.log(`Item: ${item.product?.name}, VariantId: '${variantId}', Available: ${item.isAvailable}, Stock: ${item.availableQty}`);
+        return {
+          variantId: variantId,
+          quantity: parseInt(item.quantity)
+        };
+      });
+      
+      console.log('Order payload:', {
+        storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
+        deliveryAddressId: selectedDeliveryAddress.id,
+        paymentMethod: 'CASH_ON_DELIVERY',
+        items: orderItems
+      });
+      
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/orders/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
+          deliveryAddressId: selectedDeliveryAddress.id,
+          paymentMethod: 'CASH_ON_DELIVERY',
+          items: orderItems
+        })
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        dispatch(clearCart());
+        Alert.alert(
+          'Order Placed Successfully!',
+          'Your order will be delivered soon.',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.push('/(tabs)/' as any),
+            },
+          ]
+        );
+      } else {
+        console.log('Order creation failed:', result);
+        Alert.alert('Error', result.message || 'Failed to place order');
+      }
+    } catch (error) {
+      console.error('Error placing order:', error);
+      Alert.alert('Error', 'Failed to place order. Please try again.');
+    } finally {
+      setIsPlacingOrder(false);
+    }
   };
 
   if (isLoading) {
@@ -268,10 +332,10 @@ export default function CheckoutScreen() {
             <Text style={[styles.billLabel, { color: colors.gray }]}>Items Total</Text>
             <Text style={[styles.billValue, { color: colors.text }]}>₹{total}</Text>
           </View>
-          <View style={styles.billRow}>
+          {/* <View style={styles.billRow}>
             <Text style={[styles.billLabel, { color: colors.gray }]}>Delivery Fee</Text>
             <Text style={[styles.billValue, { color: colors.text }]}>₹{deliveryFee}</Text>
-          </View>
+          </View> */}
           {referralDiscount > 0 && (
             <View style={styles.billRow}>
               <Text style={[styles.billLabel, { color: colors.primary }]}>Referral Discount</Text>
@@ -334,6 +398,7 @@ export default function CheckoutScreen() {
                     style={styles.modalOption}
                     onPress={() => {
                       const selectedAddr = {
+                        id: address.id,
                         name: address.type.charAt(0).toUpperCase() + address.type.slice(1),
                         address: `${address.landmark ? address.landmark + ', ' : ''}${address.pincode ? address.pincode.city + ', ' + address.pincode.code : ''}`,
                         timestamp: new Date().toISOString()
@@ -365,6 +430,7 @@ export default function CheckoutScreen() {
                     style={styles.modalOption}
                     onPress={() => {
                       const selectedAddr = {
+                        id: location.id,
                         name: location.locality,
                         address: location.fullAddress,
                         timestamp: new Date().toISOString()

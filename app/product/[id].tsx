@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { behaviorTracker } from '@/services/behaviorTracker';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -41,6 +42,9 @@ export default function ProductDetailScreen() {
   React.useEffect(() => {
     if (selectedProduct) {
       behaviorTracker.trackProductView(selectedProduct.id, selectedProduct.category);
+      
+      // Reset selected variant when product changes
+      setSelectedVariant(0);
       
       // Progressive loading animation
       const delays = [0, 150, 300, 450, 600, 750];
@@ -81,17 +85,49 @@ export default function ProductDetailScreen() {
     );
   }
 
-  const handleAddToCart = () => {
+  const addToCartAPI = async (variantId: string, quantity: number) => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) return false;
+
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/cart/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          variantId,
+          quantity: quantity.toString()
+        })
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      return false;
+    }
+  };
+
+  const handleAddToCart = async () => {
     const currentVariant = selectedProduct.variants?.[selectedVariant];
     const price = currentVariant?.price?.sellingPrice || selectedProduct.price;
     const minQty = currentVariant?.minOrderQty || 1;
     
     if (currentVariant?.stock?.availableQty === 0) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Out of Stock', 'This product is currently out of stock');
+      Alert.alert('Out of Stock', 'This variant is currently out of stock');
       return;
     }
     
+    const variantId = currentVariant?.id || selectedProduct.id;
+    const token = await AsyncStorage.getItem('authToken');
+    
+    if (token) {
+      await addToCartAPI(variantId, minQty);
+    }
+    
+    // Always update local state for better UX
     dispatch(addToCart({
       id: selectedProduct.id,
       name: selectedProduct.name,
@@ -102,7 +138,7 @@ export default function ProductDetailScreen() {
     }));
   };
 
-  const handleUpdateQuantity = (quantity: number) => {
+  const handleUpdateQuantity = async (quantity: number) => {
     const currentVariant = selectedProduct.variants?.[selectedVariant];
     const minQty = currentVariant?.minOrderQty || 1;
     const maxQty = currentVariant?.maxOrderQty || 10;
@@ -119,6 +155,14 @@ export default function ProductDetailScreen() {
       return;
     }
     
+    const variantId = currentVariant?.id || selectedProduct.id;
+    const token = await AsyncStorage.getItem('authToken');
+    
+    if (token) {
+      await addToCartAPI(variantId, quantity);
+    }
+    
+    // Always update local state for better UX
     dispatch(updateQuantity({ id: selectedProduct.id, quantity }));
   };
 
@@ -230,7 +274,10 @@ export default function ProductDetailScreen() {
                     key={variant.id} 
                     style={[
                       styles.variantCard, 
-                      { borderColor: selectedVariant === index ? colors.primary : colors.border },
+                      { 
+                        borderColor: selectedVariant === index ? colors.primary : colors.border,
+                        opacity: variant.stock?.availableQty === 0 ? 0.5 : 1
+                      },
                       selectedVariant === index && { backgroundColor: colors.lightGray }
                     ]}
                     onPress={() => setSelectedVariant(index)}
@@ -254,7 +301,7 @@ export default function ProductDetailScreen() {
                       </Text>
                     )}
                     <Text style={[styles.stockText, { color: variant.stock?.availableQty === 0 ? 'red' : 'green' }]}>
-                      {variant.stock?.availableQty === 0 ? 'Out of Stock' : `${variant.stock?.availableQty} in stock`}
+                      {variant.stock?.availableQty === 0 ? 'Out of Stock' : 'In Stock'}
                     </Text>
                   </TouchableOpacity>
                 ))}

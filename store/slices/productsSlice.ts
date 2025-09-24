@@ -19,7 +19,6 @@ export interface Product {
 interface ProductsState {
   products: Product[];
   selectedProduct: Product | null;
-  productCache: { [key: string]: Product };
   categories: string[];
   selectedCategory: string;
   searchQuery: string;
@@ -31,7 +30,6 @@ interface ProductsState {
 const initialState: ProductsState = {
   products: [],
   selectedProduct: null,
-  productCache: {},
   categories: ['All', 'Vegetables', 'Fruits', 'Dairy', 'Snacks', 'Beverages', 'Personal Care'],
   selectedCategory: 'All',
   searchQuery: '',
@@ -53,17 +51,9 @@ export const fetchProductsByCategory = createAsyncThunk(
 
 export const fetchProductById = createAsyncThunk(
   'products/fetchProductById',
-  async (productId: string, { getState, rejectWithValue }) => {
+  async (productId: string, { rejectWithValue }) => {
     try {
-      const state = getState() as { products: ProductsState };
-      const cachedProduct = state.products.productCache[productId];
-      
-      if (cachedProduct) {
-        return { product: cachedProduct, fromCache: true };
-      }
-      
-      const product = await productAPI.getProductById(productId);
-      return { product, fromCache: false };
+      return await productAPI.getProductById(productId);
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch product');
     }
@@ -101,20 +91,13 @@ const productsSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
-      .addCase(fetchProductById.pending, (state, action) => {
-        const productId = action.meta.arg;
-        if (!state.productCache[productId]) {
-          state.productLoading = true;
-        }
+      .addCase(fetchProductById.pending, (state) => {
+        state.productLoading = true;
         state.error = null;
       })
       .addCase(fetchProductById.fulfilled, (state, action) => {
         state.productLoading = false;
-        const { product, fromCache } = action.payload;
-        state.selectedProduct = product;
-        if (!fromCache) {
-          state.productCache[product.id] = product;
-        }
+        state.selectedProduct = action.payload;
       })
       .addCase(fetchProductById.rejected, (state, action) => {
         state.productLoading = false;

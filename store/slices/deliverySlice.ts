@@ -8,7 +8,7 @@ interface DeliveryState {
 }
 
 const initialState: DeliveryState = {
-  deliveryTime: '10 mins',
+  deliveryTime: '',
   loading: false,
   error: null,
 };
@@ -17,8 +17,8 @@ export const fetchDeliveryTime = createAsyncThunk(
   'delivery/fetchDeliveryTime',
   async ({ latitude, longitude }: { latitude: string; longitude: string }, { rejectWithValue }) => {
     try {
-      const response = await deliveryAPI.getStoreDeliveryTime(latitude, longitude);
-      return response.deliveryTime || '10 mins';
+      const response = await deliveryAPI.getDeliveryEstimate(latitude, longitude);
+      return response.deliveryTime;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch delivery time');
     }
@@ -41,7 +41,7 @@ const deliverySlice = createSlice({
       })
       .addCase(fetchDeliveryTime.fulfilled, (state, action) => {
         state.loading = false;
-        state.deliveryTime = action.payload;
+        state.deliveryTime = action.payload || '';
       })
       .addCase(fetchDeliveryTime.rejected, (state, action) => {
         state.loading = false;

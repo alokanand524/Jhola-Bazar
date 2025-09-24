@@ -29,7 +29,20 @@ export const fetchCart = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await cartAPI.getCart();
-      return response.data || [];
+      const cart = response.data?.carts?.[0];
+      const items = cart?.items || [];
+      
+      // Transform API items to match local cart structure
+      const transformedItems = items.map((item: any) => ({
+        id: item.product?.id || item.id,
+        name: item.product?.name || '',
+        price: parseFloat(item.unitPrice || '0'),
+        image: item.product?.images?.[0] || '',
+        quantity: item.quantity || 1,
+        category: item.product?.category?.name || ''
+      }));
+      
+      return transformedItems;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Failed to fetch cart');
     }

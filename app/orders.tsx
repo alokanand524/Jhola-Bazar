@@ -16,8 +16,9 @@ interface OrderItem {
 
 interface Order {
   id: string;
+  orderNumber: string;
   date: string;
-  status: 'delivered' | 'pending' | 'cancelled';
+  status: string;
   total: number;
   items: OrderItem[];
   deliveryAddress: string;
@@ -60,9 +61,50 @@ const OrderCardSkeleton = () => {
 export default function OrdersScreen() {
   const { colors } = useTheme();
   const [isLoading, setIsLoading] = React.useState(true);
+  const [orders, setOrders] = React.useState<Order[]>([]);
+  
+  const fetchOrders = async () => {
+    try {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const token = await AsyncStorage.getItem('authToken');
+      
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/orders/', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const ordersData = result.data?.orders || [];
+        
+        // Transform API response to match Order interface
+        const transformedOrders = ordersData.map((order: any) => ({
+          id: order.id,
+          orderNumber: order.orderNumber,
+          date: order.createdAt,
+          status: order.status?.toLowerCase().replace('_', ' ') || 'pending',
+          total: parseFloat(order.totalAmount || '0') / 100, // Convert from paisa to rupees
+          items: order.items || [],
+          deliveryAddress: 'Delivery address'
+        }));
+        
+        setOrders(transformedOrders);
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   React.useEffect(() => {
-    setIsLoading(false);
+    fetchOrders();
   }, []);
   
   const getStatusColor = (status: string) => {
@@ -85,7 +127,7 @@ export default function OrdersScreen() {
     >
       <View style={styles.orderHeader}>
         <View>
-          <Text style={[styles.orderId, { color: colors.text }]}>Order #{item.id}</Text>
+          <Text style={[styles.orderId, { color: colors.text }]}>Order #{item.orderNumber}</Text>
           <Text style={[styles.orderDate, { color: colors.gray }]}>{new Date(item.date).toLocaleDateString()}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
@@ -93,19 +135,7 @@ export default function OrdersScreen() {
         </View>
       </View>
 
-      <View style={styles.itemsPreview}>
-        {item.items.slice(0, 3).map((orderItem, index) => (
-          <Image key={orderItem.id} source={{ uri: orderItem.image }} style={styles.itemImage} />
-        ))}
-        {item.items.length > 3 && (
-          <View style={[styles.moreItems, { backgroundColor: colors.lightGray }]}>
-            <Text style={[styles.moreItemsText, { color: colors.gray }]}>+{item.items.length - 3}</Text>
-          </View>
-        )}
-      </View>
-
       <View style={styles.orderFooter}>
-        <Text style={[styles.itemCount, { color: colors.gray }]}>{item.items.length} items</Text>
         <Text style={[styles.orderTotal, { color: colors.text }]}>₹{item.total}</Text>
       </View>
 
@@ -141,12 +171,21 @@ export default function OrdersScreen() {
         <Text style={[styles.headerTitle, { color: colors.text }]}>My Orders</Text>
       </View>
 
-      {/* Empty state */}
-      <View style={styles.emptyState}>
-        <Ionicons name="bag-outline" size={80} color={colors.gray} />
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>No Orders Yet</Text>
-        <Text style={[styles.emptySubtitle, { color: colors.gray }]}>Your order history will appear here</Text>
-      </View>
+      {orders.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="bag-outline" size={80} color={colors.gray} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>No Orders Yet</Text>
+          <Text style={[styles.emptySubtitle, { color: colors.gray }]}>Your order history will appear here</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={orders}
+          renderItem={renderOrderItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.ordersList}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </SafeAreaView>
   );
 }

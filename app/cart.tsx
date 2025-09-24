@@ -1,7 +1,7 @@
 import { removeFromCart, updateQuantity } from '@/store/slices/cartSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import React from 'react';
 import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -9,26 +9,65 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '@/hooks/useTheme';
 import { SkeletonLoader, CartItemSkeleton } from '@/components/SkeletonLoader';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function CartScreen() {
   const dispatch = useDispatch();
-  const { items, total } = useSelector((state: RootState) => state.cart);
   const { colors } = useTheme();
   const [isLoading, setIsLoading] = React.useState(true);
+  const [cartData, setCartData] = React.useState(null);
+  const [apiItems, setApiItems] = React.useState([]);
+  const [cartSummary, setCartSummary] = React.useState(null);
+
+  const fetchCartData = async () => {
+    try {
+      setIsLoading(true);
+      const token = await AsyncStorage.getItem('authToken');
+      
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/cart/', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const cart = result.data?.carts?.[0];
+        
+        if (cart) {
+          setCartData(cart);
+          setApiItems(cart.items || []);
+          setCartSummary(cart.summary);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   React.useEffect(() => {
-    setIsLoading(false);
+    fetchCartData();
   }, []);
 
-  const handleUpdateQuantity = (id: string, quantity: number, item: any) => {
-    // For cart items, we need to get product data from API or use default values
-    // Since cart items don't have variant data, we'll use reasonable defaults
-    const minQty = 1; // Default minimum
-    const maxQty = 10; // Default maximum (can be made dynamic later)
-    const incrementQty = 1; // Default increment
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchCartData();
+    }, [])
+  );
+
+  const handleUpdateQuantity = async (itemId: string, quantity: number, item: any) => {
+    const minQty = item.variant?.minOrderQty || 1;
+    const maxQty = item.variant?.maxOrderQty || 10;
     
     if (quantity < minQty) {
-      dispatch(updateQuantity({ id, quantity: 0 }));
+      handleRemoveItem(itemId);
       return;
     }
     
@@ -37,16 +76,65 @@ export default function CartScreen() {
       Alert.alert('Max Order Limit', `You can order maximum ${maxQty} units of this product`);
       return;
     }
+
+    if (quantity > item.availableQty) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Stock Limit', `Only ${item.availableQty} units available`);
+      return;
+    }
     
-    dispatch(updateQuantity({ id, quantity }));
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/cart/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          itemId,
+          quantity: quantity.toString()
+        })
+      });
+
+      if (response.ok) {
+        fetchCartData();
+      }
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+    }
   };
 
-  const handleRemoveItem = (id: string) => {
-    dispatch(removeFromCart(id));
+  const handleRemoveItem = async (itemId: string) => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${itemId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        fetchCartData();
+        // Also update Redux state
+        const item = apiItems.find(item => item.id === itemId);
+        if (item?.product?.id) {
+          dispatch(removeFromCart(item.product.id));
+        }
+      }
+    } catch (error) {
+      console.error('Error removing item:', error);
+    }
   };
 
-  const deliveryFee = 25;
-  const finalTotal = total + deliveryFee;
+  // const deliveryFee = cartSummary?.deliveryCharge ? parseInt(cartSummary.deliveryCharge) : 0;
+  const deliveryFee = 0; // Delivery fee disabled
+  const finalTotal = (cartSummary?.subtotal || 0) + deliveryFee;
 
   if (isLoading) {
     return (
@@ -87,7 +175,7 @@ export default function CartScreen() {
     );
   }
 
-  if (items.length === 0) {
+  if (!isLoading && apiItems.length === 0) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -119,19 +207,22 @@ export default function CartScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Jhola  ({items.length} items)</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Jhola ({apiItems.length} items)</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView style={styles.content}>
         <FlatList
-          data={items}
+          data={apiItems}
           renderItem={({ item }) => (
             <View style={[styles.cartItem, { borderBottomColor: colors.border }]}>
-              <Image source={{ uri: item.image }} style={styles.itemImage} />
+              <Image source={{ uri: item.product?.images?.[0] }} style={styles.itemImage} />
               <View style={styles.itemDetails}>
-                <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
-                <Text style={[styles.itemPrice, { color: colors.gray }]}>₹{item.price}</Text>
+                <Text style={[styles.itemName, { color: colors.text }]}>{item.product?.name}</Text>
+                <Text style={[styles.itemPrice, { color: colors.gray }]}>₹{item.unitPrice}</Text>
+                <Text style={[styles.stockInfo, { color: item.isAvailable ? 'green' : 'red' }]}>
+                  {item.isAvailable ? 'In stock' : 'Out of stock'}
+                </Text>
                 <View style={[styles.quantityContainer, { backgroundColor: colors.primary }]}>
                   <TouchableOpacity 
                     style={styles.quantityButton}
@@ -159,23 +250,19 @@ export default function CartScreen() {
           keyExtractor={(item) => item.id}
           scrollEnabled={false}
         />
-
-        <View style={[styles.billDetails, { backgroundColor: colors.lightGray }]}>
-          <Text style={[styles.billTitle, { color: colors.text }]}>Bill Details</Text>
-          <View style={styles.billRow}>
-            <Text style={[styles.billLabel, { color: colors.gray }]}>Items Total</Text>
-            <Text style={[styles.billValue, { color: colors.text }]}>₹{total}</Text>
-          </View>
-          <View style={styles.billRow}>
-            <Text style={[styles.billLabel, { color: colors.gray }]}>Delivery Fee</Text>
-            <Text style={[styles.billValue, { color: colors.text }]}>₹{deliveryFee}</Text>
-          </View>
-          <View style={[styles.billRow, styles.totalRow]}>
-            <Text style={[styles.totalLabel, { color: colors.text }]}>Grand Total</Text>
-            <Text style={[styles.totalValue, { color: colors.text }]}>₹{finalTotal}</Text>
-          </View>
-        </View>
       </ScrollView>
+
+      <View style={[styles.billDetails, { backgroundColor: colors.lightGray }]}>
+        <Text style={[styles.billTitle, { color: colors.text }]}>Bill Details</Text>
+        <View style={styles.billRow}>
+          <Text style={[styles.billLabel, { color: colors.gray }]}>Items Total</Text>
+          <Text style={[styles.billValue, { color: colors.text }]}>₹{cartSummary?.subtotal || 0}</Text>
+        </View>
+        <View style={[styles.billRow, styles.totalRow]}>
+          <Text style={[styles.totalLabel, { color: colors.text }]}>Grand Total</Text>
+          <Text style={[styles.totalValue, { color: colors.text }]}>₹{finalTotal}</Text>
+        </View>
+      </View>
 
       <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
         <View style={styles.totalContainer}>
@@ -261,7 +348,12 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     fontSize: 14,
+    marginBottom: 4,
+  },
+  stockInfo: {
+    fontSize: 12,
     marginBottom: 8,
+    fontWeight: '500',
   },
   quantityContainer: {
     flexDirection: 'row',
@@ -283,7 +375,8 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   billDetails: {
-    margin: 16,
+    marginHorizontal: 16,
+    marginBottom: 8,
     padding: 16,
     borderRadius: 12,
   },

@@ -111,9 +111,8 @@ const transformProduct = (apiProduct: any): Product => {
     category: apiProduct.category?.name || '',
     description: apiProduct.description || '',
     unit: variant ? `${variant.weight} ${variant.baseUnit}` : '',
-    inStock: variant?.stock?.status === 'AVAILABLE',
+    inStock: variant?.stock?.availableQty > 0,
     rating: 4.5,
-    deliveryTime: '10 mins',
     variants: apiProduct.variants
   };
 };
@@ -303,33 +302,23 @@ export const addressAPI = {
 };
 
 export const deliveryAPI = {
-  getStoreDeliveryTime: async (latitude: string, longitude: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/delivery-timing/stores`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latitude, longitude }),
-      });
-      
-      if (!response.ok) {
-        // If no stores found for location, return default
-        return { deliveryTime: '' };
-      }
-      
-      const data = await response.json();
-      
-      if (data.success && data.data?.stores?.length > 0) {
-        const store = data.data.stores[0];
-        const deliveryMinutes = store.delivery?.estimatedDeliveryMinutes;
-        
-        if (deliveryMinutes) {
-          return { deliveryTime: `${deliveryMinutes} mins` };
-        }
-      }
-      
-      return { deliveryTime: '30 mins' };
-    } catch (error) {
-      return { deliveryTime: '30 mins' };
-    }
+  getDeliveryEstimate: async (latitude: string, longitude: string) => {
+    const response = await fetch(`${API_BASE_URL}/delivery-timing/estimate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        storeId: "0d29835f-3840-4d72-a26d-ed96ca744a34",
+        latitude,
+        longitude
+      }),
+    });
+    
+    const data = await response.json();
+    const deliveryMinutes = data.data?.delivery?.estimatedDeliveryMinutes;
+    
+    return { deliveryTime: deliveryMinutes ? `${deliveryMinutes} mins` : '' };
   },
 };
+
+// Keep backward compatibility
+export const getStoreDeliveryTime = deliveryAPI.getDeliveryEstimate;

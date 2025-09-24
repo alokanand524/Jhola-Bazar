@@ -149,22 +149,26 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     
     // Get variantId from product (assuming it's in variants array)
     const variantId = product.variants?.[0]?.id || product.id;
-    const quantity = cartItem ? cartItem.quantity + 1 : 1;
+    const quantity = 1; // Always add 1 for new items
     
     // Check token directly instead of Redux state
     const token = await AsyncStorage.getItem('authToken');
+    let apiSuccess = false;
+    
     if (token) {
-      await addToCartAPI(variantId, quantity);
+      apiSuccess = await addToCartAPI(variantId, quantity);
     }
     
-    // Always update local state for better UX
-    dispatch(addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.image,
-      category: product.category,
-    }));
+    // Only update local state if API call succeeded or no token
+    if (apiSuccess || !token) {
+      dispatch(addToCart({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        category: product.category,
+      }));
+    }
     
     if (selectedSize) {
       setShowSizeModal(false);
@@ -172,15 +176,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   const handleUpdateQuantity = async (quantity: number) => {
-    if (quantity > 0) {
-      const token = await AsyncStorage.getItem('authToken');
-      if (token) {
-        const variantId = product.variants?.[0]?.id || product.id;
-        await addToCartAPI(variantId, quantity);
-      }
+    const token = await AsyncStorage.getItem('authToken');
+    let apiSuccess = false;
+    
+    if (quantity > 0 && token) {
+      const variantId = product.variants?.[0]?.id || product.id;
+      apiSuccess = await addToCartAPI(variantId, quantity);
     }
-    // Always update local state for better UX
-    dispatch(updateQuantity({ id: product.id, quantity }));
+    
+    // Only update local state if API call succeeded or no token
+    if (apiSuccess || !token) {
+      dispatch(updateQuantity({ id: product.id, quantity }));
+    }
   };
 
   const handleSizeSelect = (size: string) => {

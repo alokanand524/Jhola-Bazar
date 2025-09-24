@@ -39,6 +39,7 @@ export default function HomeScreen() {
   const [apiLoading, setApiLoading] = React.useState(true);
   const [featuredProducts, setFeaturedProducts] = React.useState([]);
   const [featuredLoading, setFeaturedLoading] = React.useState(true);
+  const [apiCartCount, setApiCartCount] = React.useState(0);
 
 
   const fetchApiProducts = async () => {
@@ -58,7 +59,7 @@ export default function HomeScreen() {
         category: product.category?.name || 'General',
         description: product.description || product.shortDescription || '',
         unit: `${product.variants?.[0]?.weight || '1'} ${product.variants?.[0]?.baseUnit || 'unit'}`,
-        inStock: product.variants?.[0]?.stock?.status === 'AVAILABLE',
+        inStock: product.variants?.[0]?.stock?.availableQty > 0,
         rating: 4.5,
         deliveryTime: '10 mins',
         variants: product.variants
@@ -90,7 +91,7 @@ export default function HomeScreen() {
         category: product.category?.name || 'General',
         description: product.description || product.shortDescription || '',
         unit: `${product.variants?.[0]?.weight || '1'} ${product.variants?.[0]?.baseUnit || 'unit'}`,
-        inStock: product.variants?.[0]?.stock?.status === 'AVAILABLE',
+        inStock: product.variants?.[0]?.stock?.availableQty > 0,
         rating: 4.5,
         deliveryTime: '10 mins',
         variants: product.variants
@@ -130,6 +131,7 @@ export default function HomeScreen() {
       const token = await AsyncStorage.getItem('authToken');
       if (token) {
         dispatch(fetchCart());
+        fetchCartCount();
         
         // Check if user has delivery address
         try {
@@ -161,7 +163,9 @@ export default function HomeScreen() {
   useFocusEffect(
     React.useCallback(() => {
       loadSelectedAddress();
-    }, [])
+      fetchCartCount();
+      dispatch(fetchCart());
+    }, [dispatch])
   );
 
   useEffect(() => {
@@ -218,7 +222,34 @@ export default function HomeScreen() {
     ? products.slice(0, 6)
     : products.filter(product => product.category === selectedCategory).slice(0, 6);
 
-  const cartItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const fetchCartCount = async () => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        setApiCartCount(0);
+        return;
+      }
+
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/cart/', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const cart = result.data?.carts?.[0];
+        setApiCartCount(cart?.items?.length || 0);
+      } else {
+        setApiCartCount(0);
+      }
+    } catch (error) {
+      console.error('Error fetching cart count:', error);
+      setApiCartCount(0);
+    }
+  };
+
+  const cartItemsCount = apiCartCount || items.length;
 
   const handleScroll = (event: any) => {
     handleTabBarScroll(event);

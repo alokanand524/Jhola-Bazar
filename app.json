@@ -7,7 +7,7 @@
     "icon": "./assets/images/jhola-bazar.png",   
     "scheme": "jholabazar",               
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
 
     "ios": {
       "supportsTablet": true,
