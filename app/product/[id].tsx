@@ -5,7 +5,7 @@ import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Animated, Alert } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ImageWithLoading } from '@/components/ImageWithLoading';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +27,7 @@ export default function ProductDetailScreen() {
     variants: false,
     features: false
   });
+
   
   const { selectedProduct, productLoading } = useSelector((state: RootState) => state.products);
   const cartItem = useSelector((state: RootState) => 
@@ -186,7 +187,8 @@ export default function ProductDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
+      {/* Fixed Image Section */}
+      <View style={styles.imageContainer}>
         {showElements.image ? (
           selectedProduct.images && selectedProduct.images.length > 1 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
@@ -195,16 +197,24 @@ export default function ProductDetailScreen() {
                   key={index}
                   source={{ uri: image }} 
                   height={300} 
-                  style={[styles.productImage, { width: 300, marginRight: 10 }]} 
+                  style={styles.productImage} 
                 />
               ))}
             </ScrollView>
           ) : (
-            <ImageWithLoading source={{ uri: selectedProduct.image || selectedProduct.images?.[0] }} height={300} style={styles.productImage} />
+            <ImageWithLoading 
+              source={{ uri: selectedProduct.image || selectedProduct.images?.[0] }} 
+              height={300} 
+              style={styles.productImage} 
+            />
           )
         ) : (
           <SkeletonLoader width="100%" height={300} />
         )}
+      </View>
+
+      {/* Scrollable Content Section */}
+      <ScrollView style={styles.scrollableContent} showsVerticalScrollIndicator={false}>
         
         <View style={styles.productInfo}>
           {showElements.name ? (
@@ -322,9 +332,16 @@ export default function ProductDetailScreen() {
 
       <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
         <View style={styles.priceInfo}>
-          <Text style={[styles.footerPrice, { color: colors.text }]}>
-            ₹{selectedProduct.variants?.[selectedVariant]?.price?.sellingPrice || selectedProduct.price}
-          </Text>
+          <View style={styles.footerPriceContainer}>
+            <Text style={[styles.footerPrice, { color: colors.text }]}>
+              ₹{selectedProduct.variants?.[selectedVariant]?.price?.sellingPrice || selectedProduct.price}
+            </Text>
+            {(selectedProduct.variants?.[selectedVariant]?.price?.basePrice || selectedProduct.originalPrice) && (
+              <Text style={[styles.footerOriginalPrice, { color: colors.gray }]}>
+                ₹{selectedProduct.variants?.[selectedVariant]?.price?.basePrice || selectedProduct.originalPrice}
+              </Text>
+            )}
+          </View>
           <Text style={[styles.footerUnit, { color: colors.gray }]}>
             {selectedProduct.variants?.[selectedVariant] ? 
               `${selectedProduct.variants[selectedVariant].weight} ${selectedProduct.variants[selectedVariant].baseUnit}` : 
@@ -372,6 +389,8 @@ export default function ProductDetailScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+
     </SafeAreaView>
   );
 }
@@ -395,8 +414,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  scrollableContent: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
   productImage: {
-    width: '100%',
+    width: 300,
     resizeMode: 'cover',
   },
   productInfo: {
@@ -532,9 +555,18 @@ const styles = StyleSheet.create({
   priceInfo: {
     flex: 1,
   },
+  footerPriceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   footerPrice: {
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  footerOriginalPrice: {
+    fontSize: 16,
+    textDecorationLine: 'line-through',
   },
   footerUnit: {
     fontSize: 14,
@@ -587,9 +619,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
   },
-  imageScroll: {
-    paddingHorizontal: 10,
+  imageContainer: {
+    height: 300,
+    backgroundColor: '#f5f5f5',
   },
+  imageScroll: {
+    height: 300,
+  },
+
+
   brandText: {
     fontSize: 14,
     marginBottom: 4,

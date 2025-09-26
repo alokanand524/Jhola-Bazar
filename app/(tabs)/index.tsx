@@ -40,6 +40,7 @@ export default function HomeScreen() {
   const [featuredProducts, setFeaturedProducts] = React.useState([]);
   const [featuredLoading, setFeaturedLoading] = React.useState(true);
   const [apiCartCount, setApiCartCount] = React.useState(0);
+  const [loadingStep, setLoadingStep] = React.useState('loading');
 
 
   const fetchApiProducts = async () => {
@@ -119,21 +120,30 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const initializeApp = async () => {
+      // Step 1: Show carousel immediately
       await behaviorTracker.init();
       dispatch(setProducts([...mockProducts, ...featuredThisWeek]));
-      await Promise.all([
-        dispatch(fetchCategories()),
-        fetchApiProducts(),
-        fetchFeaturedProducts()
-      ]);
+      setLoadingStep('carousel');
       
-      // Fetch cart for authenticated users
+      // Step 2: Load featured products
+      await fetchFeaturedProducts();
+      setLoadingStep('featured');
+      
+      // Step 3: Load categories (in background start location)
+      getCurrentLocation();
+      loadSelectedAddress();
+      await dispatch(fetchCategories());
+      setLoadingStep('categories');
+      
+      // Step 4: Load popular products
+      await fetchApiProducts();
+      
+      // Step 5: Handle user data
       const token = await AsyncStorage.getItem('authToken');
       if (token) {
         dispatch(fetchCart());
         fetchCartCount();
         
-        // Check if user has delivery address
         try {
           const addressResponse = await fetch('https://jholabazar.onrender.com/api/v1/profile/addresses', {
             headers: {
@@ -152,9 +162,8 @@ export default function HomeScreen() {
         }
       }
       
+      setLoadingStep('complete');
       setIsInitialLoading(false);
-      getCurrentLocation();
-      loadSelectedAddress();
     };
     
     initializeApp();
@@ -307,11 +316,13 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={16}>
-        {isInitialLoading ? <BannerSkeleton /> : <BannerCarousel />}
+        {/* 1. Carousel - Shows immediately */}
+        <BannerCarousel />
 
-        {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Featured this week" categoryName="Vegetables" />}
+        {/* 2. Featured Products - Shows after carousel */}
+        {loadingStep === 'loading' ? <SectionHeaderSkeleton /> : <SectionHeader title="Featured this week" categoryName="Vegetables" />}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productScroll}>
-          {isInitialLoading || featuredLoading ? (
+          {loadingStep === 'loading' || loadingStep === 'carousel' || featuredLoading ? (
             [1, 2, 3].map((item) => (
               <View key={item} style={styles.featuredCard}>
                 <ProductCardSkeleton />
@@ -330,13 +341,14 @@ export default function HomeScreen() {
           )}
         </ScrollView>
 
-        {isInitialLoading ? <SectionHeaderSkeleton /> : (
+        {/* 3. Categories - Shows after featured */}
+        {loadingStep === 'loading' || loadingStep === 'carousel' || loadingStep === 'featured' ? <SectionHeaderSkeleton /> : (
           <View style={styles.categoryHeader}>
             <Text style={[styles.categoryTitle, { color: colors.text }]}>Shop by category</Text>
           </View>
         )}
         <View style={styles.categoriesContainer}>
-          {isInitialLoading || categoriesLoading ? (
+          {loadingStep === 'loading' || loadingStep === 'carousel' || loadingStep === 'featured' || categoriesLoading ? (
             <View style={styles.categoriesGrid}>
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((item) => (
                 <SectionCardSkeleton key={item} />
@@ -353,9 +365,10 @@ export default function HomeScreen() {
           )}
         </View>
 
+        {/* 4. Popular Products - Shows last */}
         <View style={styles.productsContainer}>
-          {isInitialLoading ? <SectionHeaderSkeleton /> : <SectionHeader title="Popular Products" categoryName="Vegetables" />}
-          {isInitialLoading || apiLoading ? (
+          {loadingStep === 'loading' || loadingStep === 'carousel' || loadingStep === 'featured' || loadingStep === 'categories' ? <SectionHeaderSkeleton /> : <SectionHeader title="Popular Products" categoryName="Vegetables" />}
+          {loadingStep === 'loading' || loadingStep === 'carousel' || loadingStep === 'featured' || loadingStep === 'categories' || apiLoading ? (
             <View style={styles.row}>
               <ProductCardSkeleton />
               <ProductCardSkeleton />
