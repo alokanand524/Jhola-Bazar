@@ -41,93 +41,99 @@ export default function CategoryScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch subcategories and products when category changes
+  // Fetch subcategories when category changes
   useEffect(() => {
     const fetchCategoryData = async () => {
+      if (!categoryName || categories.length === 0) return;
+      
       setIsLoading(true);
-      setIsLoadingProducts(true);
+      setSelectedSubCategory('All'); // Reset to 'All' when category changes
+      
       try {
-        // Track category visit
-        if (categoryName) {
-          behaviorTracker.trackCategoryVisit(categoryName);
-        }
+        behaviorTracker.trackCategoryVisit(categoryName);
         
-        // Find the category by name
         const category = categories.find(cat => cat.name === categoryName);
         if (category) {
-          // Fetch subcategories
           const categoryData = await categoryAPI.getCategoryById(category.id);
-          const subCats = ['All', ...categoryData.children.map(child => child.name)];
-          setSubCategories(subCats);
           setSubCategoriesData([{ id: 'all', name: 'All', image: category.image }, ...categoryData.children]);
-          
-          // Fetch products for this category
-          let products: Product[];
-          if (selectedSubCategory === 'All') {
-            products = await productAPI.getProductsByCategory(category.id);
-          } else {
-            // For specific subcategory, find the subcategory ID
-            const subCategory = categoryData.children.find(child => child.name === selectedSubCategory);
-            if (subCategory) {
-              products = await productAPI.getProductsByCategory(subCategory.id);
-            } else {
-              products = await productAPI.getProductsByCategory(category.id);
-            }
-          }
-          setCategoryProducts(products);
         } else {
-          // Fallback to static data if category not found
-          setSubCategories(categoryData[categoryName] || ['All']);
           setSubCategoriesData([]);
-          setCategoryProducts([]);
         }
       } catch (error) {
         console.error('Error fetching category data:', error);
-        setSubCategories(categoryData[categoryName] || ['All']);
         setSubCategoriesData([]);
-        setCategoryProducts([]);
       } finally {
         setIsLoading(false);
+      }
+    };
+
+    fetchCategoryData();
+  }, [categoryName, categories]);
+
+  // Fetch products when subcategory changes
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (!categoryName || categories.length === 0) return;
+      
+      setIsLoadingProducts(true);
+      try {
+        const category = categories.find(cat => cat.name === categoryName);
+        if (category) {
+          let products: Product[];
+          if (selectedSubCategory === 'All') {
+            // Get category data to access all subcategories
+            const categoryData = await categoryAPI.getCategoryById(category.id);
+            
+            // Fetch products from main category
+            const mainCategoryProducts = await productAPI.getProductsByCategory(category.id);
+            
+            // Fetch products from all subcategories
+            const subCategoryProducts = await Promise.all(
+              categoryData.children.map(subCat => 
+                productAPI.getProductsByCategory(subCat.id)
+              )
+            );
+            
+            // Combine all products and remove duplicates
+            const allProducts = [...mainCategoryProducts, ...subCategoryProducts.flat()];
+            const uniqueProducts = allProducts.filter((product, index, self) => 
+              index === self.findIndex(p => p.id === product.id)
+            );
+            
+            products = uniqueProducts;
+          } else {
+            const categoryData = await categoryAPI.getCategoryById(category.id);
+            const subCategory = categoryData.children.find(child => child.name === selectedSubCategory);
+            products = subCategory ? await productAPI.getProductsByCategory(subCategory.id) : [];
+          }
+          setCategoryProducts(products);
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setCategoryProducts([]);
+      } finally {
         setIsLoadingProducts(false);
       }
     };
 
     if (categoryName && categories.length > 0) {
-      fetchCategoryData();
+      fetchProducts();
     }
-  }, [categoryName, categories, selectedSubCategory]);
+  }, [selectedSubCategory, categoryName, categories]);
 
-  // Handle subcategory change
-  const handleSubCategoryChange = async (subCategoryName: string) => {
+  const handleSubCategoryChange = (subCategoryName: string) => {
     setSelectedSubCategory(subCategoryName);
-    setIsLoadingProducts(true);
-    
-    try {
-      const category = categories.find(cat => cat.name === categoryName);
-      if (category) {
-        let products: Product[];
-        if (subCategoryName === 'All') {
-          products = await productAPI.getProductsByCategory(category.id);
-        } else {
-          const categoryData = await categoryAPI.getCategoryById(category.id);
-          const subCategory = categoryData.children.find(child => child.name === subCategoryName);
-          if (subCategory) {
-            products = await productAPI.getProductsByCategory(subCategory.id);
-          } else {
-            products = await productAPI.getProductsByCategory(category.id);
-          }
-        }
-        setCategoryProducts(products);
-      }
-    } catch (error) {
-      console.error('Error fetching subcategory products:', error);
-    } finally {
-      setIsLoadingProducts(false);
-    }
   };
 
-  const filteredProducts = categoryProducts;
+  const filteredProducts = categoryProducts.filter(product => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase().trim();
+    return product.name.toLowerCase().includes(query) ||
+           product.category.toLowerCase().includes(query) ||
+           (product.description && product.description.toLowerCase().includes(query));
+  });
 
   const { items } = useSelector((state: RootState) => state.cart);
   const cartItemsCount = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -156,6 +162,8 @@ export default function CategoryScreen() {
             style={[styles.searchInput, { color: colors.text }]}
             placeholder="Search products..."
             placeholderTextColor={colors.gray}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
         </View>
       </View>
@@ -280,17 +288,12 @@ export default function CategoryScreen() {
         <View style={styles.productsArea}>
           <Text style={[styles.productsTitle, { color: colors.text }]}>{selectedSubCategory}</Text>
           {isLoadingProducts ? (
-            <View>
-              <View style={styles.row}>
-                <ProductCardSkeleton />
-                <ProductCardSkeleton />
-              </View>
-              <View style={styles.row}>
-                <ProductCardSkeleton />
-                <ProductCardSkeleton />
-              </View>
+            <View style={styles.skeletonGrid}>
+              {[1, 2, 3, 4, 5, 6].map((item) => (
+                <ProductCardSkeleton key={item} />
+              ))}
             </View>
-          ) : (
+          ) : filteredProducts.length > 0 ? (
             <FlatList
               data={filteredProducts}
               renderItem={({ item }) => <ProductCard product={item} />}
@@ -299,6 +302,10 @@ export default function CategoryScreen() {
               columnWrapperStyle={styles.row}
               showsVerticalScrollIndicator={false}
             />
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={[styles.emptyText, { color: colors.gray }]}>No products available</Text>
+            </View>
           )}
         </View>
       </View>
@@ -419,6 +426,11 @@ const styles = StyleSheet.create({
   row: {
     justifyContent: 'space-between',
   },
+  skeletonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
 
   cartBadge: {
     position: 'absolute',
@@ -435,5 +447,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    textAlign: 'center',
   },
 });

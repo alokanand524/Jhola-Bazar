@@ -63,11 +63,23 @@ export const ProductCardSkeleton: React.FC = () => {
   
   return (
     <View style={[styles.productCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-      <SkeletonLoader height={120} borderRadius={8} style={{ marginBottom: 12 }} />
-      <SkeletonLoader width="60%" height={12} style={{ marginBottom: 4 }} />
-      <SkeletonLoader width="80%" height={14} style={{ marginBottom: 6 }} />
-      <SkeletonLoader width="40%" height={10} style={{ marginBottom: 8 }} />
-      <SkeletonLoader width="50%" height={16} />
+      {/* Image skeleton */}
+      <SkeletonLoader height={120} borderRadius={0} style={{ marginBottom: 0 }} />
+      
+      {/* Content area */}
+      <View style={{ padding: 12 }}>
+        {/* Weight range */}
+        <SkeletonLoader width="60%" height={10} style={{ marginBottom: 4 }} />
+        
+        {/* Product name */}
+        <SkeletonLoader width="90%" height={12} style={{ marginBottom: 6 }} />
+        
+        {/* Price */}
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <SkeletonLoader width={50} height={14} style={{ marginRight: 8 }} />
+          <SkeletonLoader width={40} height={11} />
+        </View>
+      </View>
     </View>
   );
 };

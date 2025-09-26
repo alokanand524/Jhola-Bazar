@@ -320,7 +320,7 @@ export default function HomeScreen() {
         <BannerCarousel />
 
         {/* 2. Featured Products - Shows after carousel */}
-        {loadingStep === 'loading' ? <SectionHeaderSkeleton /> : <SectionHeader title="Featured this week" categoryName="Vegetables" />}
+        {loadingStep === 'loading' ? <SectionHeaderSkeleton /> : <SectionHeader title="Featured this week" sectionType="featured" />}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productScroll}>
           {loadingStep === 'loading' || loadingStep === 'carousel' || featuredLoading ? (
             [1, 2, 3].map((item) => (
@@ -367,7 +367,7 @@ export default function HomeScreen() {
 
         {/* 4. Popular Products - Shows last */}
         <View style={styles.productsContainer}>
-          {loadingStep === 'loading' || loadingStep === 'carousel' || loadingStep === 'featured' || loadingStep === 'categories' ? <SectionHeaderSkeleton /> : <SectionHeader title="Popular Products" categoryName="Vegetables" />}
+          {loadingStep === 'loading' || loadingStep === 'carousel' || loadingStep === 'featured' || loadingStep === 'categories' ? <SectionHeaderSkeleton /> : <SectionHeader title="Popular Products" sectionType="popular" />}
           {loadingStep === 'loading' || loadingStep === 'carousel' || loadingStep === 'featured' || loadingStep === 'categories' || apiLoading ? (
             <View style={styles.row}>
               <ProductCardSkeleton />

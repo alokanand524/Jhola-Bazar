@@ -68,11 +68,6 @@ export default function OrdersScreen() {
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       const token = await AsyncStorage.getItem('authToken');
       
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
-
       const response = await fetch('https://jholabazar.onrender.com/api/v1/orders/', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -83,13 +78,12 @@ export default function OrdersScreen() {
         const result = await response.json();
         const ordersData = result.data?.orders || [];
         
-        // Transform API response to match Order interface
         const transformedOrders = ordersData.map((order: any) => ({
           id: order.id,
           orderNumber: order.orderNumber,
           date: order.createdAt,
           status: order.status?.toLowerCase().replace('_', ' ') || 'pending',
-          total: parseFloat(order.totalAmount || '0') / 100, // Convert from paisa to rupees
+          total: parseFloat(order.totalAmount || '0') / 100,
           items: order.items || [],
           deliveryAddress: 'Delivery address'
         }));
@@ -104,7 +98,19 @@ export default function OrdersScreen() {
   };
   
   React.useEffect(() => {
-    fetchOrders();
+    const checkAuthAndFetch = async () => {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const token = await AsyncStorage.getItem('authToken');
+      
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+      
+      fetchOrders();
+    };
+    
+    checkAuthAndFetch();
   }, []);
   
   const getStatusColor = (status: string) => {

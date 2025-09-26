@@ -7,13 +7,18 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 interface SectionHeaderProps {
   title: string;
   categoryName?: string;
+  sectionType?: 'category' | 'featured' | 'popular';
 }
 
-export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, categoryName }) => {
+export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, categoryName, sectionType = 'category' }) => {
   const { colors } = useTheme();
   
   const handleSeeAll = () => {
-    if (categoryName) {
+    if (sectionType === 'featured') {
+      router.push('/featured-products');
+    } else if (sectionType === 'popular') {
+      router.push('/popular-products');
+    } else if (categoryName) {
       router.push(`/category/${encodeURIComponent(categoryName)}`);
     }
   };

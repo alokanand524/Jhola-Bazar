@@ -55,14 +55,6 @@ export default function AddressesScreen() {
   
   const fetchAddresses = async () => {
     try {
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      const token = await AsyncStorage.getItem('authToken');
-      const isAuth = !!token;
-      if (!isAuth) {
-        setAddresses([]);
-        return;
-      }
-      
       const response = await addressAPI.getAddresses();
       if (response.success && response.data) {
         const transformedAddresses = response.data.map((addr: any) => ({
@@ -91,7 +83,19 @@ export default function AddressesScreen() {
   };
   
   useEffect(() => {
-    fetchAddresses();
+    const checkAuthAndFetch = async () => {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const token = await AsyncStorage.getItem('authToken');
+      
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+      
+      fetchAddresses();
+    };
+    
+    checkAuthAndFetch();
   }, []);
 
   const handleDeleteAddress = (id: string) => {
