@@ -61,9 +61,15 @@ export default function FeaturedProductsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Featured Products</Text>
+        <View style={{ width: 24 }} />
+      </View>
 
-
-      <View style={[styles.searchContainer, { backgroundColor: colors.lightGray, marginTop: 8 }]}>
+      <View style={[styles.searchContainer, { backgroundColor: colors.lightGray }]}>
         <Ionicons name="search" size={20} color={colors.gray} />
         <TextInput
           style={[styles.searchInput, { color: colors.text }]}
@@ -98,6 +104,17 @@ export default function FeaturedProductsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
   },
 
   searchContainer: {

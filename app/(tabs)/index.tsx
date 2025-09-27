@@ -3,7 +3,7 @@ import { ProductCard } from '@/components/ProductCard';
 import { SectionCard } from '@/components/SectionCard';
 import { SectionCardSkeleton } from '@/components/SectionCardSkeleton';
 import { SectionHeader } from '@/components/SectionHeader';
-import { BannerSkeleton, ProductCardSkeleton, SectionHeaderSkeleton, SkeletonLoader } from '@/components/SkeletonLoader';
+import { ProductCardSkeleton, SectionHeaderSkeleton, SkeletonLoader } from '@/components/SkeletonLoader';
 import { mockProducts } from '@/data/products';
 import { featuredThisWeek } from '@/data/sections';
 import { useLocation } from '@/hooks/useLocation';
@@ -265,7 +265,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.locationContainer}>
           {deliveryTime && (
@@ -315,7 +315,12 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} onScroll={handleScroll} scrollEventThrottle={16}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        onScroll={handleScroll} 
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingBottom: 0 }}
+      >
         {/* 1. Carousel - Shows immediately */}
         <BannerCarousel />
 
@@ -398,13 +403,14 @@ export default function HomeScreen() {
           />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: 40,
   },
   header: {
     flexDirection: 'row',
@@ -534,8 +540,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   footerSection: {
-    marginTop: 20,
-    paddingBottom: 20,
+    marginTop: 0,
+    marginBottom: 0,
   },
   footerImage: {
     width: '100%',

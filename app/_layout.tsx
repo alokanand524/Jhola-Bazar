@@ -33,6 +33,8 @@ function AppContent() {
         <Stack.Screen name="category/[name]" options={{ headerShown: false }} />
         <Stack.Screen name="cart" options={{ headerShown: false }} />
         <Stack.Screen name="checkout" options={{ headerShown: false }} />
+        <Stack.Screen name="featured-products" options={{ headerShown: false }} />
+        <Stack.Screen name="popular-products" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
