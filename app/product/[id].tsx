@@ -143,7 +143,6 @@ export default function ProductDetailScreen() {
     const currentVariant = selectedProduct.variants?.[selectedVariant];
     const minQty = currentVariant?.minOrderQty || 1;
     const maxQty = currentVariant?.maxOrderQty || 10;
-    const incrementQty = currentVariant?.incrementQty || 1;
     
     if (quantity < minQty) {
       dispatch(updateQuantity({ id: selectedProduct.id, quantity: 0 }));
@@ -160,10 +159,22 @@ export default function ProductDetailScreen() {
     const token = await AsyncStorage.getItem('authToken');
     
     if (token) {
-      await addToCartAPI(variantId, quantity);
+      try {
+        const response = await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${variantId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            quantity: quantity.toString()
+          })
+        });
+      } catch (error) {
+        console.error('Error updating quantity:', error);
+      }
     }
     
-    // Always update local state for better UX
     dispatch(updateQuantity({ id: selectedProduct.id, quantity }));
   };
 

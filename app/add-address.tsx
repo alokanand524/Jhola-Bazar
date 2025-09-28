@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 
@@ -17,6 +17,7 @@ export default function AddAddressScreen() {
   const [selectedType, setSelectedType] = useState<'home' | 'office' | 'other'>('home');
   const [pincodes, setPincodes] = useState<Pincode[]>([]);
   const [selectedPincode, setSelectedPincode] = useState('');
+  const [manualPincode, setManualPincode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
@@ -26,6 +27,12 @@ export default function AddAddressScreen() {
     fetchPincodes();
     getCurrentLocationData();
   }, []);
+
+  useEffect(() => {
+    if (detectedPincode) {
+      setManualPincode(detectedPincode);
+    }
+  }, [detectedPincode]);
 
   const fetchPincodes = async () => {
     try {
@@ -67,15 +74,20 @@ export default function AddAddressScreen() {
       return;
     }
 
-    // Use detected pincode or find matching pincode
+    // Use manual pincode, selected pincode, or detected pincode
     let pincodeId = selectedPincode;
-    if (!pincodeId && detectedPincode) {
+    let pincodeToUse = manualPincode || detectedPincode;
+    
+    if (manualPincode) {
+      const matchingPincode = pincodes.find(p => p.pincode === manualPincode);
+      pincodeId = matchingPincode?.id || '';
+    } else if (!pincodeId && detectedPincode) {
       const matchingPincode = pincodes.find(p => p.pincode === detectedPincode);
       pincodeId = matchingPincode?.id || '';
     }
 
-    if (!pincodeId) {
-      Alert.alert('Error', 'Please select a valid pincode');
+    if (!pincodeToUse || pincodeToUse.length !== 6) {
+      Alert.alert('Error', 'Please enter a valid 6-digit pincode');
       return;
     }
 
@@ -112,7 +124,11 @@ export default function AddAddressScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
         <View style={[styles.section, { backgroundColor: colors.lightGray }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Address Details</Text>
           
@@ -175,30 +191,18 @@ export default function AddAddressScreen() {
 
           <View style={styles.inputContainer}>
             <Text style={[styles.inputLabel, { color: colors.text }]}>Pincode *</Text>
-            {detectedPincode && (
-              <Text style={[styles.detectedText, { color: colors.primary }]}>{detectedPincode}</Text>
-            )}
-            <View style={styles.pincodeContainer}>
-              {pincodes.slice(0, 5).map((pincode) => (
-                <TouchableOpacity
-                  key={pincode.id}
-                  // style={[
-                  //   styles.pincodeOption,
-                  //   { borderColor: colors.border },
-                  //   selectedPincode === pincode.id && { backgroundColor: colors.primary, borderColor: colors.primary }
-                  // ]}
-                  // onPress={() => setSelectedPincode(pincode.id)}
-                >
-                  {/* <Text style={[
-                    styles.pincodeText,
-                    { color: colors.text },
-                    selectedPincode === pincode.id && { color: '#fff' }
-                  ]}>
-                    {pincode.pincode}
-                  </Text> */}
-                </TouchableOpacity>
-              ))}
-            </View>
+            {/* {detectedPincode && (
+              <Text style={[styles.detectedText, { color: colors.primary }]}>Detected: {detectedPincode}</Text>
+            )} */}
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+              value={manualPincode}
+              onChangeText={setManualPincode}
+              placeholder={detectedPincode || "Enter 6-digit pincode"}
+              placeholderTextColor={colors.gray}
+              keyboardType="numeric"
+              maxLength={6}
+            />
           </View>
 
           <View style={styles.inputContainer}>
@@ -235,7 +239,8 @@ export default function AddAddressScreen() {
             </View>
           </View>
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -259,6 +264,9 @@ const styles = StyleSheet.create({
   saveText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  keyboardView: {
+    flex: 1,
   },
   content: {
     flex: 1,

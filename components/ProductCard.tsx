@@ -177,17 +177,26 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const handleUpdateQuantity = async (quantity: number) => {
     const token = await AsyncStorage.getItem('authToken');
-    let apiSuccess = false;
     
     if (quantity > 0 && token) {
       const variantId = product.variants?.[0]?.id || product.id;
-      apiSuccess = await addToCartAPI(variantId, quantity);
+      try {
+        await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${variantId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            quantity: quantity.toString()
+          })
+        });
+      } catch (error) {
+        console.error('Error updating quantity:', error);
+      }
     }
     
-    // Only update local state if API call succeeded or no token
-    if (apiSuccess || !token) {
-      dispatch(updateQuantity({ id: product.id, quantity }));
-    }
+    dispatch(updateQuantity({ id: product.id, quantity }));
   };
 
   const handleSizeSelect = (size: string) => {

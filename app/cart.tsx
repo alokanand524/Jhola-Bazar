@@ -63,23 +63,8 @@ export default function CartScreen() {
   );
 
   const handleUpdateQuantity = async (itemId: string, quantity: number, item: any) => {
-    const minQty = item.variant?.minOrderQty || 1;
-    const maxQty = item.variant?.maxOrderQty || 10;
-    
-    if (quantity < minQty) {
+    if (quantity < 1) {
       handleRemoveItem(itemId);
-      return;
-    }
-    
-    if (quantity > maxQty) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Max Order Limit', `You can order maximum ${maxQty} units of this product`);
-      return;
-    }
-
-    if (quantity > item.availableQty) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Stock Limit', `Only ${item.availableQty} units available`);
       return;
     }
     
@@ -87,20 +72,24 @@ export default function CartScreen() {
       const token = await AsyncStorage.getItem('authToken');
       if (!token) return;
 
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/cart/update', {
+      const variantId = item.variant?.id || item.product?.variants?.[0]?.id || item.product?.id;
+      
+      const response = await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${variantId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          itemId,
           quantity: quantity.toString()
         })
       });
 
       if (response.ok) {
         fetchCartData();
+        if (item.product?.id) {
+          dispatch(updateQuantity({ id: item.product.id, quantity }));
+        }
       }
     } catch (error) {
       console.error('Error updating quantity:', error);

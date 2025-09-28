@@ -281,7 +281,7 @@ export default function HomeScreen() {
             ) : locationError ? (
               <Text style={[styles.addressText, { color: colors.gray }]}>Location unavailable</Text>
             ) : (
-              <TouchableOpacity onPress={() => router.push('/select-address')}>
+              <TouchableOpacity onPress={() => router.push('/SelectDeliveryAddress')}>
                 <Text style={[styles.addressText, { color: colors.text, fontWeight: 'bold' }]}>
                   {selectedAddress ? 
                     (selectedAddress.address.length > 28 ? selectedAddress.address.substring(0, 28) + '...' : selectedAddress.address) : 

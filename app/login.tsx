@@ -218,6 +218,7 @@ export default function LoginScreen() {
               <TouchableOpacity 
                 style={styles.sendOtpButton} 
                 onPress={handleSendOtp}
+                activeOpacity={0.8}
               >
                 <Text style={styles.sendOtpText}>Send OTP</Text>
               </TouchableOpacity>
@@ -248,6 +249,7 @@ export default function LoginScreen() {
               <TouchableOpacity 
                 style={styles.verifyButton} 
                 onPress={handleVerifyOtp}
+                activeOpacity={0.8}
               >
                 <Text style={styles.verifyText}>Verify OTP</Text>
               </TouchableOpacity>
