@@ -19,25 +19,27 @@ const images = [
 
 export default function LoadingScreen() {
   const dispatch = useDispatch();
-  const { isLoggedIn, refreshToken } = useSelector((state: RootState) => state.user);
+  const { isLoggedIn } = useSelector((state: RootState) => state.user);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const slideAnim = useRef(new Animated.Value(width)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const handleAppStart = async () => {
-      if (isLoggedIn && refreshToken) {
+      if (isLoggedIn) {
         try {
-          await authAPI.refreshToken(refreshToken);
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          const refreshToken = await AsyncStorage.getItem('refreshToken');
+          
+          if (refreshToken) {
+            await authAPI.refreshToken(refreshToken);
+          }
           router.replace('/(tabs)');
         } catch (error) {
           console.error('Token refresh failed:', error);
           dispatch(logout());
+          return;
         }
-        return;
-      } else if (isLoggedIn) {
-        router.replace('/(tabs)');
-        return;
       }
     };
     
@@ -74,7 +76,7 @@ export default function LoadingScreen() {
     if (!isLoggedIn) {
       animateImages();
     }
-  }, [isLoggedIn, refreshToken, dispatch]);
+  }, [isLoggedIn, dispatch]);
 
   const handleSkip = () => {
     router.replace('/(tabs)');

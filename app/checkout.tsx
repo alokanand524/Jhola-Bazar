@@ -1,4 +1,5 @@
 import { SkeletonLoader } from '@/components/SkeletonLoader';
+import EnterMoreDetailsModal from '@/components/EnterMoreDetailsModal';
 import { useTheme } from '@/hooks/useTheme';
 import { clearCart } from '@/store/slices/cartSlice';
 import { RootState } from '@/store/store';
@@ -86,6 +87,8 @@ export default function CheckoutScreen() {
   const [selectedDeliveryAddress, setSelectedDeliveryAddress] = useState<any>(null);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const [recentLocations, setRecentLocations] = useState<any[]>([]);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [customerDetails, setCustomerDetails] = useState<any>(null);
 
   // const deliveryFee = 25;
   const deliveryFee = 0; // Delivery fee disabled
@@ -109,6 +112,10 @@ export default function CheckoutScreen() {
   };
 
   const handlePlaceOrder = async () => {
+    if (!customerDetails) {
+      Alert.alert('Error', 'Please enter customer details');
+      return;
+    }
     if (!selectedDeliveryAddress || !selectedDeliveryAddress.id) {
       Alert.alert('Error', 'Please select a delivery address');
       return;
@@ -227,6 +234,29 @@ export default function CheckoutScreen() {
       </View>
 
       <ScrollView style={styles.content}>
+        {/* Customer Details */}
+        <View style={[styles.section, { borderBottomColor: colors.lightGray }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Customer Details</Text>
+          <TouchableOpacity 
+            style={[styles.addressCard, { backgroundColor: colors.lightGray }]}
+            onPress={() => setShowDetailsModal(true)}
+          >
+            <Ionicons name="person" size={20} color={colors.primary} />
+            <View style={styles.addressInfo}>
+              <Text style={[styles.addressType, { color: colors.text }]}>Customer Info</Text>
+              <Text style={[styles.addressText, { color: colors.gray }]}>
+                {customerDetails ? 
+                  `${customerDetails.name}${customerDetails.mobile ? ' • ' + customerDetails.mobile : ''}` : 
+                  'Enter customer details'
+                }
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowDetailsModal(true)}>
+              <Text style={[styles.changeText, { color: colors.primary }]}>Edit</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
+
         {/* Delivery Address */}
         <View style={[styles.section, { borderBottomColor: colors.lightGray }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Delivery Address</Text>
@@ -503,6 +533,13 @@ export default function CheckoutScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Enter More Details Modal */}
+      <EnterMoreDetailsModal
+        visible={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        onSubmit={(details) => setCustomerDetails(details)}
+      />
     </SafeAreaView>
   );
 }

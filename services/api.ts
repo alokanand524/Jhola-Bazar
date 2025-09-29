@@ -37,7 +37,28 @@ export const categoryAPI = {
   }
 };
 
-export const authAPI = {};
+export const authAPI = {
+  refreshToken: async (refreshToken: string) => {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken })
+    });
+    
+    if (!response.ok) throw new Error('Token refresh failed');
+    const data = await response.json();
+    
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    if (data.data?.accessToken) {
+      await AsyncStorage.setItem('authToken', data.data.accessToken);
+    }
+    if (data.data?.refreshToken) {
+      await AsyncStorage.setItem('refreshToken', data.data.refreshToken);
+    }
+    
+    return data;
+  }
+};
 
 export const profileAPI = {
   getProfile: async () => {

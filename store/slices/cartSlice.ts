@@ -8,6 +8,7 @@ export interface CartItem {
   image: string;
   quantity: number;
   category: string;
+  cartItemId?: string;
 }
 
 interface CartState {
@@ -39,7 +40,8 @@ export const fetchCart = createAsyncThunk(
         price: parseFloat(item.unitPrice || '0'),
         image: item.product?.images?.[0] || '',
         quantity: item.quantity || 1,
-        category: item.product?.category?.name || ''
+        category: item.product?.category?.name || '',
+        cartItemId: item.id // Store the cart item ID for API operations
       }));
       
       return transformedItems;

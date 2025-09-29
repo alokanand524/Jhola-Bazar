@@ -30,6 +30,7 @@ export default function ProductDetailScreen() {
 
   
   const { selectedProduct, productLoading } = useSelector((state: RootState) => state.products);
+  const { isLoggedIn } = useSelector((state: RootState) => state.user);
   const cartItem = useSelector((state: RootState) => 
     state.cart.items.find(item => item.id === id)
   );
@@ -111,6 +112,12 @@ export default function ProductDetailScreen() {
   };
 
   const handleAddToCart = async () => {
+    // Check if user is logged in
+    if (!isLoggedIn) {
+      router.push('/login');
+      return;
+    }
+    
     const currentVariant = selectedProduct.variants?.[selectedVariant];
     const price = currentVariant?.price?.sellingPrice || selectedProduct.price;
     const minQty = currentVariant?.minOrderQty || 1;

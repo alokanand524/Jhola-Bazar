@@ -20,7 +20,6 @@ import * as Location from 'expo-location';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useEffect } from 'react';
 import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { handleTabBarScroll } from './_layout';
 
@@ -248,7 +247,8 @@ export default function HomeScreen() {
       if (response.ok) {
         const result = await response.json();
         const cart = result.data?.carts?.[0];
-        setApiCartCount(cart?.items?.length || 0);
+        const totalQuantity = cart?.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 0;
+        setApiCartCount(totalQuantity);
       } else {
         setApiCartCount(0);
       }
@@ -258,7 +258,7 @@ export default function HomeScreen() {
     }
   };
 
-  const cartItemsCount = apiCartCount || items.length;
+  const cartItemsCount = apiCartCount || items.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleScroll = (event: any) => {
     handleTabBarScroll(event);
@@ -309,7 +309,12 @@ export default function HomeScreen() {
         <Ionicons name="search" size={20} color={colors.gray} />
         <TouchableOpacity
           style={styles.searchTouchable}
-          onPress={() => router.push('/(tabs)/search')}
+          onPress={() => {
+            router.push({
+              pathname: '/search-results',
+              params: { query: '' }
+            });
+          }}
         >
           <Text style={[styles.searchPlaceholder, { color: colors.gray }]}>Search for products</Text>
         </TouchableOpacity>

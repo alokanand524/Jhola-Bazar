@@ -84,7 +84,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       
       if (!token) {
         console.log('No auth token found, skipping API call');
-        return false;
+        return null;
       }
       
       // Check if user has delivery address
@@ -92,7 +92,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       if (!hasAddress) {
         console.log('No delivery address found, redirecting to add address');
         router.push('/add-address');
-        return false;
+        return null;
       }
       
       const makeRequest = async (authToken: string) => {
@@ -129,19 +129,26 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       console.log('Response body:', responseText);
       
       if (response.ok) {
+        const data = JSON.parse(responseText);
         console.log('Item added to cart successfully');
-        return true;
+        return data.data.id; // Return cart item ID
       } else {
         console.error('Failed to add item to cart. Status:', response.status, 'Body:', responseText);
-        return false;
+        return null;
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
-      return false;
+      return null;
     }
   };
 
   const handleAddToCart = async (selectedSize?: string) => {
+    // Check if user is logged in
+    if (!isLoggedIn) {
+      router.push('/login');
+      return;
+    }
+    
     if (hasMultipleSizes && !cartItem && !selectedSize) {
       setShowSizeModal(true);
       return;
@@ -167,6 +174,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         price: product.price,
         image: product.image,
         category: product.category,
+        cartItemId: apiSuccess || undefined, // Store cart item ID
       }));
     }
     
@@ -175,28 +183,44 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }
   };
 
-  const handleUpdateQuantity = async (quantity: number) => {
+  const handleIncrement = async () => {
     const token = await AsyncStorage.getItem('authToken');
+    const cartItemId = cartItem?.cartItemId;
     
-    if (quantity > 0 && token) {
-      const variantId = product.variants?.[0]?.id || product.id;
+    if (token && cartItemId) {
       try {
-        await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${variantId}`, {
-          method: 'PUT',
+        await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItemId}/increment`, {
+          method: 'PATCH',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            quantity: quantity.toString()
-          })
+          }
         });
       } catch (error) {
-        console.error('Error updating quantity:', error);
+        console.error('Error incrementing quantity:', error);
       }
     }
     
-    dispatch(updateQuantity({ id: product.id, quantity }));
+    dispatch(updateQuantity({ id: product.id, quantity: cartItem!.quantity + 1 }));
+  };
+
+  const handleDecrement = async () => {
+    const token = await AsyncStorage.getItem('authToken');
+    const cartItemId = cartItem?.cartItemId;
+    
+    if (token && cartItemId) {
+      try {
+        await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItemId}/decrement`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      } catch (error) {
+        console.error('Error decrementing quantity:', error);
+      }
+    }
+    
+    dispatch(updateQuantity({ id: product.id, quantity: cartItem!.quantity - 1 }));
   };
 
   const handleSizeSelect = (size: string) => {
@@ -245,7 +269,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                   style={styles.quantityButton}
                   onPress={(e) => {
                     e.stopPropagation();
-                    handleUpdateQuantity(cartItem.quantity - 1);
+                    handleDecrement();
                   }}
                 >
                   <Ionicons name="remove" size={14} color="#fff" />
@@ -255,7 +279,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                   style={styles.quantityButton}
                   onPress={(e) => {
                     e.stopPropagation();
-                    handleUpdateQuantity(cartItem.quantity + 1);
+                    handleIncrement();
                   }}
                 >
                   <Ionicons name="add" size={14} color="#ffffffff" />
@@ -339,6 +363,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     marginHorizontal: '1%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   imageContainer: {
     position: 'relative',

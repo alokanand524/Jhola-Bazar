@@ -10,6 +10,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '@/hooks/useTheme';
 import { profileAPI } from '@/services/api';
 
+const monthNames = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
 export default function EditProfileScreen() {
   const dispatch = useDispatch();
   const { name, phone } = useSelector((state: RootState) => state.user);
@@ -371,23 +376,26 @@ export default function EditProfileScreen() {
               <View style={styles.pickerWrapper}>
                 <Text style={[styles.pickerLabel, { color: colors.text }]}>Month</Text>
                 <ScrollView style={styles.scrollPicker} showsVerticalScrollIndicator={false}>
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
-                    <TouchableOpacity
-                      key={month}
-                      style={[
-                        styles.pickerItem,
-                        { backgroundColor: selectedMonth === month ? colors.primary : 'transparent' }
-                      ]}
-                      onPress={() => setSelectedMonth(month)}
-                    >
-                      <Text style={[
-                        styles.pickerItemText,
-                        { color: selectedMonth === month ? '#fff' : colors.text }
-                      ]}>
-                        {month}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                  {monthNames.map((monthName, index) => {
+                    const monthNumber = index + 1;
+                    return (
+                      <TouchableOpacity
+                        key={monthNumber}
+                        style={[
+                          styles.pickerItem,
+                          { backgroundColor: selectedMonth === monthNumber ? colors.primary : 'transparent' }
+                        ]}
+                        onPress={() => setSelectedMonth(monthNumber)}
+                      >
+                        <Text style={[
+                          styles.pickerItemText,
+                          { color: selectedMonth === monthNumber ? '#fff' : colors.text }
+                        ]}>
+                          {monthName}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </ScrollView>
               </View>
               <View style={styles.pickerWrapper}>

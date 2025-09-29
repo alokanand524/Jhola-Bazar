@@ -1,163 +1,125 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useSelector } from 'react-redux';
-import { behaviorTracker } from '@/services/behaviorTracker';
-import { RootState } from '@/store/store';
-import { ProductCard } from '@/components/ProductCard';
-import { ProductCardSkeleton } from '@/components/SkeletonLoader';
-import { hideTabBar } from './_layout';
-import { useTheme } from '@/hooks/useTheme';
+import { router } from 'expo-router';
+import React from 'react';
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function SearchScreen() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const { products } = useSelector((state: RootState) => state.products);
-  const { colors } = useTheme();
+const supportOptions = [
+  {
+    id: '1',
+    title: 'Call Customer Support',
+    subtitle: '24/7 support available',
+    icon: 'call',
+    action: () => Linking.openURL('tel:+919262626392'),
+  },
+  {
+    id: '2',
+    title: 'Chat with Us',
+    subtitle: 'Get instant help',
+    icon: 'chatbubble',
+    action: () => router.push('/chatbot'),
+  },
+  {
+    id: '3',
+    title: 'Email Support',
+    subtitle: 'support@Jholabazar.com',
+    icon: 'mail',
+    action: () => Linking.openURL('mailto:support@Jholabazar.com'),
+  },
+  {
+    id: '4',
+    title: 'Order Issues',
+    subtitle: 'Report problems with orders',
+    icon: 'bag',
+    action: () => {},
+  },
+  {
+    id: '5',
+    title: 'Payment Issues',
+    subtitle: 'Refunds and payment problems',
+    icon: 'card',
+    action: () => {},
+  },
+  {
+    id: '6',
+    title: 'Account Issues',
+    subtitle: 'Login and account problems',
+    icon: 'person',
+    action: () => {},
+  },
+];
 
-  const [apiResults, setApiResults] = React.useState([]);
-  const [isApiSearching, setIsApiSearching] = React.useState(false);
+const faqs = [
+  {
+    question: 'How do I track my order?',
+    answer: 'You can track your order in the "My Orders" section of your profile.',
+  },
+  {
+    question: 'What is the delivery time?',
+    answer: 'We deliver most orders within 10-15 minutes in your area.',
+  },
+  {
+    question: 'How do I cancel an order?',
+    answer: 'You can cancel your order before it is dispatched from the store.',
+  },
+  {
+    question: 'What payment methods do you accept?',
+    answer: 'We accept UPI, Credit/Debit Cards.',
+  },
+];
 
-  const searchProducts = async (query: string) => {
-    if (!query.trim()) {
-      setApiResults([]);
-      return;
-    }
-
-    setIsApiSearching(true);
-    try {
-      const response = await fetch(`https://jholabazar.onrender.com/api/v1/products/search?q=${encodeURIComponent(query)}`);
-      const data = await response.json();
-      
-      if (data.success && data.data?.results) {
-        const transformedProducts = data.data.results.map(product => ({
-          id: product.id,
-          name: product.name,
-          image: product.image || '',
-          price: '0',
-          originalPrice: '0',
-          category: product.category || 'General',
-          description: '',
-          unit: '1 unit',
-          inStock: true,
-          rating: 4.5,
-          deliveryTime: '10 mins',
-          brand: product.brand
-        }));
-        setApiResults(transformedProducts);
-      } else {
-        setApiResults([]);
-      }
-    } catch (error) {
-      console.error('Search API error:', error);
-      setApiResults([]);
-    } finally {
-      setIsApiSearching(false);
-    }
-  };
-
-  React.useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchQuery.trim()) {
-        behaviorTracker.trackSearch(searchQuery.trim());
-        searchProducts(searchQuery.trim());
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
-
-  const filteredProducts = apiResults.length > 0 ? apiResults : 
-    products.filter(product =>
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-  const [searchSuggestions, setSearchSuggestions] = React.useState<string[]>([]);
-
-  React.useEffect(() => {
-    setSearchSuggestions(behaviorTracker.getSearchSuggestions());
-  }, []);
-
+export default function SupportScreen() {
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Search Products</Text>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Help & Support</Text>
       </View>
 
-      <View style={[styles.searchContainer, { backgroundColor: colors.lightGray }]}>
-        <Ionicons name="search" size={20} color={colors.gray} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Search for products..."
-          placeholderTextColor={colors.gray}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          autoFocus
-        />
-      </View>
-
-      {searchQuery.trim() === '' && searchSuggestions.length > 0 && (
-        <View style={[styles.suggestionsContainer, { backgroundColor: colors.background }]}>
-          <Text style={[styles.suggestionsTitle, { color: colors.text }]}>Recent Searches</Text>
-          {searchSuggestions.map((suggestion, index) => (
+      <ScrollView style={styles.content}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Contact Us</Text>
+          {supportOptions.map((option) => (
             <TouchableOpacity
-              key={index}
-              style={styles.suggestionItem}
-              onPress={() => setSearchQuery(suggestion)}
+              key={option.id}
+              style={styles.supportOption}
+              onPress={option.action}
             >
-              <Ionicons name="time-outline" size={16} color={colors.gray} />
-              <Text style={[styles.suggestionText, { color: colors.text }]}>{suggestion}</Text>
+              <View style={styles.optionLeft}>
+                <View style={styles.iconContainer}>
+                  <Ionicons name={option.icon as any} size={20} color="#00B761" />
+                </View>
+                <View style={styles.optionText}>
+                  <Text style={styles.optionTitle}>{option.title}</Text>
+                  <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#ccc" />
             </TouchableOpacity>
           ))}
         </View>
-      )}
 
-      <View style={styles.content}>
-        {searchQuery.length > 0 && (
-          <Ionicons 
-            name="close-circle" 
-            size={20} 
-            color={colors.gray} 
-            onPress={() => setSearchQuery('')}
-          />
-        )}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
+          {faqs.map((faq, index) => (
+            <View key={index} style={styles.faqItem}>
+              <Text style={styles.faqQuestion}>{faq.question}</Text>
+              <Text style={styles.faqAnswer}>{faq.answer}</Text>
+            </View>
+          ))}
+        </View>
 
-        {searchQuery.trim() === '' ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="search" size={64} color={colors.gray} />
-            <Text style={[styles.emptyStateText, { color: colors.gray }]}>Start typing to search products</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>App Information</Text>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>App Version</Text>
+            <Text style={styles.infoValue}>1.0.0</Text>
           </View>
-        ) : (isSearching || isApiSearching) ? (
-          <View style={styles.row}>
-            <ProductCardSkeleton />
-            <ProductCardSkeleton />
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Last Updated</Text>
+            <Text style={styles.infoValue}>August 2025</Text>
           </View>
-        ) : filteredProducts.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="sad" size={64} color={colors.gray} />
-            <Text style={[styles.emptyStateText, { color: colors.gray }]}>No products found</Text>
-            <Text style={[styles.emptyStateSubtext, { color: colors.gray }]}>Try searching with different keywords</Text>
-          </View>
-        ) : (
-          <>
-            <Text style={[styles.resultsText, { color: colors.text }]}>
-              {filteredProducts.length} result{filteredProducts.length !== 1 ? 's' : ''} found
-            </Text>
-            <FlatList
-              data={filteredProducts}
-              renderItem={({ item }) => <ProductCard product={item} />}
-              keyExtractor={(item) => item.id}
-              numColumns={2}
-              columnWrapperStyle={styles.row}
-              showsVerticalScrollIndicator={false}
-              onScroll={hideTabBar}
-              scrollEventThrottle={16}
-            />
-          </>
-        )}
-      </View>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -165,72 +127,100 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f8f8f8',
   },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 16,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    margin: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
   },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyStateText: {
-    fontSize: 18,
+  section: {
+    backgroundColor: '#fff',
     marginTop: 16,
-    textAlign: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 20,
   },
-  emptyStateSubtext: {
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  resultsText: {
-    fontSize: 16,
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: '600',
+    color: '#333',
     marginBottom: 16,
   },
-  row: {
-    justifyContent: 'space-between',
-  },
-  suggestionsContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  suggestionsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  suggestionItem: {
+  supportOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  suggestionText: {
+  optionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0f8f4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  optionText: {
+    flex: 1,
+  },
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 2,
+  },
+  optionSubtitle: {
     fontSize: 14,
-    marginLeft: 8,
+    color: '#666',
+  },
+  faqItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  faqQuestion: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 8,
+  },
+  faqAnswer: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  infoLabel: {
+    fontSize: 16,
+    color: '#333',
+  },
+  infoValue: {
+    fontSize: 16,
+    color: '#666',
   },
 });
+

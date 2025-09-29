@@ -1,8 +1,8 @@
+import { ImageWithLoading } from '@/components/ImageWithLoading';
+import { useTheme } from '@/hooks/useTheme';
 import { router } from 'expo-router';
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useTheme } from '@/hooks/useTheme';
-import { ImageWithLoading } from '@/components/ImageWithLoading';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface SectionCardProps {
   title: string;
@@ -24,8 +24,8 @@ export const SectionCard: React.FC<SectionCardProps> = ({ title, image, category
       <View style={[styles.imageContainer, { backgroundColor: colors.lightGray }]}>
         <ImageWithLoading 
           source={{ uri: image }} 
-          width={45} 
-          height={45} 
+          width={70} 
+          height={70} 
           borderRadius={0}
         />
       </View>
@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   imageContainer: {
-    padding: 8,
+    padding: 12,
     borderRadius: 8,
     marginBottom: 6,
   },

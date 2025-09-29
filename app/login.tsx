@@ -106,7 +106,8 @@ export default function LoginScreen() {
           name: data.data?.customer?.firstName || 'User',
           phone: `${phoneNumber}`,
         }));
-        router.replace('/referral');
+        // router.replace('/referral');
+        router.replace('/(tabs)');
       } else {
         Alert.alert('Error', data.message || 'Invalid OTP');
       }
@@ -212,17 +213,14 @@ export default function LoginScreen() {
             </View>
             */}
 
-            {isLoading ? (
-              <SkeletonLoader width="100%" height={50} borderRadius={8} style={{ marginBottom: 24 }} />
-            ) : (
-              <TouchableOpacity 
-                style={styles.sendOtpButton} 
-                onPress={handleSendOtp}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.sendOtpText}>Send OTP</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity 
+              style={[styles.sendOtpButton, isLoading && styles.disabledButton]} 
+              onPress={handleSendOtp}
+              disabled={isLoading}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.sendOtpText}>{isLoading ? 'Sending...' : 'Send OTP'}</Text>
+            </TouchableOpacity>
 
 
           </>
@@ -243,17 +241,14 @@ export default function LoginScreen() {
               />
             </View>
 
-            {isLoading ? (
-              <SkeletonLoader width="100%" height={50} borderRadius={8} style={{ marginBottom: 16 }} />
-            ) : (
-              <TouchableOpacity 
-                style={styles.verifyButton} 
-                onPress={handleVerifyOtp}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.verifyText}>Verify OTP</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity 
+              style={[styles.verifyButton, isLoading && styles.disabledButton]} 
+              onPress={handleVerifyOtp}
+              disabled={isLoading}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.verifyText}>{isLoading ? 'Verifying...' : 'Verify OTP'}</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.resendButton} 
@@ -366,14 +361,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   sendOtpButton: {
-    backgroundColor: '#00B761',
+    backgroundColor: '#006B3C',
     paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
     marginBottom: 24,
   },
   sendOtpText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -404,14 +399,14 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
   },
   verifyButton: {
-    backgroundColor: '#00B761',
+    backgroundColor: '#006B3C',
     paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
     marginBottom: 16,
   },
   verifyText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -422,7 +417,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   disabledButton: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#999',
+    opacity: 0.7,
   },
   resendButton: {
     alignItems: 'center',
