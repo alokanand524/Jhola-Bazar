@@ -112,6 +112,30 @@ export default function ProductDetailScreen() {
   };
 
   const handleAddToCart = async () => {
+    // Check if area is serviceable
+    try {
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/delivery-timing/estimate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
+          latitude: '25.623428',
+          longitude: '85.048640'
+        })
+      });
+      
+      const result = await response.json();
+      if (!result.success) {
+        Alert.alert('Not Serviceable', 'Sorry, we don\'t deliver to your area');
+        return;
+      }
+    } catch (error) {
+      Alert.alert('Not Serviceable', 'Sorry, we don\'t deliver to your area');
+      return;
+    }
+    
     // Check if user is logged in
     if (!isLoggedIn) {
       router.push('/login');
@@ -147,6 +171,30 @@ export default function ProductDetailScreen() {
   };
 
   const handleUpdateQuantity = async (quantity: number) => {
+    // Check if area is serviceable
+    try {
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/delivery-timing/estimate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
+          latitude: '25.623428',
+          longitude: '85.048640'
+        })
+      });
+      
+      const result = await response.json();
+      if (!result.success) {
+        Alert.alert('Not Serviceable', 'Sorry, we don\'t deliver to your area');
+        return;
+      }
+    } catch (error) {
+      Alert.alert('Not Serviceable', 'Sorry, we don\'t deliver to your area');
+      return;
+    }
+    
     const currentVariant = selectedProduct.variants?.[selectedVariant];
     const minQty = currentVariant?.minOrderQty || 1;
     const maxQty = currentVariant?.maxOrderQty || 10;
@@ -165,18 +213,25 @@ export default function ProductDetailScreen() {
     const variantId = currentVariant?.id || selectedProduct.id;
     const token = await AsyncStorage.getItem('authToken');
     
-    if (token) {
+    if (token && cartItem?.cartItemId) {
       try {
-        const response = await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${variantId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            quantity: quantity.toString()
-          })
-        });
+        if (quantity > cartItem.quantity) {
+          // Increment
+          await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItem.cartItemId}/increment`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+        } else {
+          // Decrement
+          await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItem.cartItemId}/decrement`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+        }
       } catch (error) {
         console.error('Error updating quantity:', error);
       }

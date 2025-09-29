@@ -11,6 +11,7 @@ export default function SearchResultsScreen() {
   const [searchQuery, setSearchQuery] = useState(query as string || '');
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isServiceable, setIsServiceable] = useState(true);
 
   const searchProducts = async (searchTerm: string) => {
     if (!searchTerm.trim()) {
@@ -54,7 +55,29 @@ export default function SearchResultsScreen() {
     if (searchQuery) {
       searchProducts(searchQuery);
     }
+    checkServiceability();
   }, []);
+  
+  const checkServiceability = async () => {
+    try {
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/delivery-timing/estimate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
+          latitude: '25.623428',
+          longitude: '85.048640'
+        })
+      });
+      
+      const result = await response.json();
+      setIsServiceable(result.success);
+    } catch (error) {
+      setIsServiceable(false);
+    }
+  };
 
   const handleSearch = () => {
     searchProducts(searchQuery);
@@ -91,7 +114,7 @@ export default function SearchResultsScreen() {
             </Text>
             <FlatList
               data={searchResults}
-              renderItem={({ item }) => <ProductCard product={item} />}
+              renderItem={({ item }) => <ProductCard product={item} isServiceable={isServiceable} />}
               keyExtractor={(item) => item.id}
               numColumns={2}
               columnWrapperStyle={styles.row}

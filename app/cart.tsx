@@ -62,7 +62,31 @@ export default function CartScreen() {
     }, [])
   );
 
-  const handleUpdateQuantity = async (itemId: string, quantity: number, item: any) => {
+  const handleUpdateQuantity = async (itemId: string, quantity: number, item: any, isIncrement: boolean) => {
+    // Check serviceability first
+    try {
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/delivery-timing/estimate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
+          latitude: '25.623428',
+          longitude: '85.048640'
+        })
+      });
+      
+      const result = await response.json();
+      if (!result.success) {
+        Alert.alert('Not Serviceable', 'Sorry, we don\'t deliver to your area');
+        return;
+      }
+    } catch (error) {
+      Alert.alert('Not Serviceable', 'Sorry, we don\'t deliver to your area');
+      return;
+    }
+    
     if (quantity < 1) {
       handleRemoveItem(itemId);
       return;
@@ -72,17 +96,16 @@ export default function CartScreen() {
       const token = await AsyncStorage.getItem('authToken');
       if (!token) return;
 
-      const variantId = item.variant?.id || item.product?.variants?.[0]?.id || item.product?.id;
+      // Use increment/decrement API endpoints
+      const endpoint = isIncrement ? 
+        `https://jholabazar.onrender.com/api/v1/cart/items/${itemId}/increment` :
+        `https://jholabazar.onrender.com/api/v1/cart/items/${itemId}/decrement`;
       
-      const response = await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${variantId}`, {
-        method: 'PUT',
+      const response = await fetch(endpoint, {
+        method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          quantity: quantity.toString()
-        })
+        }
       });
 
       if (response.ok) {
@@ -215,14 +238,14 @@ export default function CartScreen() {
                 <View style={[styles.quantityContainer, { backgroundColor: colors.primary }]}>
                   <TouchableOpacity 
                     style={styles.quantityButton}
-                    onPress={() => handleUpdateQuantity(item.id, item.quantity - 1, item)}
+                    onPress={() => handleUpdateQuantity(item.id, item.quantity - 1, item, false)}
                   >
                     <Ionicons name="remove" size={16} color="#ffffffff" />
                   </TouchableOpacity>
                   <Text style={styles.quantity}>{item.quantity}</Text>
                   <TouchableOpacity 
                     style={styles.quantityButton}
-                    onPress={() => handleUpdateQuantity(item.id, item.quantity + 1, item)}
+                    onPress={() => handleUpdateQuantity(item.id, item.quantity + 1, item, true)}
                   >
                     <Ionicons name="add" size={16} color="#ffffffff" />
                   </TouchableOpacity>

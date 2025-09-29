@@ -21,6 +21,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
   const dispatch = useDispatch();
   const { colors } = useTheme();
   const [showSizeModal, setShowSizeModal] = useState(false);
+  const [showVariantModal, setShowVariantModal] = useState(false);
   const { isLoggedIn } = useSelector((state: RootState) => state.user);
   const cartItem = useSelector((state: RootState) => 
     state.cart.items.find(item => item.id === product.id)
@@ -143,8 +144,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
     }
   };
 
-  const handleAddToCart = async (selectedSize?: string) => {
-    // Check if area is serviceable
+  const handleAddToCart = async (selectedSize?: string, selectedVariantId?: string) => {
+    // If product has variants and no variant selected, show variant modal first
+    if (product.variants && product.variants.length > 1 && !cartItem && !selectedVariantId) {
+      setShowVariantModal(true);
+      return;
+    }
+    
+    if (hasMultipleSizes && !cartItem && !selectedSize) {
+      setShowSizeModal(true);
+      return;
+    }
+    
+    // Check if area is serviceable only when actually adding to cart
     if (!isServiceable) {
       alert('Sorry, we don\'t deliver to your area');
       return;
@@ -156,13 +168,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
       return;
     }
     
-    if (hasMultipleSizes && !cartItem && !selectedSize) {
-      setShowSizeModal(true);
-      return;
-    }
-    
     // Get variantId from product (assuming it's in variants array)
-    const variantId = product.variants?.[0]?.id || product.id;
+    const variantId = selectedVariantId || product.variants?.[0]?.id || product.id;
     const quantity = 1; // Always add 1 for new items
     
     // Check token directly instead of Redux state
@@ -187,6 +194,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
     
     if (selectedSize) {
       setShowSizeModal(false);
+    }
+    if (selectedVariantId) {
+      setShowVariantModal(false);
     }
   };
 
@@ -304,13 +314,26 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
               </View>
             ) : (
               <TouchableOpacity 
-                style={[styles.addButton, { backgroundColor: 'white', borderColor: colors.primary, borderWidth: 2 }]} 
+                style={[styles.addButton, { 
+                  backgroundColor: 'white', 
+                  borderColor: colors.primary, 
+                  borderWidth: 2,
+                  flexDirection: product.variants && product.variants.length > 1 ? 'row' : 'column',
+                  paddingHorizontal: product.variants && product.variants.length > 1 ? 8 : 0,
+                  width: product.variants && product.variants.length > 1 ? 'auto' : 32,
+                  minWidth: product.variants && product.variants.length > 1 ? 60 : 32
+                }]} 
                 onPress={(e) => {
                   e.stopPropagation();
                   handleAddToCart();
                 }}
               >
-                <Ionicons name="add" size={18} color={colors.primary} />
+                <Ionicons name="add" size={product.variants && product.variants.length > 1 ? 14 : 18} color={colors.primary} />
+                {product.variants && product.variants.length > 1 && (
+                  <Text style={[styles.variantText, { color: colors.primary }]}>
+                    {product.variants.length} options
+                  </Text>
+                )}
               </TouchableOpacity>
             )}
           </View>
@@ -365,6 +388,76 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
             >
               <Text style={[styles.modalCloseText, { color: colors.text }]}>Cancel</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Variant Selection Modal */}
+      <Modal visible={showVariantModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Variant</Text>
+              <TouchableOpacity onPress={() => setShowVariantModal(false)}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.modalSubtitle, { color: colors.gray }]}>{product.name}</Text>
+            
+            {product.variants?.map((variant) => {
+              const variantCartItem = cartItem; // For now, using same cart item logic
+              return (
+                <View
+                  key={variant.id}
+                  style={[styles.variantOption, { borderBottomColor: colors.border }]}
+                >
+                  <View style={styles.variantInfo}>
+                    <Text style={[styles.variantName, { color: colors.text }]}>
+                      {variant.weight} {variant.baseUnit}
+                    </Text>
+                    <Text style={[styles.variantPrice, { color: colors.text }]}>₹{variant.price?.sellingPrice}</Text>
+                    {variant.price?.basePrice && variant.price.basePrice !== variant.price.sellingPrice && (
+                      <Text style={[styles.variantOrigPrice, { color: colors.gray }]}>₹{variant.price.basePrice}</Text>
+                    )}
+                  </View>
+                  <View style={styles.variantActions}>
+                    {variantCartItem ? (
+                      <View style={[styles.quantityContainer, { backgroundColor: colors.primary }]}>
+                        <TouchableOpacity 
+                          style={styles.quantityButton}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleDecrement();
+                          }}
+                        >
+                          <Ionicons name="remove" size={14} color="#fff" />
+                        </TouchableOpacity>
+                        <Text style={styles.quantity}>{variantCartItem.quantity}</Text>
+                        <TouchableOpacity 
+                          style={styles.quantityButton}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleIncrement();
+                          }}
+                        >
+                          <Ionicons name="add" size={14} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity 
+                        style={[styles.addButton, { backgroundColor: 'white', borderColor: colors.primary, borderWidth: 2 }]} 
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleAddToCart(undefined, variant.id);
+                        }}
+                      >
+                        <Ionicons name="add" size={18} color={colors.primary} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
           </View>
         </View>
       </Modal>
@@ -505,5 +598,47 @@ const styles = StyleSheet.create({
   modalCloseText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  variantText: {
+    fontSize: 10,
+    fontWeight: '500',
+    marginLeft: 2,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  variantOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  variantActions: {
+    alignItems: 'center',
+  },
+  variantInfo: {
+    flex: 1,
+  },
+  variantName: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  variantDesc: {
+    fontSize: 14,
+    marginTop: 2,
+  },
+
+  variantPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  variantOrigPrice: {
+    fontSize: 12,
+    textDecorationLine: 'line-through',
+    marginTop: 2,
   },
 });

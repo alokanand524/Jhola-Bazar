@@ -13,10 +13,33 @@ export default function FeaturedProductsScreen() {
   const [loading, setLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [filteredProducts, setFilteredProducts] = React.useState([]);
+  const [isServiceable, setIsServiceable] = React.useState(true);
 
   React.useEffect(() => {
     fetchFeaturedProducts();
+    checkServiceability();
   }, []);
+  
+  const checkServiceability = async () => {
+    try {
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/delivery-timing/estimate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
+          latitude: '25.623428',
+          longitude: '85.048640'
+        })
+      });
+      
+      const result = await response.json();
+      setIsServiceable(result.success);
+    } catch (error) {
+      setIsServiceable(false);
+    }
+  };
 
   React.useEffect(() => {
     if (searchQuery) {
@@ -89,7 +112,7 @@ export default function FeaturedProductsScreen() {
       ) : (
         <FlatList
           data={filteredProducts}
-          renderItem={({ item }) => <ProductCard product={item} />}
+          renderItem={({ item }) => <ProductCard product={item} isServiceable={isServiceable} />}
           keyExtractor={(item) => item.id}
           numColumns={2}
           columnWrapperStyle={styles.row}
