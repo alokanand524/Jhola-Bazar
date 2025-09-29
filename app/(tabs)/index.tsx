@@ -40,6 +40,8 @@ export default function HomeScreen() {
   const [featuredLoading, setFeaturedLoading] = React.useState(true);
   const [apiCartCount, setApiCartCount] = React.useState(0);
   const [loadingStep, setLoadingStep] = React.useState('loading');
+  const [deliveryEstimate, setDeliveryEstimate] = React.useState<string | null>(null);
+  const [isServiceable, setIsServiceable] = React.useState<boolean>(true);
 
 
   const fetchApiProducts = async () => {
@@ -185,6 +187,36 @@ export default function HomeScreen() {
     }
   }, [location, dispatch]);
 
+  const fetchDeliveryEstimate = async (lat: string, lng: string) => {
+    try {
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/delivery-timing/estimate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
+          latitude: lat,
+          longitude: lng
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success && result.data?.delivery?.deliveryMessage) {
+        setDeliveryEstimate(result.data.delivery.deliveryMessage);
+        setIsServiceable(true);
+      } else {
+        setDeliveryEstimate('Not serviceable in your area');
+        setIsServiceable(false);
+      }
+    } catch (error) {
+      console.error('Error fetching delivery estimate:', error);
+      setDeliveryEstimate('Not serviceable in your area');
+      setIsServiceable(false);
+    }
+  };
+
   const getCurrentLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -195,6 +227,9 @@ export default function HomeScreen() {
 
       const currentLocation = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = currentLocation.coords;
+      
+      // Fetch delivery estimate
+      fetchDeliveryEstimate(latitude.toString(), longitude.toString());
       
       const reverseGeocode = await Location.reverseGeocodeAsync({
         latitude,
@@ -268,9 +303,12 @@ export default function HomeScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.locationContainer}>
-          {deliveryTime && (
-            <Text style={[styles.deliveryTimeText, { color: colors.primary }]}>
-              Delivery in {deliveryTime}
+          {deliveryEstimate && (
+            <Text style={[styles.deliveryTimeText, { 
+              color: deliveryEstimate.includes('Not serviceable') ? 'red' : colors.primary,
+              fontWeight: deliveryEstimate.includes('Not serviceable') ? 'bold' : '600'
+            }]}>
+              {deliveryEstimate}
             </Text>
           )}
           <View style={styles.locationRow}>
@@ -341,7 +379,7 @@ export default function HomeScreen() {
           ) : featuredProducts.length > 0 ? (
             featuredProducts.map((item) => (
               <View key={item.id} style={styles.featuredCard}>
-                <ProductCard product={item} />
+                <ProductCard product={item} isServiceable={isServiceable} />
               </View>
             ))
           ) : (
@@ -386,7 +424,7 @@ export default function HomeScreen() {
           ) : apiProducts.length > 0 ? (
             <FlatList
               data={apiProducts}
-              renderItem={({ item }) => <ProductCard product={item} />}
+              renderItem={({ item }) => <ProductCard product={item} isServiceable={isServiceable} />}
               keyExtractor={(item, index) => item.id || item._id || `product-${index}`}
               numColumns={2}
               scrollEnabled={false}

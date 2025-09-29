@@ -12,11 +12,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface ProductCardProps {
   product: Product;
+  isServiceable?: boolean;
 }
 
 const sizeOptions = ['100g', '200g', '500g', '1kg', '2kg'];
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable = true }) => {
   const dispatch = useDispatch();
   const { colors } = useTheme();
   const [showSizeModal, setShowSizeModal] = useState(false);
@@ -143,6 +144,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   const handleAddToCart = async (selectedSize?: string) => {
+    // Check if area is serviceable
+    if (!isServiceable) {
+      alert('Sorry, we don\'t deliver to your area');
+      return;
+    }
+    
     // Check if user is logged in
     if (!isLoggedIn) {
       router.push('/login');
@@ -184,6 +191,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   const handleIncrement = async () => {
+    if (!isServiceable) {
+      alert('Sorry, we don\'t deliver to your area');
+      return;
+    }
+    
     const token = await AsyncStorage.getItem('authToken');
     const cartItemId = cartItem?.cartItemId;
     
@@ -204,6 +216,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   const handleDecrement = async () => {
+    if (!isServiceable) {
+      alert('Sorry, we don\'t deliver to your area');
+      return;
+    }
+    
     const token = await AsyncStorage.getItem('authToken');
     const cartItemId = cartItem?.cartItemId;
     
