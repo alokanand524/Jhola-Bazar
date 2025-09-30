@@ -1,53 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import ChatWidget from '@/components/ChatWidget';
 
-const supportOptions = [
-  {
-    id: '1',
-    title: 'Call Customer Support',
-    subtitle: '24/7 support available',
-    icon: 'call',
-    action: () => Linking.openURL('tel:+919262626392'),
-  },
-  {
-    id: '2',
-    title: 'Chat with Us',
-    subtitle: 'Get instant help',
-    icon: 'chatbubble',
-    action: () => {},
-  },
-  {
-    id: '3',
-    title: 'Email Support',
-    subtitle: 'support@Jholabazar.com',
-    icon: 'mail',
-    action: () => Linking.openURL('mailto:support@Jholabazar.com'),
-  },
-  {
-    id: '4',
-    title: 'Order Issues',
-    subtitle: 'Report problems with orders',
-    icon: 'bag',
-    action: () => {},
-  },
-  {
-    id: '5',
-    title: 'Payment Issues',
-    subtitle: 'Refunds and payment problems',
-    icon: 'card',
-    action: () => {},
-  },
-  {
-    id: '6',
-    title: 'Account Issues',
-    subtitle: 'Login and account problems',
-    icon: 'person',
-    action: () => {},
-  },
-];
+
 
 const faqs = [
   {
@@ -69,6 +27,53 @@ const faqs = [
 ];
 
 export default function SupportScreen() {
+  const [showChat, setShowChat] = useState(false);
+
+  const supportOptions = [
+    {
+      id: '1',
+      title: 'Call Customer Support',
+      subtitle: '24/7 support available',
+      icon: 'call',
+      action: () => Linking.openURL('tel:+919262626392'),
+    },
+    {
+      id: '2',
+      title: 'Chat with Us',
+      subtitle: 'Get instant help',
+      icon: 'chatbubble',
+      action: () => setShowChat(true),
+    },
+    {
+      id: '3',
+      title: 'Email Support',
+      subtitle: 'support@Jholabazar.com',
+      icon: 'mail',
+      action: () => Linking.openURL('mailto:support@Jholabazar.com'),
+    },
+    {
+      id: '4',
+      title: 'Order Issues',
+      subtitle: 'Report problems with orders',
+      icon: 'bag',
+      action: () => {},
+    },
+    {
+      id: '5',
+      title: 'Payment Issues',
+      subtitle: 'Refunds and payment problems',
+      icon: 'card',
+      action: () => {},
+    },
+    {
+      id: '6',
+      title: 'Account Issues',
+      subtitle: 'Login and account problems',
+      icon: 'person',
+      action: () => {},
+    },
+  ];
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -123,6 +128,11 @@ export default function SupportScreen() {
           </View>
         </View>
       </ScrollView>
+      
+      <ChatWidget 
+        visible={showChat}
+        onClose={() => setShowChat(false)}
+      />
     </SafeAreaView>
   );
 }

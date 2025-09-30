@@ -14,7 +14,6 @@ import { tokenManager } from '@/utils/tokenManager';
 const paymentMethods = [
   { id: 'cod', name: 'Cash on Delivery', icon: 'cash' },
   { id: 'upi', name: 'UPI Payment', icon: 'phone-portrait' },
-  { id: 'card', name: 'Credit/Debit Card', icon: 'card' },
 ];
 
 export default function CheckoutScreen() {

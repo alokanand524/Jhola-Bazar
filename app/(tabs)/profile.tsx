@@ -15,7 +15,6 @@ import { handleTabBarScroll } from './_layout';
 const menuItems = [
   { id: '1', title: 'My Orders', icon: 'bag-outline', screen: 'orders' },
   { id: '2', title: 'Addresses', icon: 'location-outline', screen: 'addresses' },
-  { id: '3', title: 'Payment Methods', icon: 'card-outline', screen: 'payments' },
   { id: '4', title: 'Help & Support', icon: 'help-circle-outline', screen: 'support' },
   { id: '5', title: 'About', icon: 'information-circle-outline', screen: 'about' },
 ];
