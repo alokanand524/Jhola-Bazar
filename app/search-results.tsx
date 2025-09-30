@@ -1,9 +1,10 @@
 import { ProductCard } from '@/components/ProductCard';
 import { useTheme } from '@/hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, Stack } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SearchResultsScreen() {
   const { colors } = useTheme();
@@ -60,20 +61,27 @@ export default function SearchResultsScreen() {
   
   const checkServiceability = async () => {
     try {
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/delivery-timing/estimate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
-          latitude: '25.623428',
-          longitude: '85.048640'
-        })
-      });
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const selectedAddressData = await AsyncStorage.getItem('selectedDeliveryAddress');
       
-      const result = await response.json();
-      setIsServiceable(result.success);
+      if (selectedAddressData) {
+        const selectedAddress = JSON.parse(selectedAddressData);
+        if (selectedAddress.latitude && selectedAddress.longitude) {
+          const response = await fetch('https://jholabazar.onrender.com/api/v1/service-area/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              latitude: selectedAddress.latitude,
+              longitude: selectedAddress.longitude
+            })
+          });
+          
+          const result = await response.json();
+          setIsServiceable(result.success && result.data?.available);
+          return;
+        }
+      }
+      setIsServiceable(false);
     } catch (error) {
       setIsServiceable(false);
     }
@@ -84,7 +92,15 @@ export default function SearchResultsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Search Products</Text>
+        </View>
       <View style={[styles.searchContainer, { backgroundColor: colors.lightGray }]}>
         <Ionicons name="search" size={20} color={colors.gray} />
         <TextInput
@@ -135,13 +151,26 @@ export default function SearchResultsScreen() {
           </View>
         )}
       </View>
-    </View>
+      </SafeAreaView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: 16,
   },
 
 

@@ -8,11 +8,12 @@ import userReducer from './slices/userSlice';
 import uiReducer from './slices/uiSlice';
 import categoriesReducer from './slices/categoriesSlice';
 import deliveryReducer from './slices/deliverySlice';
+import addressReducer from './slices/addressSlice';
 
 const persistConfig = {
   key: 'root',
   storage: AsyncStorage,
-  whitelist: ['user', 'cart'],
+  whitelist: ['user', 'cart', 'address'],
 };
 
 const rootReducer = combineReducers({
@@ -22,6 +23,7 @@ const rootReducer = combineReducers({
   ui: uiReducer,
   categories: categoriesReducer,
   delivery: deliveryReducer,
+  address: addressReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

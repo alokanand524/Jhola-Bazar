@@ -10,6 +10,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '@/hooks/useTheme';
 import { SkeletonLoader, CartItemSkeleton } from '@/components/SkeletonLoader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { tokenManager } from '@/utils/tokenManager';
 
 export default function CartScreen() {
   const dispatch = useDispatch();
@@ -22,18 +23,8 @@ export default function CartScreen() {
   const fetchCartData = async () => {
     try {
       setIsLoading(true);
-      const token = await AsyncStorage.getItem('authToken');
       
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/cart/', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/cart/');
 
       if (response.ok) {
         const result = await response.json();
@@ -62,27 +53,36 @@ export default function CartScreen() {
     }, [])
   );
 
+  const checkServiceability = async () => {
+    try {
+      const selectedAddressData = await AsyncStorage.getItem('selectedDeliveryAddress');
+      
+      if (selectedAddressData) {
+        const selectedAddress = JSON.parse(selectedAddressData);
+        if (selectedAddress.latitude && selectedAddress.longitude) {
+          const response = await fetch('https://jholabazar.onrender.com/api/v1/service-area/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              latitude: selectedAddress.latitude,
+              longitude: selectedAddress.longitude
+            })
+          });
+          
+          const result = await response.json();
+          return result.success && result.data?.available;
+        }
+      }
+      return false;
+    } catch (error) {
+      return false;
+    }
+  };
+
   const handleUpdateQuantity = async (itemId: string, quantity: number, item: any, isIncrement: boolean) => {
     // Check serviceability first
-    try {
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/delivery-timing/estimate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
-          latitude: '25.623428',
-          longitude: '85.048640'
-        })
-      });
-      
-      const result = await response.json();
-      if (!result.success) {
-        Alert.alert('Not Serviceable', 'Sorry, we don\'t deliver to your area');
-        return;
-      }
-    } catch (error) {
+    const isServiceable = await checkServiceability();
+    if (!isServiceable) {
       Alert.alert('Not Serviceable', 'Sorry, we don\'t deliver to your area');
       return;
     }
@@ -93,19 +93,12 @@ export default function CartScreen() {
     }
     
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      if (!token) return;
-
-      // Use increment/decrement API endpoints
       const endpoint = isIncrement ? 
         `https://jholabazar.onrender.com/api/v1/cart/items/${itemId}/increment` :
         `https://jholabazar.onrender.com/api/v1/cart/items/${itemId}/decrement`;
       
-      const response = await fetch(endpoint, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await tokenManager.makeAuthenticatedRequest(endpoint, {
+        method: 'PATCH'
       });
 
       if (response.ok) {
@@ -121,14 +114,8 @@ export default function CartScreen() {
 
   const handleRemoveItem = async (itemId: string) => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      if (!token) return;
-
-      const response = await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${itemId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await tokenManager.makeAuthenticatedRequest(`https://jholabazar.onrender.com/api/v1/cart/items/${itemId}`, {
+        method: 'DELETE'
       });
 
       if (response.ok) {

@@ -3,32 +3,63 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-
-const mockOrderDetails = {
-  '1': {
-    id: '1',
-    date: '2024-01-15',
-    status: 'delivered',
-    total: 245,
-    deliveryAddress: 'Home - New Delhi, 110001',
-    deliveryTime: '10:30 AM',
-    paymentMethod: 'UPI',
-    items: [
-      { id: '1', name: 'Fresh Tomatoes', quantity: 2, price: 40, image: 'https://images5.alphacoders.com/368/368817.jpg?w=300' },
-      { id: '2', name: 'Bananas', quantity: 1, price: 60, image: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300' },
-      { id: '3', name: 'Milk', quantity: 3, price: 28, image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=300' },
-    ]
-  }
-};
+import { useTheme } from '@/hooks/useTheme';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { tokenManager } from '@/utils/tokenManager';
 
 export default function OrderDetailsScreen() {
   const { id } = useLocalSearchParams();
-  const order = mockOrderDetails[id as keyof typeof mockOrderDetails];
+  const { colors } = useTheme();
+  const [order, setOrder] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    fetchOrderDetails();
+  }, [id]);
+
+  const fetchOrderDetails = async () => {
+    try {
+      const response = await tokenManager.makeAuthenticatedRequest(`https://jholabazar.onrender.com/api/v1/orders/${id}`);
+      
+      if (response.ok) {
+        const result = await response.json();
+        setOrder(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching order details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.lightGray }]}>
+        <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+          <SkeletonLoader width={24} height={24} />
+          <SkeletonLoader width={120} height={18} style={{ marginLeft: 16 }} />
+        </View>
+        <ScrollView style={styles.content}>
+          <SkeletonLoader width="100%" height={120} borderRadius={12} style={{ marginBottom: 16 }} />
+          <SkeletonLoader width="100%" height={200} borderRadius={12} style={{ marginBottom: 16 }} />
+          <SkeletonLoader width="100%" height={80} borderRadius={12} style={{ marginBottom: 16 }} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   if (!order) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Text>Order not found</Text>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Order Details</Text>
+        </View>
+        <View style={styles.emptyState}>
+          <Text style={[styles.emptyText, { color: colors.text }]}>Order not found</Text>
+        </View>
       </SafeAreaView>
     );
   }
@@ -36,6 +67,7 @@ export default function OrderDetailsScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'delivered': return '#00B761';
+      case 'payment confirmed': return '#00B761';
       case 'pending': return '#FF9500';
       case 'cancelled': return '#FF3B30';
       default: return '#666';
@@ -43,63 +75,80 @@ export default function OrderDetailsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.lightGray }]}>
+      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Order Details</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Order Details</Text>
       </View>
 
       <ScrollView style={styles.content}>
-        <View style={styles.statusCard}>
+        <View style={[styles.statusCard, { backgroundColor: colors.background }]}>
           <View style={styles.statusHeader}>
-            <Text style={styles.orderId}>Order #{order.id}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
-              <Text style={styles.statusText}>{order.status.toUpperCase()}</Text>
+            <Text style={[styles.orderId, { color: colors.text }]}>Order #{order.orderNumber}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status?.toLowerCase().replace('_', ' ') || 'pending') }]}>
+              <Text style={styles.statusText}>{order.status?.replace('_', ' ').toUpperCase()}</Text>
             </View>
           </View>
-          <Text style={styles.orderDate}>Ordered on {new Date(order.date).toLocaleDateString()}</Text>
-          <Text style={styles.deliveryTime}>Delivered at {order.deliveryTime}</Text>
+          <Text style={[styles.orderDate, { color: colors.gray }]}>Ordered on {new Date(order.createdAt).toLocaleDateString()}</Text>
+          {order.slotStartTime && (
+            <Text style={[styles.deliveryTime, { color: colors.primary }]}>Delivery at {new Date(order.slotStartTime).toLocaleTimeString()}</Text>
+          )}
         </View>
 
-        <View style={styles.itemsCard}>
-          <Text style={styles.sectionTitle}>Items ({order.items.length})</Text>
-          {order.items.map((item) => (
-            <View key={item.id} style={styles.itemRow}>
-              <Image source={{ uri: item.image }} style={styles.itemImage} />
+        <View style={[styles.itemsCard, { backgroundColor: colors.background }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Items ({order.items?.length || 0})</Text>
+          {order.items?.map((item) => (
+            <View key={item.id} style={[styles.itemRow, { borderBottomColor: colors.border }]}>
+              <Image source={{ uri: item.variant?.product?.images?.[0] }} style={styles.itemImage} />
               <View style={styles.itemDetails}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemQuantity}>Qty: {item.quantity}</Text>
+                <Text style={[styles.itemName, { color: colors.text }]}>{item.variant?.product?.name || item.variant?.name}</Text>
+                <Text style={[styles.itemQuantity, { color: colors.gray }]}>Qty: {item.quantity}</Text>
               </View>
-              <Text style={styles.itemPrice}>₹{item.price * item.quantity}</Text>
+              <Text style={[styles.itemPrice, { color: colors.text }]}>₹{parseFloat(item.totalPrice || '0')}</Text>
             </View>
           ))}
         </View>
 
-        <View style={styles.addressCard}>
-          <Text style={styles.sectionTitle}>Delivery Address</Text>
+        <View style={[styles.addressCard, { backgroundColor: colors.background }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Delivery Address</Text>
           <View style={styles.addressRow}>
-            <Ionicons name="location" size={20} color="#00B761" />
-            <Text style={styles.addressText}>{order.deliveryAddress}</Text>
+            <Ionicons name="location" size={20} color={colors.primary} />
+            <View style={styles.addressDetails}>
+              <Text style={[styles.addressText, { color: colors.text }]}>{order.deliveryAddress?.addressLine1}</Text>
+              {order.deliveryAddress?.metadata?.contactPerson && (
+                <Text style={[styles.contactText, { color: colors.gray }]}>
+                  {order.deliveryAddress.metadata.contactPerson.name} • {order.deliveryAddress.metadata.contactPerson.mobile}
+                </Text>
+              )}
+            </View>
           </View>
         </View>
 
-        <View style={styles.paymentCard}>
-          <Text style={styles.sectionTitle}>Payment Details</Text>
+        <View style={[styles.paymentCard, { backgroundColor: colors.background }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Bill Details</Text>
           <View style={styles.paymentRow}>
-            <Text style={styles.paymentLabel}>Payment Method</Text>
-            <Text style={styles.paymentValue}>{order.paymentMethod}</Text>
+            <Text style={[styles.paymentLabel, { color: colors.gray }]}>Subtotal</Text>
+            <Text style={[styles.paymentValue, { color: colors.text }]}>₹{parseFloat(order.subtotal || '0')}</Text>
           </View>
           <View style={styles.paymentRow}>
-            <Text style={styles.paymentLabel}>Total Amount</Text>
-            <Text style={styles.totalAmount}>₹{order.total}</Text>
+            <Text style={[styles.paymentLabel, { color: colors.gray }]}>Delivery Charge</Text>
+            <Text style={[styles.paymentValue, { color: colors.text }]}>₹{parseFloat(order.deliveryCharge || '0')}</Text>
+          </View>
+          <View style={styles.paymentRow}>
+            <Text style={[styles.paymentLabel, { color: colors.gray }]}>Tax</Text>
+            <Text style={[styles.paymentValue, { color: colors.text }]}>₹{parseFloat(order.tax || '0')}</Text>
+          </View>
+          <View style={[styles.paymentRow, styles.totalRow, { borderTopColor: colors.border }]}>
+            <Text style={[styles.paymentLabel, { color: colors.text, fontWeight: 'bold' }]}>Total Amount</Text>
+            <Text style={[styles.totalAmount, { color: colors.text }]}>₹{parseFloat(order.totalAmount || '0')}</Text>
+          </View>
+          <View style={styles.paymentRow}>
+            <Text style={[styles.paymentLabel, { color: colors.gray }]}>Payment Method</Text>
+            <Text style={[styles.paymentValue, { color: colors.text }]}>{order.paymentMethod?.replace('_', ' ')}</Text>
           </View>
         </View>
-
-        <TouchableOpacity style={styles.reorderButton}>
-          <Text style={styles.reorderText}>Reorder Items</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -108,16 +157,13 @@ export default function OrderDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   headerTitle: {
     fontSize: 18,
@@ -129,7 +175,6 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   statusCard: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -166,7 +211,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   itemsCard: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -182,7 +226,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   itemImage: {
     width: 50,
@@ -209,23 +252,26 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   addressCard: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
   },
   addressRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
-  addressText: {
-    fontSize: 14,
-    color: '#333',
+  addressDetails: {
     marginLeft: 8,
     flex: 1,
   },
+  addressText: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  contactText: {
+    fontSize: 12,
+  },
   paymentCard: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -250,16 +296,17 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '600',
   },
-  reorderButton: {
-    backgroundColor: '#00B761',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 20,
+  totalRow: {
+    borderTopWidth: 1,
+    paddingTop: 8,
+    marginTop: 8,
   },
-  reorderText: {
-    color: '#fff',
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
     fontSize: 16,
-    fontWeight: '600',
   },
 });

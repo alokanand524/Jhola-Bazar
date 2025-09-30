@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import EnterMoreDetailsModal from '@/components/EnterMoreDetailsModal';
 import { useTheme } from '@/hooks/useTheme';
-import { WebView } from 'react-native-webview';
+import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { WebView } from 'react-native-webview';
 
 interface LocationData {
   latitude: number;
@@ -19,6 +20,9 @@ export default function MapPickerScreen() {
   const { colors } = useTheme();
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
   const [currentLocation, setCurrentLocation] = useState({ lat: 28.6139, lng: 77.2090 }); // Default to Delhi
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showAddressModal, setShowAddressModal] = useState(false);
 
   useEffect(() => {
     getCurrentLocation();
@@ -68,9 +72,53 @@ export default function MapPickerScreen() {
     return null;
   };
 
-  const handleLocationSelect = async () => {
+  const searchLocations = async (query: string) => {
+    if (query.length < 3) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=5`,
+        { headers: { 'User-Agent': 'JholaBazar/1.0' } }
+      );
+      const data = await response.json();
+      setSearchResults(data.map((item: any, index: number) => ({
+        id: index,
+        name: item.display_name.split(',')[0],
+        address: item.display_name,
+        latitude: parseFloat(item.lat),
+        longitude: parseFloat(item.lon),
+      })));
+    } catch (error) {
+      console.log('Search error:', error);
+      setSearchResults([]);
+    }
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    searchLocations(query);
+  };
+
+  const handleSearchResultSelect = async (location: any) => {
+    const locationData = await reverseGeocode(location.latitude, location.longitude);
+    if (locationData) {
+      setSelectedLocation(locationData);
+    }
+    setSearchQuery(location.name);
+    setSearchResults([]);
+  };
+
+  const handleLocationSelect = () => {
     if (selectedLocation) {
-      // Save location to localStorage
+      setShowAddressModal(true);
+    }
+  };
+
+  const handleAddressSubmit = async (details: any) => {
+    if (selectedLocation) {
       try {
         const AsyncStorage = require('@react-native-async-storage/async-storage').default;
         const existingLocations = await AsyncStorage.getItem('savedLocations');
@@ -84,16 +132,16 @@ export default function MapPickerScreen() {
           latitude: selectedLocation.latitude,
           longitude: selectedLocation.longitude,
           fullAddress: `${selectedLocation.locality}, ${selectedLocation.district}, ${selectedLocation.pincode}`,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          customerDetails: details
         };
         
         locations.unshift(newLocation);
         await AsyncStorage.setItem('savedLocations', JSON.stringify(locations));
+        router.back();
       } catch (error) {
         console.log('Error saving location:', error);
       }
-      
-      router.back();
     }
   };
 
@@ -118,9 +166,10 @@ export default function MapPickerScreen() {
         }
         .current-location-btn {
           position: absolute;
-          bottom: 120px;
-          left: 20px;
-          width: 50px;
+          bottom: 15px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 200px;
           height: 50px;
           background: white;
           border-radius: 25px;
@@ -167,6 +216,7 @@ export default function MapPickerScreen() {
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
           <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" fill="#666"/>
         </svg>
+        &nbsp; Current Location
       </div>
       
       <script>
@@ -264,9 +314,52 @@ export default function MapPickerScreen() {
         />
       </View>
 
+      {/* Search Box */}
+      <View style={[styles.searchBoxContainer, { backgroundColor: colors.background }]}>
+        <View style={[styles.searchBox, { backgroundColor: colors.lightGray }]}>
+          <Ionicons name="search" size={20} color={colors.gray} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search for area, street name..."
+            placeholderTextColor={colors.gray}
+            value={searchQuery}
+            onChangeText={handleSearch}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => {
+              setSearchQuery('');
+              setSearchResults([]);
+            }}>
+              <Ionicons name="close-circle" size={20} color={colors.gray} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* Search Results */}
+      {searchResults.length > 0 && (
+        <View style={[styles.searchResultsContainer, { backgroundColor: colors.background }]}>
+          <ScrollView style={styles.searchResults} keyboardShouldPersistTaps="handled">
+            {searchResults.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[styles.resultItem, { borderBottomColor: colors.border }]}
+                onPress={() => handleSearchResultSelect(item)}
+              >
+                <Ionicons name="location" size={16} color={colors.primary} />
+                <View style={styles.resultContent}>
+                  <Text style={[styles.resultName, { color: colors.text }]}>{item.name}</Text>
+                  <Text style={[styles.resultAddress, { color: colors.gray }]}>{item.address}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       <View style={[styles.locationInfo, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
         <View style={styles.locationDetails}>
-          <Text style={[styles.locationTitle, { color: colors.text }]}>Selected Location</Text>
+          <Text style={[styles.locationTitle, { color: colors.text }]}>Deliver to</Text>
           {selectedLocation ? (
             <Text style={[styles.locationText, { color: colors.text }]}>
               {selectedLocation.locality && `${selectedLocation.locality}, `}
@@ -282,9 +375,16 @@ export default function MapPickerScreen() {
           onPress={handleLocationSelect}
           disabled={!selectedLocation}
         >
-          <Text style={styles.confirmButtonText}>Confirm Location</Text>
+          <Text style={styles.confirmButtonText}>Add Address</Text>
         </TouchableOpacity>
       </View>
+
+      <EnterMoreDetailsModal
+        visible={showAddressModal}
+        onClose={() => setShowAddressModal(false)}
+        onSubmit={handleAddressSubmit}
+        selectedLocation={selectedLocation}
+      />
     </SafeAreaView>
   );
 }
@@ -310,6 +410,66 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  searchBoxContainer: {
+    position: 'absolute',
+    top: 110,
+    left: 16,
+    right: 16,
+    zIndex: 1000,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 16,
+  },
+  searchResultsContainer: {
+    position: 'absolute',
+    top: 190,
+    left: 16,
+    right: 16,
+    zIndex: 999,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    maxHeight: 350,
+  },
+  searchResults: {
+    borderRadius: 10,
+  },
+  resultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+  },
+  resultContent: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  resultName: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  resultAddress: {
+    fontSize: 14,
   },
   locationInfo: {
     padding: 16,

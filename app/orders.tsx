@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useTheme } from '@/hooks/useTheme';
+import { tokenManager } from '@/utils/tokenManager';
 
 interface OrderItem {
   id: string;
@@ -65,14 +66,7 @@ export default function OrdersScreen() {
   
   const fetchOrders = async () => {
     try {
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      const token = await AsyncStorage.getItem('authToken');
-      
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/orders/', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/orders/');
 
       if (response.ok) {
         const result = await response.json();
@@ -83,7 +77,7 @@ export default function OrdersScreen() {
           orderNumber: order.orderNumber,
           date: order.createdAt,
           status: order.status?.toLowerCase().replace('_', ' ') || 'pending',
-          total: parseFloat(order.totalAmount || '0') / 100,
+          total: parseFloat(order.totalAmount || order.total || '0'),
           items: order.items || [],
           deliveryAddress: 'Delivery address'
         }));
@@ -116,6 +110,7 @@ export default function OrdersScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'delivered': return '#00B761';
+      case 'payment confirmed': return '#00B761';
       case 'pending': return '#FF9500';
       case 'cancelled': return '#FF3B30';
       default: return '#666';

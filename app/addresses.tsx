@@ -238,7 +238,7 @@ export default function AddressesScreen() {
 
       <TouchableOpacity 
         style={[styles.addButton, { backgroundColor: colors.primary }]}
-        onPress={() => router.push('/add-address' as any)}
+        onPress={() => router.push('/map-picker')}
       >
         <Ionicons name="add" size={24} color="#fff" />
         <Text style={styles.addButtonText}>Add New Address</Text>

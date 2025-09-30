@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import React from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function FeaturedProductsScreen() {
   const { colors } = useTheme();
@@ -22,20 +23,26 @@ export default function FeaturedProductsScreen() {
   
   const checkServiceability = async () => {
     try {
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/delivery-timing/estimate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
-          latitude: '25.623428',
-          longitude: '85.048640'
-        })
-      });
+      const selectedAddressData = await AsyncStorage.getItem('selectedDeliveryAddress');
       
-      const result = await response.json();
-      setIsServiceable(result.success);
+      if (selectedAddressData) {
+        const selectedAddress = JSON.parse(selectedAddressData);
+        if (selectedAddress.latitude && selectedAddress.longitude) {
+          const response = await fetch('https://jholabazar.onrender.com/api/v1/service-area/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              latitude: selectedAddress.latitude,
+              longitude: selectedAddress.longitude
+            })
+          });
+          
+          const result = await response.json();
+          setIsServiceable(result.success && result.data?.available);
+          return;
+        }
+      }
+      setIsServiceable(false);
     } catch (error) {
       setIsServiceable(false);
     }

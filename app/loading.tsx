@@ -29,9 +29,11 @@ export default function LoadingScreen() {
       if (isLoggedIn) {
         try {
           const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          const accessToken = await AsyncStorage.getItem('authToken');
           const refreshToken = await AsyncStorage.getItem('refreshToken');
           
-          if (refreshToken) {
+          // Only refresh if access token is missing or expired
+          if (!accessToken && refreshToken) {
             await authAPI.refreshToken(refreshToken);
           }
           router.replace('/(tabs)');
@@ -114,7 +116,7 @@ export default function LoadingScreen() {
           </View>
           
           <Text style={styles.welcomeText}>Welcome to Jhola Bazar</Text>
-          <Text style={styles.subtitle}>Get groceries delivered in 10 minutes</Text>
+          <Text style={styles.subtitle}>Khushiyon Ka Jhola Aab Aapke Ghar</Text>
           
           <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
             <Ionicons name="phone-portrait" size={20} color="#fff" />

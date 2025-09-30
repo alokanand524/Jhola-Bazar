@@ -1,75 +1,52 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
-import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import { setSelectedAddress } from '@/store/slices/addressSlice';
+import { tokenManager } from '@/utils/tokenManager';
 
 interface EnterMoreDetailsModalProps {
   visible: boolean;
   onClose: () => void;
   onSubmit: (details: any) => void;
+  selectedLocation?: any;
 }
 
-export default function EnterMoreDetailsModal({ visible, onClose, onSubmit }: EnterMoreDetailsModalProps) {
-  console.log('🔥 Modal component rendered, visible:', visible);
+export default function EnterMoreDetailsModal({ visible, onClose, onSubmit, selectedLocation }: EnterMoreDetailsModalProps) {
   const { colors } = useTheme();
+  const dispatch = useDispatch();
   const { name, phone } = useSelector((state: RootState) => state.user);
-  console.log('🔥 Redux state - name:', name, 'phone:', phone);
   
   const [orderForFriend, setOrderForFriend] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
+  const [addressType, setAddressType] = useState('HOME');
+  const [markAsDefault, setMarkAsDefault] = useState(false);
 
   const loadUserData = async () => {
-    console.log('🔥 loadUserData called');
     try {
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      const token = await AsyncStorage.getItem('authToken');
-      
-      console.log('🔥 Token exists:', !!token);
-      if (!token) {
-        console.log('🔥 No token found, returning');
-        return;
-      }
-      
-      console.log('🔥 Making API call...');
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/profile', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/profile', {
+        headers: { 'Content-Type': 'application/json' }
       });
       
-      console.log('🔥 Response status:', response.status);
       const data = await response.json();
-      console.log('🔥 API Response:', data);
       
       if (response.ok && data.success && data.data) {
         const profile = data.data;
-        console.log('🔥 Profile data:', profile);
-        console.log('🔥 Setting name:', `${profile.firstName} ${profile.lastName}`);
-        console.log('🔥 Setting email:', profile.email);
-        console.log('🔥 Setting phone:', profile.phone);
-        
         setCustomerName(`${profile.firstName} ${profile.lastName}`);
         setCustomerEmail(profile.email);
         setCustomerMobile(profile.phone);
-        
-        console.log('🔥 Data set successfully!');
-      } else {
-        console.log('🔥 API response failed or no data');
       }
     } catch (error) {
-      console.error('🔥 Error:', error);
+      console.error('Error loading user data:', error);
     }
   };
 
   useEffect(() => {
-    console.log('🔥 useEffect triggered - visible:', visible, 'orderForFriend:', orderForFriend);
     if (visible && !orderForFriend) {
-      console.log('🔥 Calling loadUserData');
       loadUserData();
     }
   }, [visible]);
@@ -89,7 +66,7 @@ export default function EnterMoreDetailsModal({ visible, onClose, onSubmit }: En
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!customerName.trim()) {
       Alert.alert('Error', 'Please enter customer name');
       return;
@@ -99,16 +76,70 @@ export default function EnterMoreDetailsModal({ visible, onClose, onSubmit }: En
       return;
     }
 
-    onSubmit({
-      name: customerName.trim(),
-      email: customerEmail.trim(),
-      mobile: customerMobile.trim(),
-      orderForFriend
-    });
-    onClose();
+    try {
+      const payload = {
+        type: addressType.toLowerCase(),
+        address: selectedLocation ? 
+          `${selectedLocation.locality}, ${selectedLocation.district}, ${selectedLocation.pincode}` : 
+          'Current Location',
+        latitude: selectedLocation?.latitude?.toString() || '0',
+        longitude: selectedLocation?.longitude?.toString() || '0',
+        contactPersonName: customerName.trim(),
+        contactMobile: customerMobile.trim(),
+        isDefault: markAsDefault
+      };
+
+      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/service-area/save-address', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        Alert.alert('Success', 'Address saved successfully');
+        
+        // If marked as default or it's the first address, set it as selected
+        if (markAsDefault || result.data) {
+          const newAddress = {
+            id: result.data?.id || Date.now().toString(),
+            address: selectedLocation ? 
+              `${selectedLocation.locality}, ${selectedLocation.district}, ${selectedLocation.pincode}` : 
+              'New Address',
+            type: addressType.toLowerCase(),
+            isDefault: markAsDefault,
+            latitude: selectedLocation?.latitude?.toString(),
+            longitude: selectedLocation?.longitude?.toString()
+          };
+          
+          // Update Redux store
+          dispatch(setSelectedAddress(newAddress));
+          
+          // Update AsyncStorage
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          await AsyncStorage.setItem('selectedDeliveryAddress', JSON.stringify(newAddress));
+        }
+        
+        onSubmit({
+          name: customerName.trim(),
+          email: customerEmail.trim(),
+          mobile: customerMobile.trim(),
+          orderForFriend,
+          addressType,
+          markAsDefault
+        });
+        onClose();
+      } else {
+        Alert.alert('Error', result.message || 'Failed to save address');
+      }
+    } catch (error) {
+      console.error('Error saving address:', error);
+      Alert.alert('Error', 'Failed to save address. Please try again.');
+    }
   };
 
-  console.log('🔥 Rendering modal with visible:', visible);
+
   
   return (
     <Modal visible={visible} transparent animationType="slide">
@@ -121,7 +152,21 @@ export default function EnterMoreDetailsModal({ visible, onClose, onSubmit }: En
             </TouchableOpacity>
           </View>
 
-          <View style={styles.content}>
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            {/* Detected Location */}
+            <View style={[styles.locationContainer, { backgroundColor: colors.lightGray }]}>
+              <Ionicons name="location" size={20} color={colors.primary} />
+              <View style={styles.locationDetails}>
+                <Text style={[styles.locationTitle, { color: colors.text }]}>Detected Location</Text>
+                <Text style={[styles.locationText, { color: colors.gray }]}>
+                  {selectedLocation ? 
+                    `${selectedLocation.locality}, ${selectedLocation.district}, ${selectedLocation.pincode}` : 
+                    'Loading location...'
+                  }
+                </Text>
+              </View>
+            </View>
+
             <TouchableOpacity 
               style={styles.checkboxContainer}
               onPress={handleOrderForFriendToggle}
@@ -146,7 +191,7 @@ export default function EnterMoreDetailsModal({ visible, onClose, onSubmit }: En
                 style={[
                   styles.input,
                   { 
-                    backgroundColor: colors.background,
+                    backgroundColor: colors.lightGray,
                     borderColor: colors.border,
                     color: colors.text
                   }
@@ -164,7 +209,7 @@ export default function EnterMoreDetailsModal({ visible, onClose, onSubmit }: En
                 style={[
                   styles.input,
                   { 
-                    backgroundColor: colors.background,
+                    backgroundColor: colors.lightGray,
                     borderColor: colors.border,
                     color: colors.text
                   }
@@ -183,7 +228,7 @@ export default function EnterMoreDetailsModal({ visible, onClose, onSubmit }: En
                 style={[
                   styles.input,
                   { 
-                    backgroundColor: colors.background,
+                    backgroundColor: colors.lightGray,
                     borderColor: colors.border,
                     color: colors.text
                   }
@@ -196,14 +241,59 @@ export default function EnterMoreDetailsModal({ visible, onClose, onSubmit }: En
                 maxLength={10}
               />
             </View>
-          </View>
+
+            {/* Save Address As */}
+            <View style={styles.sectionContainer}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Save Address as</Text>
+              <View style={styles.addressTypeRow}>
+                {['HOME', 'WORK', 'OTHER'].map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={[
+                      styles.typeButton,
+                      { borderColor: colors.border },
+                      addressType === type && { backgroundColor: colors.primary }
+                    ]}
+                    onPress={() => setAddressType(type)}
+                  >
+                    <Text style={[
+                      styles.typeButtonText,
+                      { color: colors.text },
+                      addressType === type && { color: '#fff' }
+                    ]}>
+                      {type}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Mark as Default */}
+            <TouchableOpacity 
+              style={styles.lastCheckboxContainer}
+              onPress={() => setMarkAsDefault(!markAsDefault)}
+            >
+              <View style={[
+                styles.checkbox, 
+                { borderColor: colors.primary },
+                markAsDefault && { backgroundColor: colors.primary }
+              ]}>
+                {markAsDefault && (
+                  <Ionicons name="checkmark" size={16} color="#fff" />
+                )}
+              </View>
+              <Text style={[styles.checkboxText, { color: colors.text }]}>
+                Mark as Default
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
 
           <View style={styles.footer}>
             <TouchableOpacity 
               style={[styles.submitButton, { backgroundColor: colors.primary }]}
               onPress={handleSubmit}
             >
-              <Text style={styles.submitButtonText}>Continue</Text>
+              <Text style={styles.submitButtonText}>Save Address</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -216,13 +306,13 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   modalContent: {
-    width: '90%',
-    maxWidth: 400,
-    borderRadius: 16,
+    width: '100%',
+    height: '80%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: 20,
   },
   header: {
@@ -236,12 +326,60 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   content: {
+    flex: 1,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
     marginBottom: 20,
+  },
+  locationDetails: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  locationTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  locationText: {
+    fontSize: 12,
+  },
+  sectionContainer: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  addressTypeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  typeButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  typeButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 20,
+  },
+  lastCheckboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   checkbox: {
     width: 20,
@@ -251,6 +389,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    
   },
   checkboxText: {
     fontSize: 16,
@@ -272,12 +411,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   footer: {
-    marginTop: 10,
+    paddingTop: 15,
   },
   submitButton: {
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
+
   },
   submitButtonText: {
     color: '#fff',

@@ -13,6 +13,7 @@ import { fetchCart } from '@/store/slices/cartSlice';
 import { fetchCategories } from '@/store/slices/categoriesSlice';
 import { fetchDeliveryTime } from '@/store/slices/deliverySlice';
 import { setProducts } from '@/store/slices/productsSlice';
+import { setSelectedAddress } from '@/store/slices/addressSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -29,11 +30,11 @@ export default function HomeScreen() {
   const { categories, loading: categoriesLoading } = useSelector((state: RootState) => state.categories);
   const { items } = useSelector((state: RootState) => state.cart);
   const { deliveryTime } = useSelector((state: RootState) => state.delivery);
+  const { selectedAddress } = useSelector((state: RootState) => state.address);
   const { colors } = useTheme();
   const { location, loading: locationLoading, error: locationError } = useLocation();
   const [isInitialLoading, setIsInitialLoading] = React.useState(true);
   const [userLocation, setUserLocation] = React.useState<string | null>(null);
-  const [selectedAddress, setSelectedAddress] = React.useState<any>(null);
   const [apiProducts, setApiProducts] = React.useState([]);
   const [apiLoading, setApiLoading] = React.useState(true);
   const [featuredProducts, setFeaturedProducts] = React.useState([]);
@@ -112,7 +113,7 @@ export default function HomeScreen() {
     try {
       const address = await AsyncStorage.getItem('selectedDeliveryAddress');
       if (address) {
-        setSelectedAddress(JSON.parse(address));
+        dispatch(setSelectedAddress(JSON.parse(address)));
       }
     } catch (error) {
       console.log('Error loading selected address:', error);
@@ -178,6 +179,45 @@ export default function HomeScreen() {
     }, [dispatch])
   );
 
+  // Check serviceability for selected address
+  const checkAddressServiceability = async (latitude: string, longitude: string) => {
+    try {
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/service-area/check', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          latitude,
+          longitude
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success && result.data?.available) {
+        const deliveryMinutes = result.data.nearbyStores?.[0]?.delivery?.estimatedDeliveryMinutes;
+        const deliveryMessage = deliveryMinutes ? `Delivery in ${deliveryMinutes} minutes` : 'Delivery available';
+        setDeliveryEstimate(deliveryMessage);
+        setIsServiceable(true);
+      } else {
+        setDeliveryEstimate('Not serviceable in your area');
+        setIsServiceable(false);
+      }
+    } catch (error) {
+      console.error('Error checking serviceability:', error);
+      setDeliveryEstimate('Not serviceable in your area');
+      setIsServiceable(false);
+    }
+  };
+
+  // Update serviceability when selected address changes
+  useEffect(() => {
+    if (selectedAddress?.latitude && selectedAddress?.longitude) {
+      checkAddressServiceability(selectedAddress.latitude, selectedAddress.longitude);
+    }
+  }, [selectedAddress]);
+
   useEffect(() => {
     if (location?.latitude && location?.longitude) {
       dispatch(fetchDeliveryTime({
@@ -187,35 +227,7 @@ export default function HomeScreen() {
     }
   }, [location, dispatch]);
 
-  const fetchDeliveryEstimate = async (lat: string, lng: string) => {
-    try {
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/delivery-timing/estimate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
-          latitude: lat,
-          longitude: lng
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success && result.data?.delivery?.deliveryMessage) {
-        setDeliveryEstimate(result.data.delivery.deliveryMessage);
-        setIsServiceable(true);
-      } else {
-        setDeliveryEstimate('Not serviceable in your area');
-        setIsServiceable(false);
-      }
-    } catch (error) {
-      console.error('Error fetching delivery estimate:', error);
-      setDeliveryEstimate('Not serviceable in your area');
-      setIsServiceable(false);
-    }
-  };
+
 
   const getCurrentLocation = async () => {
     try {
@@ -227,9 +239,6 @@ export default function HomeScreen() {
 
       const currentLocation = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = currentLocation.coords;
-      
-      // Fetch delivery estimate
-      fetchDeliveryEstimate(latitude.toString(), longitude.toString());
       
       const reverseGeocode = await Location.reverseGeocodeAsync({
         latitude,
@@ -250,11 +259,11 @@ export default function HomeScreen() {
         const locationString = locationParts.join(', ');
         setUserLocation(locationString || 'Current Location');
         
-        // Fetch delivery time with current coordinates
-        dispatch(fetchDeliveryTime({
-          latitude: latitude.toString(),
-          longitude: longitude.toString()
-        }));
+        // Only check serviceability if no saved address is selected
+        const savedAddress = await AsyncStorage.getItem('selectedDeliveryAddress');
+        if (!savedAddress) {
+          checkAddressServiceability(latitude.toString(), longitude.toString());
+        }
       }
     } catch (error) {
       console.log('Error getting location:', error);
@@ -319,7 +328,7 @@ export default function HomeScreen() {
             ) : locationError ? (
               <Text style={[styles.addressText, { color: colors.gray }]}>Location unavailable</Text>
             ) : (
-              <TouchableOpacity onPress={() => router.push('/SelectDeliveryAddress')}>
+              <TouchableOpacity onPress={() => router.push('/saved-locations')}>
                 <Text style={[styles.addressText, { color: colors.text, fontWeight: 'bold' }]}>
                   {selectedAddress ? 
                     (selectedAddress.address.length > 28 ? selectedAddress.address.substring(0, 28) + '...' : selectedAddress.address) : 

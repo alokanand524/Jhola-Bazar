@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
+import { tokenManager } from '@/utils/tokenManager';
 
 const paymentMethods = [
   { id: 'cod', name: 'Cash on Delivery', icon: 'cash' },
@@ -19,7 +20,7 @@ const paymentMethods = [
 export default function CheckoutScreen() {
   const dispatch = useDispatch();
   const { items, total } = useSelector((state: RootState) => state.cart);
-  const { selectedAddress } = useSelector((state: RootState) => state.user);
+  const { selectedAddress } = useSelector((state: RootState) => state.address);
   const { colors } = useTheme();
   const [isLoading, setIsLoading] = React.useState(true);
 
@@ -112,16 +113,17 @@ export default function CheckoutScreen() {
   };
 
   const handlePlaceOrder = async () => {
-    if (!customerDetails) {
-      Alert.alert('Error', 'Please enter customer details');
-      return;
-    }
-    if (!selectedDeliveryAddress || !selectedDeliveryAddress.id) {
+    // Customer details check commented out as section is hidden
+    // if (!customerDetails) {
+    //   Alert.alert('Error', 'Please enter customer details');
+    //   return;
+    // }
+    if (!selectedAddress || !selectedAddress.id) {
       Alert.alert('Error', 'Please select a delivery address');
       return;
     }
 
-    console.log('Selected address:', selectedDeliveryAddress);
+    console.log('Selected address:', selectedAddress);
     setIsPlacingOrder(true);
     
     try {
@@ -135,9 +137,7 @@ export default function CheckoutScreen() {
       }
 
       // Get cart items for the order
-      const cartResponse = await fetch('https://jholabazar.onrender.com/api/v1/cart/', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const cartResponse = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/cart/');
       const cartData = await cartResponse.json();
       const cartItems = cartData.data?.carts?.[0]?.items || [];
       
@@ -159,15 +159,12 @@ export default function CheckoutScreen() {
         items: orderItems
       });
       
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/orders/', {
+      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/orders/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
-          deliveryAddressId: selectedDeliveryAddress.id,
+          deliveryAddressId: selectedAddress.id,
           paymentMethod: 'CASH_ON_DELIVERY',
           items: orderItems
         })
@@ -234,8 +231,8 @@ export default function CheckoutScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Customer Details */}
-        <View style={[styles.section, { borderBottomColor: colors.lightGray }]}>
+        {/* Customer Details - Commented out as requested */}
+        {/* <View style={[styles.section, { borderBottomColor: colors.lightGray }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Customer Details</Text>
           <TouchableOpacity 
             style={[styles.addressCard, { backgroundColor: colors.lightGray }]}
@@ -255,7 +252,7 @@ export default function CheckoutScreen() {
               <Text style={[styles.changeText, { color: colors.primary }]}>Edit</Text>
             </TouchableOpacity>
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         {/* Delivery Address */}
         <View style={[styles.section, { borderBottomColor: colors.lightGray }]}>
@@ -265,15 +262,15 @@ export default function CheckoutScreen() {
             <View style={styles.addressInfo}>
               <Text style={[styles.addressType, { color: colors.text }]}>Delivery to</Text>
               <Text style={[styles.addressText, { color: colors.gray }]}>
-                {selectedDeliveryAddress ? 
-                  (selectedDeliveryAddress.address.length > 40 ? 
-                    selectedDeliveryAddress.address.substring(0, 40) + '...' : 
-                    selectedDeliveryAddress.address) : 
+                {selectedAddress ? 
+                  (selectedAddress.address.length > 40 ? 
+                    selectedAddress.address.substring(0, 40) + '...' : 
+                    selectedAddress.address) : 
                   'Select delivery address'
                 }
               </Text>
             </View>
-            <TouchableOpacity onPress={() => setShowAddressModal(true)}>
+            <TouchableOpacity onPress={() => router.push('/saved-locations')}>
               <Text style={[styles.changeText, { color: colors.primary }]}>Change</Text>
             </TouchableOpacity>
           </View>

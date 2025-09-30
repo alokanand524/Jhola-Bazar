@@ -9,6 +9,7 @@ import { Image, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-na
 import { ImageWithLoading } from '@/components/ImageWithLoading';
 import { useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { tokenManager } from '@/utils/tokenManager';
 
 interface ProductCardProps {
   product: Product;
@@ -30,41 +31,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
   // Check if product has multiple size options
   const hasMultipleSizes = product.category === 'Vegetables' || product.category === 'Fruits';
 
-  const refreshToken = async () => {
-    try {
-      const refreshToken = await AsyncStorage.getItem('refreshToken');
-      if (!refreshToken) return false;
-      
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/auth/refresh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.data?.accessToken) {
-          await AsyncStorage.setItem('authToken', data.data.accessToken);
-          return true;
-        }
-      }
-      return false;
-    } catch (error) {
-      console.error('Token refresh failed:', error);
-      return false;
-    }
-  };
+
 
   const checkUserAddress = async () => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      if (!token) return false;
+      // First check if there's a selected address in AsyncStorage
+      const selectedAddress = await AsyncStorage.getItem('selectedDeliveryAddress');
+      if (selectedAddress) {
+        return true;
+      }
       
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/service-area/addresses', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/service-area/addresses');
       
       if (response.ok) {
         const data = await response.json();
@@ -79,65 +56,39 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
 
   const addToCartAPI = async (variantId: string, quantity: number) => {
     try {
-      console.log('Adding to cart:', { variantId, quantity });
-      
-      let token = await AsyncStorage.getItem('authToken');
-      console.log('Token found:', token ? 'Yes' : 'No');
-      
-      if (!token) {
-        console.log('No auth token found, skipping API call');
-        return null;
-      }
-      
       // Check if user has delivery address
       const hasAddress = await checkUserAddress();
       if (!hasAddress) {
-        console.log('No delivery address found, redirecting to add address');
         router.push('/add-address');
         return null;
       }
       
-      const makeRequest = async (authToken: string) => {
-        return fetch('https://jholabazar.onrender.com/api/v1/cart/add', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-          },
-          body: JSON.stringify({
-            variantId,
-            quantity: quantity.toString()
-          })
-        });
+      // Get selected address
+      const selectedAddressData = await AsyncStorage.getItem('selectedDeliveryAddress');
+      let addressId = null;
+      
+      if (selectedAddressData) {
+        const selectedAddress = JSON.parse(selectedAddressData);
+        addressId = selectedAddress.id;
+      }
+      
+      const payload = {
+        variantId,
+        quantity: quantity.toString(),
+        ...(addressId && { addressId })
       };
       
-      let response = await makeRequest(token);
-      
-      // If token expired, refresh and retry
-      if (response.status === 401) {
-        console.log('Token expired, refreshing...');
-        const refreshed = await refreshToken();
-        
-        if (refreshed) {
-          token = await AsyncStorage.getItem('authToken');
-          if (token) {
-            response = await makeRequest(token);
-          }
-        }
-      }
-      
-      console.log('Response status:', response.status);
-      const responseText = await response.text();
-      console.log('Response body:', responseText);
+      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/cart/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
       
       if (response.ok) {
-        const data = JSON.parse(responseText);
-        console.log('Item added to cart successfully');
-        return data.data.id; // Return cart item ID
-      } else {
-        console.error('Failed to add item to cart. Status:', response.status, 'Body:', responseText);
-        return null;
+        const data = await response.json();
+        return data.data.id;
       }
+      return null;
     } catch (error) {
       console.error('Error adding to cart:', error);
       return null;
@@ -156,15 +107,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
       return;
     }
     
-    // Check if area is serviceable only when actually adding to cart
-    if (!isServiceable) {
-      alert('Sorry, we don\'t deliver to your area');
+    // Check if user is logged in first
+    if (!isLoggedIn) {
+      router.push('/login');
       return;
     }
     
-    // Check if user is logged in
-    if (!isLoggedIn) {
-      router.push('/login');
+    // After login, check if area is serviceable
+    if (!isServiceable) {
+      alert('Sorry, we don\'t deliver to your area');
       return;
     }
     
@@ -206,16 +157,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
       return;
     }
     
-    const token = await AsyncStorage.getItem('authToken');
     const cartItemId = cartItem?.cartItemId;
     
-    if (token && cartItemId) {
+    if (cartItemId) {
       try {
-        await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItemId}/increment`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        await tokenManager.makeAuthenticatedRequest(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItemId}/increment`, {
+          method: 'PATCH'
         });
       } catch (error) {
         console.error('Error incrementing quantity:', error);
@@ -231,16 +178,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
       return;
     }
     
-    const token = await AsyncStorage.getItem('authToken');
     const cartItemId = cartItem?.cartItemId;
     
-    if (token && cartItemId) {
+    if (cartItemId) {
       try {
-        await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItemId}/decrement`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        await tokenManager.makeAuthenticatedRequest(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItemId}/decrement`, {
+          method: 'PATCH'
         });
       } catch (error) {
         console.error('Error decrementing quantity:', error);

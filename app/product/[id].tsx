@@ -13,6 +13,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { behaviorTracker } from '@/services/behaviorTracker';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { tokenManager } from '@/utils/tokenManager';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -89,19 +90,25 @@ export default function ProductDetailScreen() {
 
   const addToCartAPI = async (variantId: string, quantity: number) => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      if (!token) return false;
+      // Get selected address
+      const selectedAddressData = await AsyncStorage.getItem('selectedDeliveryAddress');
+      let addressId = null;
+      
+      if (selectedAddressData) {
+        const selectedAddress = JSON.parse(selectedAddressData);
+        addressId = selectedAddress.id;
+      }
+      
+      const payload = {
+        variantId,
+        quantity: quantity.toString(),
+        ...(addressId && { addressId })
+      };
 
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/cart/add', {
+      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/cart/add', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          variantId,
-          quantity: quantity.toString()
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
 
       return response.ok;
@@ -111,27 +118,36 @@ export default function ProductDetailScreen() {
     }
   };
 
+  const checkServiceability = async () => {
+    try {
+      const selectedAddressData = await AsyncStorage.getItem('selectedDeliveryAddress');
+      
+      if (selectedAddressData) {
+        const selectedAddress = JSON.parse(selectedAddressData);
+        if (selectedAddress.latitude && selectedAddress.longitude) {
+          const response = await fetch('https://jholabazar.onrender.com/api/v1/service-area/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              latitude: selectedAddress.latitude,
+              longitude: selectedAddress.longitude
+            })
+          });
+          
+          const result = await response.json();
+          return result.success && result.data?.available;
+        }
+      }
+      return false;
+    } catch (error) {
+      return false;
+    }
+  };
+
   const handleAddToCart = async () => {
     // Check if area is serviceable
-    try {
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/delivery-timing/estimate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
-          latitude: '25.623428',
-          longitude: '85.048640'
-        })
-      });
-      
-      const result = await response.json();
-      if (!result.success) {
-        Alert.alert('Not Serviceable', 'Sorry, we don\'t deliver to your area');
-        return;
-      }
-    } catch (error) {
+    const isServiceable = await checkServiceability();
+    if (!isServiceable) {
       Alert.alert('Not Serviceable', 'Sorry, we don\'t deliver to your area');
       return;
     }
@@ -172,25 +188,8 @@ export default function ProductDetailScreen() {
 
   const handleUpdateQuantity = async (quantity: number) => {
     // Check if area is serviceable
-    try {
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/delivery-timing/estimate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
-          latitude: '25.623428',
-          longitude: '85.048640'
-        })
-      });
-      
-      const result = await response.json();
-      if (!result.success) {
-        Alert.alert('Not Serviceable', 'Sorry, we don\'t deliver to your area');
-        return;
-      }
-    } catch (error) {
+    const isServiceable = await checkServiceability();
+    if (!isServiceable) {
       Alert.alert('Not Serviceable', 'Sorry, we don\'t deliver to your area');
       return;
     }
@@ -211,25 +210,17 @@ export default function ProductDetailScreen() {
     }
     
     const variantId = currentVariant?.id || selectedProduct.id;
-    const token = await AsyncStorage.getItem('authToken');
-    
-    if (token && cartItem?.cartItemId) {
+    if (cartItem?.cartItemId) {
       try {
         if (quantity > cartItem.quantity) {
           // Increment
-          await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItem.cartItemId}/increment`, {
-            method: 'PATCH',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
+          await tokenManager.makeAuthenticatedRequest(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItem.cartItemId}/increment`, {
+            method: 'PATCH'
           });
         } else {
           // Decrement
-          await fetch(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItem.cartItemId}/decrement`, {
-            method: 'PATCH',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
+          await tokenManager.makeAuthenticatedRequest(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItem.cartItemId}/decrement`, {
+            method: 'PATCH'
           });
         }
       } catch (error) {
