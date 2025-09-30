@@ -1,5 +1,6 @@
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import EnterMoreDetailsModal from '@/components/EnterMoreDetailsModal';
+import PaymentStatusModal from '@/components/PaymentStatusModal';
 import { useTheme } from '@/hooks/useTheme';
 import { clearCart } from '@/store/slices/cartSlice';
 import { RootState } from '@/store/store';
@@ -10,6 +11,8 @@ import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { tokenManager } from '@/utils/tokenManager';
+import { WebView } from 'react-native-webview';
+import { RAZORPAY_CONFIG } from '@/utils/razorpayConfig';
 
 const paymentMethods = [
   { id: 'cod', name: 'Cash on Delivery', icon: 'cash' },
@@ -89,6 +92,13 @@ export default function CheckoutScreen() {
   const [recentLocations, setRecentLocations] = useState<any[]>([]);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [customerDetails, setCustomerDetails] = useState<any>(null);
+  const [paymentStatus, setPaymentStatus] = useState<{
+    visible: boolean;
+    status: 'processing' | 'success' | 'failed';
+    message: string;
+  }>({ visible: false, status: 'processing', message: '' });
+  const [showPaymentWebView, setShowPaymentWebView] = useState(false);
+  const [paymentHtml, setPaymentHtml] = useState('');
 
   // const deliveryFee = 25;
   const deliveryFee = 0; // Delivery fee disabled
@@ -111,18 +121,229 @@ export default function CheckoutScreen() {
     setIsReferralApplied(false);
   };
 
+  const createRazorpayOrder = async (amount: number) => {
+    // For testing without backend, we'll skip order creation
+    return {
+      id: null, // No order ID for direct payment
+      amount: amount * 100,
+      currency: 'INR',
+      status: 'created'
+    };
+  };
+
+  const handleRazorpayPayment = async (orderData: any) => {
+    try {
+      setPaymentStatus({ visible: true, status: 'processing', message: 'Initializing payment...' });
+      
+      const razorpayOrder = await createRazorpayOrder(finalTotal);
+      
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Payment</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 0; 
+              padding: 20px;
+              background: #f5f5f5;
+            }
+            .container {
+              background: white;
+              padding: 20px;
+              border-radius: 8px;
+              text-align: center;
+            }
+            .loading {
+              margin: 20px 0;
+            }
+            .error {
+              color: #ff0000;
+              margin: 20px 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h3>Jhola Bazar Payment</h3>
+            <p>Amount: ₹${finalTotal}</p>
+            <div id="loading" class="loading">Loading payment gateway...</div>
+            <div id="error" class="error" style="display:none;"></div>
+          </div>
+          
+          <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+          <script>
+            function showError(message) {
+              document.getElementById('loading').style.display = 'none';
+              document.getElementById('error').style.display = 'block';
+              document.getElementById('error').innerText = message;
+            }
+            
+            try {
+              var options = {
+                key: '${RAZORPAY_CONFIG.key}',
+                amount: ${finalTotal * 100},
+                currency: 'INR',
+                name: 'Jhola Bazar',
+                description: 'Grocery Order Payment',
+                theme: { color: '#00B761' },
+                prefill: {
+                  name: 'Customer',
+                  email: 'customer@jholabazar.com',
+                  contact: '9999999999'
+                },
+                handler: function(response) {
+                  window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'success',
+                    data: response
+                  }));
+                },
+                modal: {
+                  ondismiss: function() {
+                    window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
+                      type: 'dismiss'
+                    }));
+                  }
+                }
+              };
+              
+              // Only add order_id if it exists
+              ${razorpayOrder.id ? `options.order_id = '${razorpayOrder.id}';` : ''}
+              
+              if (typeof Razorpay !== 'undefined') {
+                var rzp = new Razorpay(options);
+                rzp.on('payment.failed', function(response) {
+                  window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'failed',
+                    error: response.error
+                  }));
+                });
+                
+                setTimeout(function() {
+                  rzp.open();
+                }, 1000);
+              } else {
+                showError('Payment gateway failed to load');
+              }
+            } catch (e) {
+              showError('Error: ' + e.message);
+            }
+          </script>
+        </body>
+        </html>
+      `;
+      
+      setPaymentHtml(html);
+      setPaymentStatus({ visible: false, status: 'processing', message: '' });
+      setShowPaymentWebView(true);
+    } catch (error) {
+      console.error('Razorpay setup error:', error);
+      setPaymentStatus({ visible: true, status: 'failed', message: 'Failed to initialize payment' });
+      setTimeout(() => {
+        setPaymentStatus({ visible: false, status: 'processing', message: '' });
+        setIsPlacingOrder(false);
+      }, 2000);
+    }
+  };
+
+  const handleWebViewMessage = (event: any) => {
+    try {
+      const message = JSON.parse(event.nativeEvent.data);
+      console.log('WebView message:', message);
+      
+      setShowPaymentWebView(false);
+      
+      if (message.type === 'success') {
+        console.log('Payment Success:', message.data);
+        setPaymentStatus({ visible: true, status: 'processing', message: 'Processing payment...' });
+        completeOrder(getCurrentOrderData(), 'UPI', message.data.razorpay_payment_id);
+      } else if (message.type === 'failed') {
+        console.log('Payment Failed:', message.error);
+        setPaymentStatus({ visible: true, status: 'failed', message: 'Payment failed' });
+        setTimeout(() => {
+          setPaymentStatus({ visible: false, status: 'processing', message: '' });
+          setIsPlacingOrder(false);
+        }, 2000);
+      } else {
+        console.log('Payment dismissed or cancelled');
+        setPaymentStatus({ visible: true, status: 'failed', message: 'Payment cancelled' });
+        setTimeout(() => {
+          setPaymentStatus({ visible: false, status: 'processing', message: '' });
+          setIsPlacingOrder(false);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Error parsing WebView message:', error);
+      setShowPaymentWebView(false);
+      setPaymentStatus({ visible: true, status: 'failed', message: 'Payment error occurred' });
+      setTimeout(() => {
+        setPaymentStatus({ visible: false, status: 'processing', message: '' });
+        setIsPlacingOrder(false);
+      }, 2000);
+    }
+  };
+
+  const [currentOrderData, setCurrentOrderData] = useState<any>(null);
+
+  const getCurrentOrderData = () => {
+    return currentOrderData;
+  };
+
+  const completeOrder = async (orderData: any, paymentMethod: string, paymentId?: string) => {
+    try {
+      const payload = {
+        storeId: orderData.storeId,
+        deliveryAddressId: orderData.deliveryAddressId,
+        items: orderData.items,
+        ...(paymentMethod === 'UPI' ? {
+          paymentMethod: 'RAZORPAY',
+          paymentGateway: 'razorpay',
+          paymentId: paymentId
+        } : {
+          paymentMethod: 'CASH_ON_DELIVERY'
+        })
+      };
+
+      console.log('Order payload:', JSON.stringify(payload, null, 2));
+
+      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/orders/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        dispatch(clearCart());
+        setPaymentStatus({ visible: true, status: 'success', message: 'Order placed successfully!' });
+        setTimeout(() => {
+          setPaymentStatus({ visible: false, status: 'processing', message: '' });
+          router.push('/(tabs)/' as any);
+        }, 2000);
+      } else {
+        console.log('Order creation failed:', result);
+        setPaymentStatus({ visible: true, status: 'failed', message: result.message || 'Failed to place order' });
+        setTimeout(() => {
+          setPaymentStatus({ visible: false, status: 'processing', message: '' });
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Error placing order:', error);
+      Alert.alert('Error', 'Failed to place order. Please try again.');
+    } finally {
+      setIsPlacingOrder(false);
+    }
+  };
+
   const handlePlaceOrder = async () => {
-    // Customer details check commented out as section is hidden
-    // if (!customerDetails) {
-    //   Alert.alert('Error', 'Please enter customer details');
-    //   return;
-    // }
     if (!selectedAddress || !selectedAddress.id) {
       Alert.alert('Error', 'Please select a delivery address');
       return;
     }
 
-    console.log('Selected address:', selectedAddress);
     setIsPlacingOrder(true);
     
     try {
@@ -140,57 +361,31 @@ export default function CheckoutScreen() {
       const cartData = await cartResponse.json();
       const cartItems = cartData.data?.carts?.[0]?.items || [];
       
-      console.log('Cart items:', JSON.stringify(cartItems, null, 2));
-      
       const orderItems = cartItems.map(item => {
         const variantId = (item.variant?.id || item.variantId)?.toString().trim();
-        console.log(`Item: ${item.product?.name}, VariantId: '${variantId}', Available: ${item.isAvailable}, Stock: ${item.availableQty}`);
         return {
           variantId: variantId,
           quantity: parseInt(item.quantity)
         };
       });
       
-      console.log('Order payload:', {
+      const orderData = {
         storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
-        deliveryAddressId: selectedDeliveryAddress.id,
-        paymentMethod: 'CASH_ON_DELIVERY',
+        deliveryAddressId: selectedAddress.id,
         items: orderItems
-      });
+      };
       
-      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/orders/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          storeId: '0d29835f-3840-4d72-a26d-ed96ca744a34',
-          deliveryAddressId: selectedAddress.id,
-          paymentMethod: 'CASH_ON_DELIVERY',
-          items: orderItems
-        })
-      });
-
-      const result = await response.json();
+      // Store order data for WebView callback
+      setCurrentOrderData(orderData);
       
-      if (response.ok) {
-        dispatch(clearCart());
-        Alert.alert(
-          'Order Placed Successfully!',
-          'Your order will be delivered soon.',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.push('/(tabs)/' as any),
-            },
-          ]
-        );
+      if (selectedPayment === 'upi') {
+        await handleRazorpayPayment(orderData);
       } else {
-        console.log('Order creation failed:', result);
-        Alert.alert('Error', result.message || 'Failed to place order');
+        await completeOrder(orderData, 'COD');
       }
     } catch (error) {
       console.error('Error placing order:', error);
       Alert.alert('Error', 'Failed to place order. Please try again.');
-    } finally {
       setIsPlacingOrder(false);
     }
   };
@@ -536,6 +731,46 @@ export default function CheckoutScreen() {
         onClose={() => setShowDetailsModal(false)}
         onSubmit={(details) => setCustomerDetails(details)}
       />
+
+      {/* Payment Status Modal */}
+      <PaymentStatusModal
+        visible={paymentStatus.visible}
+        status={paymentStatus.status}
+        message={paymentStatus.message}
+      />
+
+      {/* Razorpay WebView */}
+      <Modal visible={showPaymentWebView} animationType="slide">
+        <SafeAreaView style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+            <TouchableOpacity onPress={() => {
+              setShowPaymentWebView(false);
+              setIsPlacingOrder(false);
+            }}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', marginLeft: 16, color: colors.text }}>Payment</Text>
+          </View>
+          <WebView
+            source={{ html: paymentHtml }}
+            onMessage={handleWebViewMessage}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            startInLoadingState={true}
+            mixedContentMode="compatibility"
+            allowsInlineMediaPlayback={true}
+            mediaPlaybackRequiresUserAction={false}
+            onError={(syntheticEvent) => {
+              const { nativeEvent } = syntheticEvent;
+              console.log('WebView error: ', nativeEvent);
+            }}
+            onHttpError={(syntheticEvent) => {
+              const { nativeEvent } = syntheticEvent;
+              console.log('WebView HTTP error: ', nativeEvent);
+            }}
+          />
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }

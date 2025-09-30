@@ -1,23 +1,24 @@
 {
   "expo": {
     "name": "Jhola Bazar",
-    "slug": "jhola-Bazar",
-    "version": "1.0.2",
+    "slug": "jhola-bazar",
+    "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/jhola-bazar.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "jholabazar",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.jholabazar"
+      "supportsTablet": true
     },
     "android": {
-      "package": "com.coolboy14.jholabazar",
-      "versionCode": 1,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/jhola-bazar.png",
-        "backgroundColor": "#FFCC00"
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
       },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -27,26 +28,22 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/jhola-bazar.png"
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
+      "expo-location",
       [
-        "expo-location",
+        "expo-build-properties",
         {
-          "locationAlwaysAndWhenInUsePermission": "This app needs access to location to show nearby stores and delivery options."
+          "android": {
+            "enableProguardInReleaseBuilds": true
+          }
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "381be625-a928-43a3-8619-c8a92eedc237"
-      }
-    },
-    "owner": "coolboy14"
+    }
   }
 }
