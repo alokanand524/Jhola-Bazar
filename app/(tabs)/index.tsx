@@ -143,6 +143,11 @@ export default function HomeScreen() {
       // Step 5: Handle user data
       const token = await AsyncStorage.getItem('authToken');
       if (token) {
+        // Clear any previous user's saved address data
+        await AsyncStorage.removeItem('selectedDeliveryAddress');
+        dispatch(setSelectedAddress(null));
+        setDeliveryEstimate(null);
+        
         dispatch(fetchCart());
         fetchCartCount();
         

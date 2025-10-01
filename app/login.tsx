@@ -1,4 +1,3 @@
-import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { setUser } from '@/store/slices/userSlice';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -61,7 +60,7 @@ export default function LoginScreen() {
       
       if (response.ok) {
         setShowOtp(true);
-        Alert.alert('OTP Sent', 'OTP sent to your phone number');
+        Alert.alert('OTP Sent', 'OTP sent to your Whatsapp');
       } else {
         Alert.alert('Error', data.message || 'Failed to send OTP');
       }
@@ -136,7 +135,7 @@ export default function LoginScreen() {
       const data = await response.json();
       
       if (response.ok) {
-        Alert.alert('OTP Resent', 'New OTP sent to your phone number');
+        Alert.alert('OTP Resent', 'New OTP sent to your whatsapp');
       } else {
         Alert.alert('Error', data.message || 'Failed to resend OTP');
       }

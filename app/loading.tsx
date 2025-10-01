@@ -21,27 +21,29 @@ export default function LoadingScreen() {
   const dispatch = useDispatch();
   const { isLoggedIn } = useSelector((state: RootState) => state.user);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const slideAnim = useRef(new Animated.Value(width)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const handleAppStart = async () => {
-      if (isLoggedIn) {
-        try {
-          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-          const accessToken = await AsyncStorage.getItem('authToken');
-          const refreshToken = await AsyncStorage.getItem('refreshToken');
-          
-          // Only refresh if access token is missing or expired
-          if (!accessToken && refreshToken) {
-            await authAPI.refreshToken(refreshToken);
-          }
+      try {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        const accessToken = await AsyncStorage.getItem('authToken');
+        
+        // Show logo for at least 2 seconds
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        if (accessToken) {
+          // User has token, go to home
           router.replace('/(tabs)');
-        } catch (error) {
-          console.error('Token refresh failed:', error);
-          dispatch(logout());
-          return;
+        } else {
+          // No token, show login screen
+          setIsCheckingAuth(false);
         }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setIsCheckingAuth(false);
       }
     };
     
@@ -75,10 +77,10 @@ export default function LoadingScreen() {
       });
     };
 
-    if (!isLoggedIn) {
+    if (!isCheckingAuth) {
       animateImages();
     }
-  }, [isLoggedIn, dispatch]);
+  }, [isCheckingAuth, dispatch]);
 
   const handleSkip = () => {
     router.replace('/(tabs)');
@@ -87,6 +89,15 @@ export default function LoadingScreen() {
   const handleLogin = () => {
     router.push('/login');
   };
+
+  if (isCheckingAuth) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Ionicons name="storefront" size={60} color="#00B761" />
+        <Text style={[styles.appName, { marginTop: 16 }]}>Jhola Bazar</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
