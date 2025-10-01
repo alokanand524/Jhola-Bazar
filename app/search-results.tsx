@@ -5,6 +5,8 @@ import { router, useLocalSearchParams, Stack } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store/store';
 
 export default function SearchResultsScreen() {
   const { colors } = useTheme();
@@ -13,6 +15,7 @@ export default function SearchResultsScreen() {
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isServiceable, setIsServiceable] = useState(true);
+  const cartCount = useSelector((state: RootState) => state.cart.items.reduce((sum, item) => sum + item.quantity, 0));
 
   const searchProducts = async (searchTerm: string) => {
     if (!searchTerm.trim()) {
@@ -58,6 +61,18 @@ export default function SearchResultsScreen() {
     }
     checkServiceability();
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim()) {
+        searchProducts(searchQuery);
+      } else {
+        setSearchResults([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   
   const checkServiceability = async () => {
     try {
@@ -100,6 +115,14 @@ export default function SearchResultsScreen() {
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Search Products</Text>
+          <TouchableOpacity onPress={() => router.push('/cart')} style={styles.cartButton}>
+            <Ionicons name="bag-outline" size={24} color={colors.text} />
+            {cartCount > 0 && (
+              <View style={[styles.cartBadge, { backgroundColor: colors.primary }]}>
+                <Text style={styles.cartBadgeText}>{cartCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
       <View style={[styles.searchContainer, { backgroundColor: colors.lightGray }]}>
         <Ionicons name="search" size={20} color={colors.gray} />
@@ -163,6 +186,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
@@ -171,6 +195,25 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginLeft: 16,
+    flex: 1,
+  },
+  cartButton: {
+    position: 'relative',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
   },
 
 
