@@ -35,6 +35,9 @@ export default function ProductDetailScreen() {
   const cartItem = useSelector((state: RootState) => 
     state.cart.items.find(item => item.id === id)
   );
+  const totalCartCount = useSelector((state: RootState) => 
+    state.cart.items.reduce((total, item) => total + item.quantity, 0)
+  );
 
   React.useEffect(() => {
     if (id && typeof id === 'string') {
@@ -243,9 +246,9 @@ export default function ProductDetailScreen() {
           onPress={() => router.push('/cart')}
         >
           <Ionicons name="bag-outline" size={24} color={colors.text} />
-          {cartItem && (
+          {totalCartCount > 0 && (
             <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>{cartItem.quantity}</Text>
+              <Text style={styles.cartBadgeText}>{totalCartCount}</Text>
             </View>
           )}
         </TouchableOpacity>

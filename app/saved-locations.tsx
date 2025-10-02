@@ -16,8 +16,17 @@ interface SavedAddress {
   landmark?: string;
   isDefault: boolean;
   fullAddress?: string;
-  latitude?: string;
-  longitude?: string;
+  latitude?: number;
+  longitude?: number;
+  contactPerson?: {
+    name: string;
+    mobile: string;
+  };
+  pincode?: {
+    code: string;
+    city: string;
+    state: string;
+  };
 }
 
 export default function SavedLocationsScreen() {
@@ -69,31 +78,83 @@ export default function SavedLocationsScreen() {
     router.back();
   };
 
+  const handleMarkAsDefault = async (addressId: string) => {
+    try {
+      const response = await tokenManager.makeAuthenticatedRequest(
+        `https://jholabazar.onrender.com/api/v1/service-area/addresses/${addressId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ isDefault: true })
+        }
+      );
+      
+      if (response.ok) {
+        loadSavedAddresses();
+      }
+    } catch (error) {
+      console.log('Error marking address as default:', error);
+    }
+  };
+
+  const handleDeleteAddress = async (addressId: string) => {
+    try {
+      const response = await tokenManager.makeAuthenticatedRequest(
+        `https://jholabazar.onrender.com/api/v1/service-area/addresses/${addressId}`,
+        {
+          method: 'DELETE',
+        }
+      );
+      
+      if (response.ok) {
+        loadSavedAddresses();
+      }
+    } catch (error) {
+      console.log('Error deleting address:', error);
+    }
+  };
+
   const renderAddressItem = ({ item }: { item: SavedAddress }) => (
-    <TouchableOpacity 
-      style={[styles.addressCard, { backgroundColor: colors.background }]}
-      onPress={() => handleAddressSelect(item)}
-    >
-      <View style={styles.addressHeader}>
-        <View style={styles.addressTypeContainer}>
-          <Ionicons name={getAddressIcon(item.type) as any} size={20} color={colors.primary} />
-          <Text style={[styles.addressType, { color: colors.text }]}>
-            {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
-          </Text>
-          {item.isDefault && (
-            <View style={[styles.defaultBadge, { backgroundColor: colors.primary }]}>
-              <Text style={styles.defaultText}>Default</Text>
-            </View>
-          )}
+    <View style={[styles.addressCard, { backgroundColor: colors.background }]}>
+      <TouchableOpacity onPress={() => handleAddressSelect(item)}>
+        <View style={styles.addressHeader}>
+          <View style={styles.addressTypeContainer}>
+            <Ionicons name={getAddressIcon(item.type) as any} size={20} color={colors.primary} />
+            <Text style={[styles.addressType, { color: colors.text }]}>
+              {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+            </Text>
+            {item.isDefault && (
+              <View style={[styles.defaultBadge, { backgroundColor: colors.primary }]}>
+                <Text style={styles.defaultText}>Default</Text>
+              </View>
+            )}
+          </View>
+          <TouchableOpacity 
+            style={styles.deleteButton}
+            onPress={() => handleDeleteAddress(item.id)}
+          >
+            <Ionicons name="trash-outline" size={20} color={colors.error || '#FF4444'} />
+          </TouchableOpacity>
         </View>
-      </View>
-      <Text style={[styles.addressText, { color: colors.text }]}>
-        {item.fullAddress || `${item.addressLine1}${item.addressLine2 ? ', ' + item.addressLine2 : ''}`}
-      </Text>
-      {item.landmark && (
-        <Text style={[styles.landmarkText, { color: colors.gray }]}>Landmark: {item.landmark}</Text>
+        <Text style={[styles.addressText, { color: colors.text }]}>
+          {item.fullAddress || `${item.addressLine1}${item.addressLine2 ? ', ' + item.addressLine2 : ''}`}
+        </Text>
+        {item.landmark && (
+          <Text style={[styles.landmarkText, { color: colors.gray }]}>Landmark: {item.landmark}</Text>
+        )}
+      </TouchableOpacity>
+      
+      {!item.isDefault && (
+        <TouchableOpacity 
+          style={[styles.defaultButton, { borderColor: colors.primary }]}
+          onPress={() => handleMarkAsDefault(item.id)}
+        >
+          <Text style={[styles.defaultButtonText, { color: colors.primary }]}>Mark as Default</Text>
+        </TouchableOpacity>
       )}
-    </TouchableOpacity>
+    </View>
   );
 
   return (
@@ -227,5 +288,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
     textAlign: 'center',
+  },
+  defaultButton: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  defaultButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  deleteButton: {
+    padding: 4,
   },
 });

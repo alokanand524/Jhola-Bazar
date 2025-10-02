@@ -9,11 +9,11 @@ import { featuredThisWeek } from '@/data/sections';
 import { useLocation } from '@/hooks/useLocation';
 import { useTheme } from '@/hooks/useTheme';
 import { behaviorTracker } from '@/services/behaviorTracker';
+import { setSelectedAddress } from '@/store/slices/addressSlice';
 import { fetchCart } from '@/store/slices/cartSlice';
 import { fetchCategories } from '@/store/slices/categoriesSlice';
 import { fetchDeliveryTime } from '@/store/slices/deliverySlice';
 import { setProducts } from '@/store/slices/productsSlice';
-import { setSelectedAddress } from '@/store/slices/addressSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -151,22 +151,7 @@ export default function HomeScreen() {
         dispatch(fetchCart());
         fetchCartCount();
         
-        try {
-          const addressResponse = await fetch('https://jholabazar.onrender.com/api/v1/profile/addresses', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (addressResponse.ok) {
-            const addressData = await addressResponse.json();
-            if (!addressData.data || addressData.data.length === 0) {
-              router.push('/select-address');
-            }
-          }
-        } catch (error) {
-          console.error('Error checking addresses:', error);
-        }
+
       }
       
       setLoadingStep('complete');
@@ -242,36 +227,62 @@ export default function HomeScreen() {
         return;
       }
 
-      const currentLocation = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = currentLocation.coords;
-      
-      const reverseGeocode = await Location.reverseGeocodeAsync({
-        latitude,
-        longitude,
+      // Get location with timeout
+      const locationPromise = Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+        maximumAge: 300000, // 5 minutes
       });
       
-      if (reverseGeocode.length > 0) {
-        const address = reverseGeocode[0];
-        const place = address.district || address.subregion || '';
-        const city = address.city || '';
-        const pincode = address.postalCode || '';
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Location timeout')), 8000)
+      );
+      
+      const currentLocation = await Promise.race([locationPromise, timeoutPromise]);
+      const { latitude, longitude } = currentLocation.coords;
+      
+      // Reverse geocode with timeout
+      try {
+        const geocodePromise = Location.reverseGeocodeAsync({
+          latitude,
+          longitude,
+        });
         
-        let locationParts = [];
-        if (place) locationParts.push(place);
-        if (city && city !== place) locationParts.push(city);
-        if (pincode) locationParts.push(pincode);
+        const geocodeTimeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Geocoding timeout')), 5000)
+        );
         
-        const locationString = locationParts.join(', ');
-        setUserLocation(locationString || 'Current Location');
+        const reverseGeocode = await Promise.race([geocodePromise, geocodeTimeout]);
         
-        // Only check serviceability if no saved address is selected
-        const savedAddress = await AsyncStorage.getItem('selectedDeliveryAddress');
-        if (!savedAddress) {
-          checkAddressServiceability(latitude.toString(), longitude.toString());
+        if (reverseGeocode.length > 0) {
+          const address = reverseGeocode[0];
+          const place = address.district || address.subregion || '';
+          const city = address.city || '';
+          const pincode = address.postalCode || '';
+          
+          let locationParts = [];
+          if (place) locationParts.push(place);
+          if (city && city !== place) locationParts.push(city);
+          if (pincode) locationParts.push(pincode);
+          
+          const locationString = locationParts.join(', ');
+          setUserLocation(locationString || 'Current Location');
+        } else {
+          setUserLocation('Current Location');
         }
+      } catch (geocodeError) {
+        console.log('Geocoding failed:', geocodeError);
+        setUserLocation('Current Location');
+      }
+      
+      // Check serviceability without blocking
+      const savedAddress = await AsyncStorage.getItem('selectedDeliveryAddress');
+      if (!savedAddress) {
+        checkAddressServiceability(latitude.toString(), longitude.toString())
+          .catch(err => console.log('Serviceability check failed:', err));
       }
     } catch (error) {
       console.log('Error getting location:', error);
+      setUserLocation('Location unavailable');
     }
   };
 
@@ -425,6 +436,15 @@ export default function HomeScreen() {
               ))}
             </View>
           )}
+        </View>
+
+        {/* Grocery Image */}
+        <View style={styles.groceryImageContainer}>
+          <Image 
+            source={require('../../assets/images/GROCERY.png')} 
+            style={styles.groceryImage}
+            resizeMode="contain"
+          />
         </View>
 
         {/* 4. Popular Products - Shows last */}
@@ -604,5 +624,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 300,
     backgroundColor: 'darken',
+  },
+  groceryImageContainer: {
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+    groceryImage: {
+    width: '100%',
+    height: 300,
+    borderRadius: 8,
   },
 });

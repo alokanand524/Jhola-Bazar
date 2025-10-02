@@ -17,6 +17,15 @@ interface LocationData {
   pincode: string;
 }
 
+interface PlacePrediction {
+  place_id: string;
+  description: string;
+  structured_formatting: {
+    main_text: string;
+    secondary_text: string;
+  };
+}
+
 const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 export default function MapPickerScreen() {
@@ -29,9 +38,10 @@ export default function MapPickerScreen() {
     longitudeDelta: 0.01,
   });
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const mapRef = useRef<MapView>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     getCurrentLocation();
@@ -82,54 +92,68 @@ export default function MapPickerScreen() {
     return null;
   };
 
-  const searchLocations = async (query: string) => {
-    if (query.length < 3) {
-      setSearchResults([]);
+  const searchPlaces = async (query: string) => {
+    if (query.length < 2) {
+      setPredictions([]);
       return;
     }
 
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${GOOGLE_MAPS_API_KEY}&region=in`
+        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${GOOGLE_MAPS_API_KEY}&components=country:in&types=geocode`
       );
       const data = await response.json();
-      if (data.results) {
-        setSearchResults(data.results.slice(0, 5).map((item: any, index: number) => ({
-          id: index,
-          name: item.name,
-          address: item.formatted_address,
-          latitude: item.geometry.location.lat,
-          longitude: item.geometry.location.lng,
-        })));
+      if (data.predictions) {
+        setPredictions(data.predictions.slice(0, 5));
       }
     } catch (error) {
       console.log('Search error:', error);
-      setSearchResults([]);
+      setPredictions([]);
     }
   };
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    searchLocations(query);
-  };
-
-  const handleSearchResultSelect = async (location: any) => {
-    const newRegion = {
-      latitude: location.latitude,
-      longitude: location.longitude,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
-    };
-    setRegion(newRegion);
-    mapRef.current?.animateToRegion(newRegion, 1000);
     
-    const locationData = await reverseGeocode(location.latitude, location.longitude);
-    if (locationData) {
-      setSelectedLocation(locationData);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
     
-    setSearchQuery(location.name);
-    setSearchResults([]);
+    searchTimeoutRef.current = setTimeout(() => {
+      searchPlaces(query);
+    }, 300);
+  };
+
+  const handlePredictionSelect = async (prediction: PlacePrediction) => {
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.place_id}&key=${GOOGLE_MAPS_API_KEY}&fields=geometry`
+      );
+      const data = await response.json();
+      
+      if (data.result?.geometry?.location) {
+        const { lat, lng } = data.result.geometry.location;
+        const newRegion = {
+          latitude: lat,
+          longitude: lng,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        };
+        
+        setRegion(newRegion);
+        mapRef.current?.animateToRegion(newRegion, 1000);
+        
+        const locationData = await reverseGeocode(lat, lng);
+        if (locationData) {
+          setSelectedLocation(locationData);
+        }
+      }
+    } catch (error) {
+      console.log('Place details error:', error);
+    }
+    
+    setSearchQuery(prediction.structured_formatting.main_text);
+    setPredictions([]);
   };
 
   const handleRegionChange = async (newRegion: Region) => {
@@ -138,6 +162,10 @@ export default function MapPickerScreen() {
     if (locationData) {
       setSelectedLocation(locationData);
     }
+  };
+
+  const handleCurrentLocationPress = () => {
+    getCurrentLocation();
   };
 
   const handleLocationSelect = () => {
@@ -192,7 +220,9 @@ export default function MapPickerScreen() {
           onRegionChangeComplete={handleRegionChange}
           showsUserLocation={true}
           showsMyLocationButton={false}
-        />
+        >
+          <Marker coordinate={region} />
+        </MapView>
         
         <View style={styles.centerMarker}>
           <Ionicons name="location" size={30} color={colors.primary} />
@@ -200,7 +230,7 @@ export default function MapPickerScreen() {
         
         <TouchableOpacity 
           style={[styles.currentLocationBtn, { backgroundColor: colors.background }]}
-          onPress={getCurrentLocation}
+          onPress={handleCurrentLocationPress}
         >
           <Ionicons name="locate" size={20} color={colors.primary} />
           <Text style={[styles.currentLocationText, { color: colors.text }]}>Current Location</Text>
@@ -220,7 +250,7 @@ export default function MapPickerScreen() {
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => {
               setSearchQuery('');
-              setSearchResults([]);
+              setPredictions([]);
             }}>
               <Ionicons name="close-circle" size={20} color={colors.gray} />
             </TouchableOpacity>
@@ -228,19 +258,23 @@ export default function MapPickerScreen() {
         </View>
       </View>
 
-      {searchResults.length > 0 && (
+      {predictions.length > 0 && (
         <View style={[styles.searchResultsContainer, { backgroundColor: colors.background }]}>
           <ScrollView style={styles.searchResults} keyboardShouldPersistTaps="handled">
-            {searchResults.map((item) => (
+            {predictions.map((prediction) => (
               <TouchableOpacity
-                key={item.id}
+                key={prediction.place_id}
                 style={[styles.resultItem, { borderBottomColor: colors.border }]}
-                onPress={() => handleSearchResultSelect(item)}
+                onPress={() => handlePredictionSelect(prediction)}
               >
                 <Ionicons name="location" size={16} color={colors.primary} />
                 <View style={styles.resultContent}>
-                  <Text style={[styles.resultName, { color: colors.text }]}>{item.name}</Text>
-                  <Text style={[styles.resultAddress, { color: colors.gray }]}>{item.address}</Text>
+                  <Text style={[styles.resultName, { color: colors.text }]}>
+                    {prediction.structured_formatting.main_text}
+                  </Text>
+                  <Text style={[styles.resultAddress, { color: colors.gray }]}>
+                    {prediction.structured_formatting.secondary_text}
+                  </Text>
                 </View>
               </TouchableOpacity>
             ))}

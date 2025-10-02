@@ -157,6 +157,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
       return;
     }
     
+    // Update Redux state immediately for instant UI feedback
+    dispatch(updateQuantity({ id: product.id, quantity: cartItem!.quantity + 1 }));
+    
     const cartItemId = cartItem?.cartItemId;
     
     if (cartItemId) {
@@ -166,10 +169,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
         });
       } catch (error) {
         console.error('Error incrementing quantity:', error);
+        // Revert on error
+        dispatch(updateQuantity({ id: product.id, quantity: cartItem!.quantity }));
       }
     }
-    
-    dispatch(updateQuantity({ id: product.id, quantity: cartItem!.quantity + 1 }));
   };
 
   const handleDecrement = async () => {
@@ -177,6 +180,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
       alert('Sorry, we don\'t deliver to your area');
       return;
     }
+    
+    // Update Redux state immediately for instant UI feedback
+    dispatch(updateQuantity({ id: product.id, quantity: cartItem!.quantity - 1 }));
     
     const cartItemId = cartItem?.cartItemId;
     
@@ -187,10 +193,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
         });
       } catch (error) {
         console.error('Error decrementing quantity:', error);
+        // Revert on error
+        dispatch(updateQuantity({ id: product.id, quantity: cartItem!.quantity }));
       }
     }
-    
-    dispatch(updateQuantity({ id: product.id, quantity: cartItem!.quantity - 1 }));
   };
 
   const handleSizeSelect = (size: string) => {

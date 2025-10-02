@@ -19,6 +19,9 @@ export const useLocation = () => {
 
   const sendLocationToBackend = async (locationData: LocationData) => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
       await fetch('https://jholabazar.onrender.com/api/v1/user/location', {
         method: 'POST',
         headers: {
@@ -29,7 +32,10 @@ export const useLocation = () => {
           longitude: locationData.longitude,
           address: locationData.address,
         }),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
     } catch (error) {
       console.error('Failed to send location to backend:', error);
     }
@@ -48,7 +54,7 @@ export const useLocation = () => {
     }
   };
 
-  const getCurrentLocation = async () => {
+  const getCurrentLocation = async (retryCount = 0) => {
     try {
       setLoading(true);
       
@@ -59,17 +65,49 @@ export const useLocation = () => {
         return;
       }
 
-      const currentLocation = await Location.getCurrentPositionAsync({});
+      // Get location with timeout
+      const currentLocation = await Promise.race([
+        Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+          maximumAge: 300000, // 5 minutes
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Location timeout')), 10000)
+        )
+      ]);
+      
       const { latitude, longitude } = currentLocation.coords;
 
-      const [addressResult] = await Location.reverseGeocodeAsync({
-        latitude,
-        longitude,
-      });
+      // Reverse geocode with timeout and fallback
+      let address = 'Current Location';
+      try {
+        const reverseGeocodePromise = Location.reverseGeocodeAsync({
+          latitude,
+          longitude,
+        });
+        
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Geocoding timeout')), 5000)
+        );
+        
+        const addressResult = await Promise.race([reverseGeocodePromise, timeoutPromise]);
+        
+        if (addressResult && addressResult.length > 0) {
+          const addr = addressResult[0];
+          address = `${addr.name || ''}, ${addr.city || ''}, ${addr.region || ''}`.trim();
+        }
+      } catch (geocodeError) {
+        console.log('Geocoding failed, using coordinates:', geocodeError);
+        address = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+      }
 
-      const address = `${addressResult.name || ''}, ${addressResult.city || ''}, ${addressResult.region || ''}`.trim();
-
-      const deliveryTime = await getDeliveryTime(latitude, longitude);
+      // Get delivery time with fallback
+      let deliveryTime = '10 mins';
+      try {
+        deliveryTime = await getDeliveryTime(latitude, longitude);
+      } catch (deliveryError) {
+        console.log('Delivery time fetch failed, using default');
+      }
       
       const locationData: LocationData = {
         latitude,
@@ -80,11 +118,23 @@ export const useLocation = () => {
 
       setLocation(locationData);
       await AsyncStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(locationData));
-      await sendLocationToBackend(locationData);
+      
+      // Send to backend without blocking UI
+      sendLocationToBackend(locationData).catch(err => 
+        console.log('Backend location update failed:', err)
+      );
       
     } catch (error) {
-      setError('Failed to get location');
       console.error('Location error:', error);
+      
+      // Retry logic
+      if (retryCount < 2) {
+        console.log(`Retrying location fetch (${retryCount + 1}/2)`);
+        setTimeout(() => getCurrentLocation(retryCount + 1), 2000);
+        return;
+      }
+      
+      setError('Failed to get location');
     } finally {
       setLoading(false);
     }
