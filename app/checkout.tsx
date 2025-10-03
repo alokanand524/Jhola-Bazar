@@ -1,22 +1,22 @@
-import { SkeletonLoader } from '@/components/SkeletonLoader';
 import EnterMoreDetailsModal from '@/components/EnterMoreDetailsModal';
 import PaymentStatusModal from '@/components/PaymentStatusModal';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useTheme } from '@/hooks/useTheme';
 import { clearCart } from '@/store/slices/cartSlice';
 import { RootState } from '@/store/store';
+import { RAZORPAY_CONFIG } from '@/utils/razorpayConfig';
+import { tokenManager } from '@/utils/tokenManager';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch, useSelector } from 'react-redux';
-import { tokenManager } from '@/utils/tokenManager';
 import { WebView } from 'react-native-webview';
-import { RAZORPAY_CONFIG } from '@/utils/razorpayConfig';
+import { useDispatch, useSelector } from 'react-redux';
 
 const paymentMethods = [
   { id: 'cod', name: 'Cash on Delivery', icon: 'cash' },
-  { id: 'upi', name: 'UPI Payment', icon: 'phone-portrait' },
+  { id: 'upi', name: 'Pay Online', icon: 'phone-portrait' },
 ];
 
 export default function CheckoutScreen() {
@@ -99,6 +99,7 @@ export default function CheckoutScreen() {
   }>({ visible: false, status: 'processing', message: '' });
   const [showPaymentWebView, setShowPaymentWebView] = useState(false);
   const [paymentHtml, setPaymentHtml] = useState('');
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 
   // const deliveryFee = 25;
   const deliveryFee = 0; // Delivery fee disabled
@@ -131,11 +132,69 @@ export default function CheckoutScreen() {
     };
   };
 
+  const placeOrder = async () => {
+    if (!selectedDeliveryAddress) {
+      Alert.alert('Error', 'Please select a delivery address');
+      return;
+    }
+
+    setIsPlacingOrder(true);
+    
+    try {
+      const paymentMethod = selectedPayment === 'cod' ? 'CASH_ON_DELIVERY' : 'ONLINE_PAYMENT';
+      
+      const orderPayload = {
+        storeId: "0d29835f-3840-4d72-a26d-ed96ca744a34",
+        deliveryAddressId: selectedDeliveryAddress.id,
+        paymentMethod: paymentMethod
+      };
+
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const token = await AsyncStorage.getItem('authToken');
+      
+      if (!token) {
+        Alert.alert('Error', 'Please login to place order');
+        return;
+      }
+
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/orders/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(orderPayload)
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.statusCode === 201) {
+        if (paymentMethod === 'CASH_ON_DELIVERY') {
+          // COD order placed successfully
+          dispatch(clearCart());
+          setPaymentStatus({ visible: true, status: 'success', message: 'Order placed successfully!' });
+        } else {
+          // Online payment - store order ID and open payment gateway
+          setCurrentOrderId(result.data.order.id);
+          handleRazorpayPayment(result.data);
+        }
+      } else {
+        throw new Error(result.message || 'Failed to place order');
+      }
+    } catch (error) {
+      console.log('Order placement error:', error);
+      Alert.alert('Error', 'Failed to place order. Please try again.');
+    } finally {
+      setIsPlacingOrder(false);
+    }
+  };
+
   const handleRazorpayPayment = async (orderData: any) => {
     try {
       setPaymentStatus({ visible: true, status: 'processing', message: 'Initializing payment...' });
       
-      const razorpayOrder = await createRazorpayOrder(finalTotal);
+      const paymentInfo = orderData.payment;
+      const gatewayData = paymentInfo.gatewayData;
       
       const html = `
         <!DOCTYPE html>
@@ -183,9 +242,10 @@ export default function CheckoutScreen() {
             
             try {
               var options = {
-                key: '${RAZORPAY_CONFIG.key}',
-                amount: ${finalTotal * 100},
+                key: '${gatewayData.keyId}',
+                amount: ${paymentInfo.amount * 100},
                 currency: 'INR',
+                order_id: '${gatewayData.gatewayOrderId}',
                 name: 'Jhola Bazar',
                 description: 'Grocery Order Payment',
                 theme: { color: '#00B761' },
@@ -209,8 +269,7 @@ export default function CheckoutScreen() {
                 }
               };
               
-              // Only add order_id if it exists
-              ${razorpayOrder.id ? `options.order_id = '${razorpayOrder.id}';` : ''}
+              // Order ID already set above from API response
               
               if (typeof Razorpay !== 'undefined') {
                 var rzp = new Razorpay(options);
@@ -248,7 +307,63 @@ export default function CheckoutScreen() {
     }
   };
 
-  const handleWebViewMessage = (event: any) => {
+  const verifyPayment = async (paymentData: any) => {
+    try {
+      console.log('🔍 Starting payment verification...');
+      console.log('📦 Payment data:', paymentData);
+      console.log('🆔 Order ID:', currentOrderId);
+      
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const token = await AsyncStorage.getItem('authToken');
+      
+      const verifyPayload = {
+        orderId: currentOrderId,
+        paymentData: paymentData,
+        gateway: 'razorpay'
+      };
+
+      console.log('📤 Verification payload:', verifyPayload);
+
+      const response = await fetch('https://jholabazar.onrender.com/api/v1/customer/payments/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(verifyPayload)
+      });
+
+      console.log('📡 Verification response status:', response.status);
+      const result = await response.json();
+      console.log('📥 Verification result:', result);
+
+      if (result.success) {
+        console.log('✅ Payment verification successful!');
+        dispatch(clearCart());
+        setPaymentStatus({ visible: true, status: 'success', message: 'Payment successful! Order placed.' });
+        setTimeout(() => {
+          setPaymentStatus({ visible: false, status: 'processing', message: '' });
+          router.push('/(tabs)/' as any);
+        }, 2000);
+      } else {
+        console.log('❌ Payment verification failed:', result.message);
+        setPaymentStatus({ visible: true, status: 'failed', message: `Payment verification failed: ${result.message}` });
+        setTimeout(() => {
+          setPaymentStatus({ visible: false, status: 'processing', message: '' });
+          setIsPlacingOrder(false);
+        }, 3000);
+      }
+    } catch (error) {
+      console.log('💥 Payment verification error:', error);
+      setPaymentStatus({ visible: true, status: 'failed', message: 'Payment verification failed' });
+      setTimeout(() => {
+        setPaymentStatus({ visible: false, status: 'processing', message: '' });
+        setIsPlacingOrder(false);
+      }, 2000);
+    }
+  };
+
+  const handleWebViewMessage = async (event: any) => {
     try {
       const message = JSON.parse(event.nativeEvent.data);
       console.log('WebView message:', message);
@@ -257,8 +372,10 @@ export default function CheckoutScreen() {
       
       if (message.type === 'success') {
         console.log('Payment Success:', message.data);
-        setPaymentStatus({ visible: true, status: 'processing', message: 'Processing payment...' });
-        completeOrder(getCurrentOrderData(), 'UPI', message.data.razorpay_payment_id);
+        setPaymentStatus({ visible: true, status: 'processing', message: 'Verifying payment...' });
+        // Verify payment with backend
+        await verifyPayment(message.data);
+      } else if (message.type === 'failed') {
       } else if (message.type === 'failed') {
         console.log('Payment Failed:', message.error);
         setPaymentStatus({ visible: true, status: 'failed', message: 'Payment failed' });
@@ -376,7 +493,11 @@ export default function CheckoutScreen() {
       };
       
       // Store order data for WebView callback
-      setCurrentOrderData(orderData);
+      setCurrentOrderData({
+        storeId: "0d29835f-3840-4d72-a26d-ed96ca744a34",
+        deliveryAddressId: selectedDeliveryAddress.id,
+        paymentMethod: paymentMethod
+      });
       
       if (selectedPayment === 'upi') {
         await handleRazorpayPayment(orderData);
@@ -594,7 +715,7 @@ export default function CheckoutScreen() {
             { backgroundColor: colors.primary },
             isPlacingOrder && styles.disabledButton
           ]}
-          onPress={handlePlaceOrder}
+          onPress={placeOrder}
           disabled={isPlacingOrder}
         >
           <Text style={styles.placeOrderText}>₹{finalTotal}</Text>

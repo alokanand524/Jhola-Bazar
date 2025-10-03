@@ -23,6 +23,7 @@ interface Order {
   total: number;
   items: OrderItem[];
   deliveryAddress: string;
+  arrivingTime?: string;
 }
 
 
@@ -33,27 +34,18 @@ const OrderCardSkeleton = () => {
   return (
     <View style={[styles.orderCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
       <View style={styles.orderHeader}>
-        <View>
-          <SkeletonLoader width={100} height={16} style={{ marginBottom: 4 }} />
-          <SkeletonLoader width={80} height={12} />
-        </View>
-        <SkeletonLoader width={70} height={24} borderRadius={12} />
+        <SkeletonLoader width={120} height={16} style={{ marginBottom: 12 }} />
       </View>
       
-      <View style={styles.itemsPreview}>
-        {[1, 2, 3].map((item) => (
-          <SkeletonLoader key={item} width={40} height={40} borderRadius={8} style={{ marginRight: 8 }} />
+      <View style={styles.productImagesContainer}>
+        {[1, 2, 3, 4].map((item) => (
+          <SkeletonLoader key={item} width={50} height={50} borderRadius={8} style={{ marginRight: 8 }} />
         ))}
       </View>
       
-      <View style={styles.orderFooter}>
-        <SkeletonLoader width={60} height={14} />
-        <SkeletonLoader width={50} height={16} />
-      </View>
-      
-      <View style={styles.addressContainer}>
-        <SkeletonLoader width={16} height={16} style={{ marginRight: 4 }} />
-        <SkeletonLoader width={120} height={12} />
+      <View style={styles.orderInfo}>
+        <SkeletonLoader width={100} height={13} style={{ marginBottom: 6 }} />
+        <SkeletonLoader width={140} height={13} />
       </View>
     </View>
   );
@@ -72,15 +64,23 @@ export default function OrdersScreen() {
         const result = await response.json();
         const ordersData = result.data?.orders || [];
         
-        const transformedOrders = ordersData.map((order: any) => ({
-          id: order.id,
-          orderNumber: order.orderNumber,
-          date: order.createdAt,
-          status: order.status?.toLowerCase().replace('_', ' ') || 'pending',
-          total: parseFloat(order.totalAmount || order.total || '0'),
-          items: order.items || [],
-          deliveryAddress: 'Delivery address'
-        }));
+        const transformedOrders = ordersData.map((order: any, index: number) => {
+          let status = 'placed';
+          if (index === 0) status = 'delivered';
+          else if (index === 1) status = 'placed';
+          else if (index === 2) status = 'on the way';
+          
+          return {
+            id: order.id,
+            orderNumber: order.orderNumber,
+            date: order.createdAt,
+            status: status,
+            total: parseFloat(order.totalAmount || order.total || '0'),
+            items: order.items || [],
+            deliveryAddress: 'Delivery address',
+            arrivingTime: order.estimatedDeliveryTime || '30-45 mins'
+          };
+        });
         
         setOrders(transformedOrders);
       }
@@ -107,18 +107,31 @@ export default function OrdersScreen() {
     checkAuthAndFetch();
   }, []);
   
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'delivered': return '#00B761';
-      case 'payment confirmed': return '#00B761';
-      case 'pending': return '#FF9500';
-      case 'cancelled': return '#FF3B30';
-      default: return '#666';
-    }
-  };
 
-  const getStatusText = (status: string) => {
-    return status.charAt(0).toUpperCase() + status.slice(1);
+
+  const renderProductImages = (items: OrderItem[]) => {
+    const maxImages = 4;
+    const displayItems = items.slice(0, maxImages);
+    const remainingCount = items.length - maxImages;
+
+    return (
+      <View style={styles.productImagesContainer}>
+        {displayItems.map((product, index) => (
+          <View key={index} style={styles.productImageBox}>
+            <Image 
+              source={{ uri: product.image || 'https://via.placeholder.com/50' }} 
+              style={styles.productImage}
+              resizeMode="cover"
+            />
+          </View>
+        ))}
+        {remainingCount > 0 && (
+          <View style={[styles.productImageBox, styles.moreItemsBox, { backgroundColor: colors.gray + '20' }]}>
+            <Text style={[styles.moreItemsText, { color: colors.text }]}>+{remainingCount}</Text>
+          </View>
+        )}
+      </View>
+    );
   };
 
   const renderOrderItem = ({ item }: { item: Order }) => (
@@ -127,22 +140,25 @@ export default function OrdersScreen() {
       onPress={() => router.push(`/order-details/${item.id}` as any)}
     >
       <View style={styles.orderHeader}>
-        <View>
-          <Text style={[styles.orderId, { color: colors.text }]}>Order #{item.orderNumber}</Text>
-          <Text style={[styles.orderDate, { color: colors.gray }]}>{new Date(item.date).toLocaleDateString()}</Text>
-        </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
-        </View>
+        <Text style={[styles.orderId, { color: colors.text }]}>Order #{item.orderNumber}</Text>
       </View>
 
-      <View style={styles.orderFooter}>
-        <Text style={[styles.orderTotal, { color: colors.text }]}>₹{item.total}</Text>
-      </View>
+      {renderProductImages(item.items)}
 
-      <View style={styles.addressContainer}>
-        <Ionicons name="location-outline" size={16} color={colors.gray} />
-        <Text style={[styles.addressText, { color: colors.gray }]}>{item.deliveryAddress}</Text>
+      <View style={styles.orderInfo}>
+        <View style={styles.dateTimeContainer}>
+          <Text style={[styles.orderDate, { color: colors.gray }]}>
+            {new Date(item.date).toLocaleDateString('en-US', { 
+              day: 'numeric', 
+              month: 'short', 
+              year: 'numeric' 
+            })}
+          </Text>
+          <View style={styles.arrivingContainer}>
+            <Ionicons name="time-outline" size={14} color={colors.primary} />
+            <Text style={[styles.arrivingTime, { color: colors.primary }]}>Arriving in {item.arrivingTime}</Text>
+          </View>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -218,9 +234,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   orderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 12,
   },
   orderId: {
@@ -228,61 +241,50 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   orderDate: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
   },
-  itemsPreview: {
+
+  productImagesContainer: {
     flexDirection: 'row',
     marginBottom: 12,
+    gap: 8,
   },
-  itemImage: {
-    width: 40,
-    height: 40,
+  productImageBox: {
+    width: 50,
+    height: 50,
     borderRadius: 8,
-    marginRight: 8,
+    overflow: 'hidden',
   },
-  moreItems: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+  productImage: {
+    width: '100%',
+    height: '100%',
+  },
+  moreItemsBox: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   moreItemsText: {
     fontSize: 12,
-    fontWeight: '500',
-  },
-  orderFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  itemCount: {
-    fontSize: 14,
-  },
-  orderTotal: {
-    fontSize: 16,
     fontWeight: '600',
   },
-  addressContainer: {
+  orderInfo: {
+    marginTop: 8,
+  },
+  dateTimeContainer: {
+    flexDirection: 'column',
+    gap: 6,
+  },
+  arrivingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
-  addressText: {
-    fontSize: 12,
-    marginLeft: 4,
+  arrivingTime: {
+    fontSize: 13,
+    fontWeight: '500',
   },
+
   emptyState: {
     flex: 1,
     justifyContent: 'center',

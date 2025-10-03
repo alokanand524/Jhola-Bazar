@@ -1,13 +1,13 @@
 import EnterMoreDetailsModal from '@/components/EnterMoreDetailsModal';
 import { useTheme } from '@/hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import MapView, { Region } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker, Region } from 'react-native-maps';
-import Constants from 'expo-constants';
 
 interface LocationData {
   latitude: number;
@@ -32,6 +32,7 @@ export default function MapPickerScreen() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const mapRef = useRef<MapView>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     getCurrentLocation();
@@ -83,24 +84,54 @@ export default function MapPickerScreen() {
   };
 
   const searchLocations = async (query: string) => {
-    if (query.length < 3) {
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    if (!GOOGLE_MAPS_API_KEY) {
+      console.log('Google Maps API key not found');
       setSearchResults([]);
       return;
     }
 
     try {
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${GOOGLE_MAPS_API_KEY}&region=in`
-      );
+      // Use Google Places Autocomplete API for better results
+      const autocompleteUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=${GOOGLE_MAPS_API_KEY}&components=country:in&location=${region.latitude},${region.longitude}&radius=50000&types=establishment|geocode`;
+      
+      const response = await fetch(autocompleteUrl);
       const data = await response.json();
-      if (data.results) {
-        setSearchResults(data.results.slice(0, 5).map((item: any, index: number) => ({
-          id: index,
-          name: item.name,
-          address: item.formatted_address,
-          latitude: item.geometry.location.lat,
-          longitude: item.geometry.location.lng,
-        })));
+      
+      if (data.status === 'OK' && data.predictions && data.predictions.length > 0) {
+        // Get place details for each prediction to get coordinates
+        const results = await Promise.all(
+          data.predictions.slice(0, 5).map(async (prediction: any, index: number) => {
+            try {
+              const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.place_id}&key=${GOOGLE_MAPS_API_KEY}&fields=geometry,name,formatted_address`;
+              const detailsResponse = await fetch(detailsUrl);
+              const detailsData = await detailsResponse.json();
+              
+              if (detailsData.status === 'OK' && detailsData.result?.geometry?.location) {
+                return {
+                  id: index,
+                  name: prediction.structured_formatting?.main_text || prediction.description.split(',')[0],
+                  address: prediction.description,
+                  latitude: detailsData.result.geometry.location.lat,
+                  longitude: detailsData.result.geometry.location.lng,
+                };
+              }
+            } catch (error) {
+              console.log('Place details error:', error);
+            }
+            return null;
+          })
+        );
+        
+        const validResults = results.filter(Boolean);
+        setSearchResults(validResults);
+      } else {
+        console.log('Google Places API error:', data.status, data.error_message);
+        setSearchResults([]);
       }
     } catch (error) {
       console.log('Search error:', error);
@@ -109,8 +140,17 @@ export default function MapPickerScreen() {
   };
 
   const handleSearch = (query: string) => {
+    console.log('🔎 handleSearch called with:', query);
     setSearchQuery(query);
-    searchLocations(query);
+    
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      console.log('⏰ Timeout triggered, calling searchLocations');
+      searchLocations(query);
+    }, 300);
   };
 
   const handleSearchResultSelect = async (location: any) => {
@@ -212,7 +252,7 @@ export default function MapPickerScreen() {
           <Ionicons name="search" size={20} color={colors.gray} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search for area, street name..."
+            placeholder="Search or enter shop/building name..."
             placeholderTextColor={colors.gray}
             value={searchQuery}
             onChangeText={handleSearch}
@@ -228,22 +268,46 @@ export default function MapPickerScreen() {
         </View>
       </View>
 
-      {searchResults.length > 0 && (
+      {/* Debug: Always show this to test */}
+      {searchQuery.length > 0 && (
         <View style={[styles.searchResultsContainer, { backgroundColor: colors.background }]}>
           <ScrollView style={styles.searchResults} keyboardShouldPersistTaps="handled">
-            {searchResults.map((item) => (
-              <TouchableOpacity
-                key={item.id}
+            {searchResults.length > 0 ? (
+              searchResults.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.resultItem, { borderBottomColor: colors.border }]}
+                  onPress={() => handleSearchResultSelect(item)}
+                >
+                  <Ionicons name="location" size={16} color={colors.primary} />
+                  <View style={styles.resultContent}>
+                    <Text style={[styles.resultName, { color: colors.text }]}>{item.name}</Text>
+                    <Text style={[styles.resultAddress, { color: colors.gray }]}>{item.address}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <TouchableOpacity 
                 style={[styles.resultItem, { borderBottomColor: colors.border }]}
-                onPress={() => handleSearchResultSelect(item)}
+                onPress={() => {
+                  // Use current map center as location for manual entry
+                  const manualLocation = {
+                    id: 0,
+                    name: searchQuery,
+                    address: `${searchQuery}, Near ${selectedLocation?.locality || 'Current Location'}`,
+                    latitude: region.latitude,
+                    longitude: region.longitude,
+                  };
+                  handleSearchResultSelect(manualLocation);
+                }}
               >
-                <Ionicons name="location" size={16} color={colors.primary} />
+                <Ionicons name="add-circle" size={16} color={colors.primary} />
                 <View style={styles.resultContent}>
-                  <Text style={[styles.resultName, { color: colors.text }]}>{item.name}</Text>
-                  <Text style={[styles.resultAddress, { color: colors.gray }]}>{item.address}</Text>
+                  <Text style={[styles.resultName, { color: colors.primary }]}>Use "{searchQuery}" at current location</Text>
+                  <Text style={[styles.resultAddress, { color: colors.gray }]}>Tap to set this location manually</Text>
                 </View>
               </TouchableOpacity>
-            ))}
+            )}
           </ScrollView>
         </View>
       )}

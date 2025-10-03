@@ -2,10 +2,13 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-// Enable fast refresh
+// Add platform-specific resolver for react-native-maps
 config.resolver.platforms = ['ios', 'android', 'native', 'web'];
+config.resolver.alias = {
+  'react-native-maps': require.resolve('react-native-maps/lib/index.js'),
+};
 
-// Clear cache on restart
-config.resetCache = true;
+// Platform-specific extensions
+config.resolver.sourceExts.push('web.js', 'web.ts', 'web.tsx');
 
 module.exports = config;

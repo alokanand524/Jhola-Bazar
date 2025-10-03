@@ -23,7 +23,17 @@ export default function OrderDetailsScreen() {
       
       if (response.ok) {
         const result = await response.json();
-        setOrder(result.data);
+        const orderData = result.data;
+        
+        // Simulate different statuses based on order ID
+        if (orderData && orderData.id) {
+          const orderId = orderData.id;
+          if (orderId.endsWith('1') || orderId.includes('a')) orderData.status = 'delivered';
+          else if (orderId.endsWith('2') || orderId.includes('b')) orderData.status = 'placed';
+          else orderData.status = 'on_the_way';
+        }
+        
+        setOrder(orderData);
       }
     } catch (error) {
       console.error('Error fetching order details:', error);
@@ -110,6 +120,57 @@ export default function OrderDetailsScreen() {
             </View>
           ))}
         </View>
+
+        {order.status?.toLowerCase() !== 'delivered' && (
+          <View style={[styles.orderStatusCard, { backgroundColor: colors.background }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Order Status</Text>
+            
+            <View style={styles.statusFlow}>
+              {['placed', 'packed', 'on the way', 'delivered'].map((status, index) => {
+                const currentStatus = order.status?.toLowerCase().replace('_', ' ') || 'placed';
+                let statusIndex = ['placed', 'packed', 'on the way', 'delivered'].indexOf(currentStatus);
+                if (statusIndex === -1) statusIndex = 0;
+                
+                const isCompleted = index <= statusIndex;
+                
+                return (
+                  <View key={status} style={styles.statusStep}>
+                    <View style={styles.statusStepContent}>
+                      <View style={[
+                        styles.statusDot, 
+                        { 
+                          backgroundColor: isCompleted ? '#00B761' : colors.border,
+                          borderColor: isCompleted ? '#00B761' : colors.border
+                        }
+                      ]}>
+                        {isCompleted && (
+                          <Ionicons name="checkmark" size={12} color="white" />
+                        )}
+                      </View>
+                      <Text style={[
+                        styles.statusLabel, 
+                        { color: isCompleted ? colors.text : colors.gray }
+                      ]}>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </Text>
+                    </View>
+                    {index < 3 && (
+                      <View style={[
+                        styles.statusLine, 
+                        { backgroundColor: index < statusIndex ? '#00B761' : colors.border }
+                      ]} />
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+            
+            <View style={styles.arrivingInfo}>
+              <Ionicons name="time-outline" size={16} color={colors.primary} />
+              <Text style={[styles.arrivingText, { color: colors.primary }]}>Arriving in {order.estimatedDeliveryTime || '30-45 mins'}</Text>
+            </View>
+          </View>
+        )}
 
         <View style={[styles.addressCard, { backgroundColor: colors.background }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Delivery Address</Text>
@@ -270,6 +331,58 @@ const styles = StyleSheet.create({
   },
   contactText: {
     fontSize: 12,
+  },
+  orderStatusCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  statusFlow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  statusStep: {
+    flex: 1,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  statusStepContent: {
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statusLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  statusLine: {
+    position: 'absolute',
+    top: 10,
+    left: '60%',
+    right: '-60%',
+    height: 2,
+  },
+  arrivingInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    gap: 6,
+  },
+  arrivingText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   paymentCard: {
     borderRadius: 12,
