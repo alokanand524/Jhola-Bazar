@@ -6,8 +6,10 @@ import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-
-const API_BASE_URL = 'https://jholabazar.onrender.com/api/v1';
+import { config } from '@/config/env';
+import { InputValidator } from '@/utils/inputValidator';
+import { logger } from '@/utils/logger';
+import { API_ENDPOINTS } from '@/constants/api';
 
 export default function LoginScreen() {
   const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('phone');
@@ -20,7 +22,8 @@ export default function LoginScreen() {
   const dispatch = useDispatch();
 
   const handleSendOtp = async () => {
-    if (loginMethod === 'phone' && phoneNumber.length !== 10) {
+    const sanitizedPhone = InputValidator.sanitizeString(phoneNumber);
+    if (loginMethod === 'phone' && !InputValidator.validatePhoneNumber(sanitizedPhone)) {
       Alert.alert('Error', 'Please enter a valid 10-digit phone number');
       return;
     }
@@ -28,13 +31,13 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       // Try login first
-      let response = await fetch(`${API_BASE_URL}/auth/login`, {
+      let response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          phone: `${phoneNumber}`,
+          phone: sanitizedPhone,
         }),
       });
       
@@ -42,13 +45,13 @@ export default function LoginScreen() {
       
       // If login fails (user doesn't exist), try signup
       if (!response.ok) {
-        response = await fetch(`${API_BASE_URL}/auth/signup`, {
+        response = await fetch(API_ENDPOINTS.AUTH.SIGNUP, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            phone: `${phoneNumber}`,
+            phone: sanitizedPhone,
           }),
         });
         
@@ -71,22 +74,32 @@ export default function LoginScreen() {
     }
   };
 
-  const handleVerifyOtp = async () => {
-    if (otp.length !== 6) {
+  const handleOtpChange = (text: string) => {
+    setOtp(text);
+    // Auto-verify when 6 digits are entered
+    if (text.length === 6 && !isLoading) {
+      handleVerifyOtp(text);
+    }
+  };
+
+  const handleVerifyOtp = async (otpValue?: string) => {
+    const currentOtp = otpValue || otp;
+    const sanitizedOtp = InputValidator.sanitizeString(currentOtp);
+    if (!InputValidator.validateOTP(sanitizedOtp)) {
       Alert.alert('Error', 'Please enter a valid 6-digit OTP');
       return;
     }
     
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
+      const response = await fetch(API_ENDPOINTS.AUTH.VERIFY_OTP, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          phone: `${phoneNumber}`,
-          otp: otp,
+          phone: InputValidator.sanitizeString(phoneNumber),
+          otp: sanitizedOtp,
         }),
       });
       
@@ -102,8 +115,8 @@ export default function LoginScreen() {
         }
         
         dispatch(setUser({
-          name: data.data?.customer?.firstName || 'User',
-          phone: `${phoneNumber}`,
+          name: InputValidator.sanitizeString(data.data?.customer?.firstName || 'User'),
+          phone: InputValidator.sanitizeString(phoneNumber),
         }));
         // router.replace('/referral');
         router.replace('/(tabs)');
@@ -122,13 +135,13 @@ export default function LoginScreen() {
     try {
       // Use the same endpoint that was successful initially
       const endpoint = isNewUser ? '/auth/signup' : '/auth/login';
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const response = await fetch(`${API_ENDPOINTS.BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          phone: `${phoneNumber}`,
+          phone: InputValidator.sanitizeString(phoneNumber),
         }),
       });
       
@@ -234,7 +247,7 @@ export default function LoginScreen() {
                 style={styles.otpInput}
                 placeholder="Enter 6-digit OTP"
                 value={otp}
-                onChangeText={setOtp}
+                onChangeText={handleOtpChange}
                 keyboardType="numeric"
                 maxLength={6}
               />

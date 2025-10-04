@@ -1,11 +1,14 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useTheme } from '@/hooks/useTheme';
 import { tokenManager } from '@/utils/tokenManager';
+import { API_ENDPOINTS } from '@/constants/api';
+import { RootState } from '@/store/store';
+import { useSelector } from 'react-redux';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import React from 'react';
+import { FlatList, Image, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface OrderItem {
   id: string;
@@ -53,12 +56,22 @@ const OrderCardSkeleton = () => {
 
 export default function OrdersScreen() {
   const { colors } = useTheme();
+  const { isLoggedIn } = useSelector((state: RootState) => state.user);
   const [isLoading, setIsLoading] = React.useState(true);
   const [orders, setOrders] = React.useState<Order[]>([]);
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  // Redirect to login if not authenticated
+  React.useEffect(() => {
+    if (!isLoggedIn) {
+      router.replace('/login');
+      return;
+    }
+  }, [isLoggedIn]);
   
   const fetchOrders = async () => {
     try {
-      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/orders/');
+      const response = await tokenManager.makeAuthenticatedRequest(API_ENDPOINTS.ORDERS.BASE);
 
       if (response.ok) {
         const result = await response.json();
@@ -106,6 +119,16 @@ export default function OrdersScreen() {
     
     checkAuthAndFetch();
   }, []);
+
+  const onRefresh = React.useCallback(async () => {
+    if (!isLoggedIn) return;
+    setRefreshing(true);
+    try {
+      await fetchOrders();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [isLoggedIn]);
   
 
 
@@ -163,6 +186,10 @@ export default function OrdersScreen() {
     </TouchableOpacity>
   );
 
+  if (!isLoggedIn) {
+    return null;
+  }
+
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -201,6 +228,14 @@ export default function OrdersScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.ordersList}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
         />
       )}
     </SafeAreaView>

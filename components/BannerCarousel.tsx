@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Dimensions, Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SkeletonLoader } from './SkeletonLoader';
+import { API_ENDPOINTS } from '@/constants/api';
 
 const { width } = Dimensions.get('window');
 
@@ -18,7 +19,7 @@ export const BannerCarousel: React.FC = () => {
 
   const handleBannerClick = async (bannerId: string) => {
     try {
-      await fetch(`https://jholabazar.onrender.com/api/v1/scroller/${bannerId}/click`, {
+      await fetch(`${API_ENDPOINTS.BASE_URL}/scroller/${bannerId}/click`, {
         method: 'POST'
       });
     } catch (error) {
@@ -28,7 +29,7 @@ export const BannerCarousel: React.FC = () => {
 
   const fetchBanners = async () => {
     try {
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/scroller/');
+      const response = await fetch(`${API_ENDPOINTS.BASE_URL}/scroller/`);
       const result = await response.json();
       
       if (result.success && result.data && result.data.scrollers) {

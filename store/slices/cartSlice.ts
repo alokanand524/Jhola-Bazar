@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { cartAPI } from '@/services/api';
+import { logout } from './userSlice';
 
 export interface CartItem {
   id: string;
@@ -101,6 +102,12 @@ const cartSlice = createSlice({
       .addCase(fetchCart.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      .addCase(logout, (state) => {
+        state.items = [];
+        state.total = 0;
+        state.loading = false;
+        state.error = null;
       });
   },
 });

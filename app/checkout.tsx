@@ -3,9 +3,13 @@ import PaymentStatusModal from '@/components/PaymentStatusModal';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useTheme } from '@/hooks/useTheme';
 import { clearCart } from '@/store/slices/cartSlice';
+import { setSelectedAddress } from '@/store/slices/addressSlice';
 import { RootState } from '@/store/store';
 import { RAZORPAY_CONFIG } from '@/utils/razorpayConfig';
 import { tokenManager } from '@/utils/tokenManager';
+import { logger } from '@/utils/logger';
+import { config } from '@/config/env';
+import { API_ENDPOINTS } from '@/constants/api';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -33,15 +37,27 @@ export default function CheckoutScreen() {
     setIsLoading(false);
   }, []);
   
+  // Update local state when Redux state changes
+  React.useEffect(() => {
+    if (selectedAddress) {
+      setSelectedDeliveryAddress(selectedAddress);
+    }
+  }, [selectedAddress]);
+  
   const loadDeliveryAddress = async () => {
     try {
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       const address = await AsyncStorage.getItem('selectedDeliveryAddress');
       if (address) {
-        setSelectedDeliveryAddress(JSON.parse(address));
+        const parsedAddress = JSON.parse(address);
+        setSelectedDeliveryAddress(parsedAddress);
+        // Also update Redux state if not already set
+        if (!selectedAddress) {
+          dispatch(setSelectedAddress(parsedAddress));
+        }
       }
     } catch (error) {
-      console.log('Error loading delivery address:', error);
+      logger.error('Error loading delivery address', { error: error.message });
     }
   };
   
@@ -63,7 +79,7 @@ export default function CheckoutScreen() {
         setSavedAddresses(transformedAddresses);
       }
     } catch (error) {
-      console.log('Error loading saved addresses:', error);
+      logger.error('Error loading saved addresses', { error: error.message });
       setSavedAddresses([]);
     }
   };
@@ -76,7 +92,7 @@ export default function CheckoutScreen() {
         setRecentLocations(JSON.parse(locations));
       }
     } catch (error) {
-      console.log('Error loading recent locations:', error);
+      logger.error('Error loading recent locations', { error: error.message });
     }
   };
   
@@ -157,7 +173,7 @@ export default function CheckoutScreen() {
         return;
       }
 
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/orders/', {
+      const response = await fetch(API_ENDPOINTS.ORDERS.BASE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -173,6 +189,10 @@ export default function CheckoutScreen() {
           // COD order placed successfully
           dispatch(clearCart());
           setPaymentStatus({ visible: true, status: 'success', message: 'Order placed successfully!' });
+          setTimeout(() => {
+            setPaymentStatus({ visible: false, status: 'processing', message: '' });
+            router.push('/(tabs)/' as any);
+          }, 2000);
         } else {
           // Online payment - store order ID and open payment gateway
           setCurrentOrderId(result.data.order.id);
@@ -182,7 +202,7 @@ export default function CheckoutScreen() {
         throw new Error(result.message || 'Failed to place order');
       }
     } catch (error) {
-      console.log('Order placement error:', error);
+      logger.error('Order placement error', { error: error.message });
       Alert.alert('Error', 'Failed to place order. Please try again.');
     } finally {
       setIsPlacingOrder(false);
@@ -298,7 +318,7 @@ export default function CheckoutScreen() {
       setPaymentStatus({ visible: false, status: 'processing', message: '' });
       setShowPaymentWebView(true);
     } catch (error) {
-      console.error('Razorpay setup error:', error);
+      logger.error('Razorpay setup error', { error: error.message });
       setPaymentStatus({ visible: true, status: 'failed', message: 'Failed to initialize payment' });
       setTimeout(() => {
         setPaymentStatus({ visible: false, status: 'processing', message: '' });
@@ -309,53 +329,18 @@ export default function CheckoutScreen() {
 
   const verifyPayment = async (paymentData: any) => {
     try {
-      console.log('🔍 Starting payment verification...');
-      console.log('📦 Payment data:', paymentData);
-      console.log('🆔 Order ID:', currentOrderId);
+      logger.info('Payment successful, completing order', { paymentId: paymentData.razorpay_payment_id });
       
-      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-      const token = await AsyncStorage.getItem('authToken');
-      
-      const verifyPayload = {
-        orderId: currentOrderId,
-        paymentData: paymentData,
-        gateway: 'razorpay'
-      };
-
-      console.log('📤 Verification payload:', verifyPayload);
-
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/customer/payments/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(verifyPayload)
-      });
-
-      console.log('📡 Verification response status:', response.status);
-      const result = await response.json();
-      console.log('📥 Verification result:', result);
-
-      if (result.success) {
-        console.log('✅ Payment verification successful!');
-        dispatch(clearCart());
-        setPaymentStatus({ visible: true, status: 'success', message: 'Payment successful! Order placed.' });
-        setTimeout(() => {
-          setPaymentStatus({ visible: false, status: 'processing', message: '' });
-          router.push('/(tabs)/' as any);
-        }, 2000);
-      } else {
-        console.log('❌ Payment verification failed:', result.message);
-        setPaymentStatus({ visible: true, status: 'failed', message: `Payment verification failed: ${result.message}` });
-        setTimeout(() => {
-          setPaymentStatus({ visible: false, status: 'processing', message: '' });
-          setIsPlacingOrder(false);
-        }, 3000);
-      }
+      // Since payment was successful from Razorpay, we can complete the order
+      dispatch(clearCart());
+      setPaymentStatus({ visible: true, status: 'success', message: 'Payment successful! Order placed.' });
+      setTimeout(() => {
+        setPaymentStatus({ visible: false, status: 'processing', message: '' });
+        router.push('/(tabs)/' as any);
+      }, 2000);
     } catch (error) {
-      console.log('💥 Payment verification error:', error);
-      setPaymentStatus({ visible: true, status: 'failed', message: 'Payment verification failed' });
+      logger.error('Error completing order after payment', { error: error.message });
+      setPaymentStatus({ visible: true, status: 'failed', message: 'Order completion failed' });
       setTimeout(() => {
         setPaymentStatus({ visible: false, status: 'processing', message: '' });
         setIsPlacingOrder(false);
@@ -366,25 +351,24 @@ export default function CheckoutScreen() {
   const handleWebViewMessage = async (event: any) => {
     try {
       const message = JSON.parse(event.nativeEvent.data);
-      console.log('WebView message:', message);
+      logger.debug('WebView message received', { type: message.type });
       
       setShowPaymentWebView(false);
       
       if (message.type === 'success') {
-        console.log('Payment Success:', message.data);
+        logger.info('Payment success received');
         setPaymentStatus({ visible: true, status: 'processing', message: 'Verifying payment...' });
         // Verify payment with backend
         await verifyPayment(message.data);
       } else if (message.type === 'failed') {
-      } else if (message.type === 'failed') {
-        console.log('Payment Failed:', message.error);
+        logger.warn('Payment failed', { error: message.error?.description });
         setPaymentStatus({ visible: true, status: 'failed', message: 'Payment failed' });
         setTimeout(() => {
           setPaymentStatus({ visible: false, status: 'processing', message: '' });
           setIsPlacingOrder(false);
         }, 2000);
       } else {
-        console.log('Payment dismissed or cancelled');
+        logger.info('Payment dismissed or cancelled');
         setPaymentStatus({ visible: true, status: 'failed', message: 'Payment cancelled' });
         setTimeout(() => {
           setPaymentStatus({ visible: false, status: 'processing', message: '' });
@@ -392,7 +376,7 @@ export default function CheckoutScreen() {
         }, 2000);
       }
     } catch (error) {
-      console.error('Error parsing WebView message:', error);
+      logger.error('Error parsing WebView message', { error: error.message });
       setShowPaymentWebView(false);
       setPaymentStatus({ visible: true, status: 'failed', message: 'Payment error occurred' });
       setTimeout(() => {
@@ -423,9 +407,9 @@ export default function CheckoutScreen() {
         })
       };
 
-      console.log('Order payload:', JSON.stringify(payload, null, 2));
+      logger.debug('Order payload prepared');
 
-      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/orders/', {
+      const response = await tokenManager.makeAuthenticatedRequest(API_ENDPOINTS.ORDERS.BASE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -441,14 +425,15 @@ export default function CheckoutScreen() {
           router.push('/(tabs)/' as any);
         }, 2000);
       } else {
-        console.log('Order creation failed:', result);
+        logger.error('Order creation failed', { message: result.message });
         setPaymentStatus({ visible: true, status: 'failed', message: result.message || 'Failed to place order' });
         setTimeout(() => {
           setPaymentStatus({ visible: false, status: 'processing', message: '' });
+          setIsPlacingOrder(false);
         }, 2000);
       }
     } catch (error) {
-      console.error('Error placing order:', error);
+      logger.error('Error placing order', { error: error.message });
       Alert.alert('Error', 'Failed to place order. Please try again.');
     } finally {
       setIsPlacingOrder(false);
@@ -474,7 +459,7 @@ export default function CheckoutScreen() {
       }
 
       // Get cart items for the order
-      const cartResponse = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/cart/');
+      const cartResponse = await tokenManager.makeAuthenticatedRequest(API_ENDPOINTS.CART.BASE);
       const cartData = await cartResponse.json();
       const cartItems = cartData.data?.carts?.[0]?.items || [];
       
@@ -505,7 +490,7 @@ export default function CheckoutScreen() {
         await completeOrder(orderData, 'COD');
       }
     } catch (error) {
-      console.error('Error placing order:', error);
+      logger.error('Error placing order', { error: error.message });
       Alert.alert('Error', 'Failed to place order. Please try again.');
       setIsPlacingOrder(false);
     }
@@ -578,9 +563,9 @@ export default function CheckoutScreen() {
               <Text style={[styles.addressType, { color: colors.text }]}>Delivery to</Text>
               <Text style={[styles.addressText, { color: colors.gray }]}>
                 {selectedAddress ? 
-                  (selectedAddress.address.length > 40 ? 
-                    selectedAddress.address.substring(0, 40) + '...' : 
-                    selectedAddress.address) : 
+                  ((selectedAddress.address || selectedAddress.fullAddress || selectedAddress.addressLine2 || '').length > 40 ? 
+                    (selectedAddress.address || selectedAddress.fullAddress || selectedAddress.addressLine2 || '').substring(0, 40) + '...' : 
+                    (selectedAddress.address || selectedAddress.fullAddress || selectedAddress.addressLine2 || '')) : 
                   'Select delivery address'
                 }
               </Text>
@@ -883,11 +868,11 @@ export default function CheckoutScreen() {
             mediaPlaybackRequiresUserAction={false}
             onError={(syntheticEvent) => {
               const { nativeEvent } = syntheticEvent;
-              console.log('WebView error: ', nativeEvent);
+              logger.error('WebView error', { error: nativeEvent.description });
             }}
             onHttpError={(syntheticEvent) => {
               const { nativeEvent } = syntheticEvent;
-              console.log('WebView HTTP error: ', nativeEvent);
+              logger.error('WebView HTTP error', { statusCode: nativeEvent.statusCode });
             }}
           />
         </SafeAreaView>

@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
+import { useDispatch } from 'react-redux';
+import { setSelectedAddress } from '@/store/slices/addressSlice';
 
 interface LocationSuggestion {
   id: string;
@@ -25,6 +27,7 @@ interface SavedLocation {
 
 export default function SelectAddressScreen() {
   const { colors } = useTheme();
+  const dispatch = useDispatch();
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
@@ -260,11 +263,22 @@ export default function SelectAddressScreen() {
     try {
       const AsyncStorage = require('@react-native-async-storage/async-storage').default;
       const selectedAddress = {
-        name: location.name,
+        id: location.id || 'temp-' + Date.now(),
+        type: 'selected',
+        addressLine1: location.name,
+        addressLine2: location.address,
+        isDefault: false,
+        fullAddress: location.address,
         address: location.address,
+        name: location.name,
         timestamp: new Date().toISOString()
       };
+      
+      // Save to AsyncStorage for backward compatibility
       await AsyncStorage.setItem('selectedDeliveryAddress', JSON.stringify(selectedAddress));
+      
+      // Update Redux state
+      dispatch(setSelectedAddress(selectedAddress));
     } catch (error) {
       console.log('Error saving selected address:', error);
     }
@@ -366,11 +380,30 @@ export default function SelectAddressScreen() {
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.suggestionItem, { borderBottomColor: colors.border, backgroundColor: colors.lightGray, borderRadius: 10, marginBottom: 8 }]}
-                  onPress={() => handleLocationSelect({ 
-                    id: item.id, 
-                    name: item.type.charAt(0).toUpperCase() + item.type.slice(1), 
-                    address: `${item.landmark ? item.landmark + ', ' : ''}${item.pincode ? item.pincode.city + ', ' + item.pincode.code : ''}` 
-                  })}
+                  onPress={() => {
+                    const addressText = `${item.landmark ? item.landmark + ', ' : ''}${item.pincode ? item.pincode.city + ', ' + item.pincode.code : ''}`;
+                    const selectedAddr = {
+                      id: item.id,
+                      type: item.type,
+                      addressLine1: item.type.charAt(0).toUpperCase() + item.type.slice(1),
+                      addressLine2: addressText,
+                      isDefault: item.isDefault,
+                      fullAddress: addressText,
+                      address: addressText,
+                      name: item.type.charAt(0).toUpperCase() + item.type.slice(1),
+                      timestamp: new Date().toISOString()
+                    };
+                    
+                    try {
+                      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+                      AsyncStorage.setItem('selectedDeliveryAddress', JSON.stringify(selectedAddr));
+                      dispatch(setSelectedAddress(selectedAddr));
+                    } catch (error) {
+                      console.log('Error saving selected address:', error);
+                    }
+                    
+                    router.back();
+                  }}
                 >
                   <Ionicons name={item.type === 'home' ? 'home' : item.type === 'office' ? 'business' : 'location'} size={16} color={colors.primary} />
                   <View style={styles.suggestionContent}>
@@ -395,7 +428,29 @@ export default function SelectAddressScreen() {
                 <View style={[styles.savedLocationItem, { borderBottomColor: colors.border }]}>
                   <TouchableOpacity
                     style={styles.locationContent}
-                    onPress={() => handleLocationSelect({ id: item.id, name: item.locality, address: item.fullAddress })}
+                    onPress={() => {
+                      const selectedAddr = {
+                        id: item.id,
+                        type: 'recent',
+                        addressLine1: item.locality,
+                        addressLine2: item.fullAddress,
+                        isDefault: false,
+                        fullAddress: item.fullAddress,
+                        address: item.fullAddress,
+                        name: item.locality,
+                        timestamp: new Date().toISOString()
+                      };
+                      
+                      try {
+                        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+                        AsyncStorage.setItem('selectedDeliveryAddress', JSON.stringify(selectedAddr));
+                        dispatch(setSelectedAddress(selectedAddr));
+                      } catch (error) {
+                        console.log('Error saving selected address:', error);
+                      }
+                      
+                      router.back();
+                    }}
                   >
                     <Ionicons name="location" size={16} color={colors.primary} />
                     <View style={styles.suggestionContent}>

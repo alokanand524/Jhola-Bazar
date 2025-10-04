@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { deliveryAPI } from '@/services/api';
+import { logout } from './userSlice';
 
 interface DeliveryState {
   deliveryTime: string;
@@ -46,6 +47,11 @@ const deliverySlice = createSlice({
       .addCase(fetchDeliveryTime.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      .addCase(logout, (state) => {
+        state.deliveryTime = '';
+        state.loading = false;
+        state.error = null;
       });
   },
 });

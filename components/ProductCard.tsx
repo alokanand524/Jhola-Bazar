@@ -1,15 +1,16 @@
+import { ImageWithLoading } from '@/components/ImageWithLoading';
 import { useTheme } from '@/hooks/useTheme';
 import { addToCart, updateQuantity } from '@/store/slices/cartSlice';
 import { Product } from '@/store/slices/productsSlice';
 import { RootState } from '@/store/store';
+import { tokenManager } from '@/utils/tokenManager';
+import { API_ENDPOINTS } from '@/constants/api';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ImageWithLoading } from '@/components/ImageWithLoading';
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { tokenManager } from '@/utils/tokenManager';
 
 interface ProductCardProps {
   product: Product;
@@ -41,7 +42,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
         return true;
       }
       
-      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/service-area/addresses');
+      const response = await tokenManager.makeAuthenticatedRequest(API_ENDPOINTS.ADDRESSES.ALL);
       
       if (response.ok) {
         const data = await response.json();
@@ -78,7 +79,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
         ...(addressId && { addressId })
       };
       
-      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/cart/add', {
+      const response = await tokenManager.makeAuthenticatedRequest(`${API_ENDPOINTS.BASE_URL}/cart/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -164,7 +165,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
     
     if (cartItemId) {
       try {
-        await tokenManager.makeAuthenticatedRequest(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItemId}/increment`, {
+        await tokenManager.makeAuthenticatedRequest(API_ENDPOINTS.CART.INCREMENT(cartItemId), {
           method: 'PATCH'
         });
       } catch (error) {
@@ -188,7 +189,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isServiceable
     
     if (cartItemId) {
       try {
-        await tokenManager.makeAuthenticatedRequest(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItemId}/decrement`, {
+        await tokenManager.makeAuthenticatedRequest(API_ENDPOINTS.CART.DECREMENT(cartItemId), {
           method: 'PATCH'
         });
       } catch (error) {

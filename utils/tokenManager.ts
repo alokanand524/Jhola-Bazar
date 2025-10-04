@@ -1,4 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { config } from '@/config/env';
+import { InputValidator } from './inputValidator';
+import { logger } from './logger';
 
 class TokenManager {
   private static instance: TokenManager;
@@ -27,7 +30,7 @@ class TokenManager {
       const refreshToken = await AsyncStorage.getItem('refreshToken');
       if (!refreshToken) return null;
 
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/auth/refresh', {
+      const response = await fetch(`${config.API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken })
@@ -42,16 +45,20 @@ class TokenManager {
       }
       return null;
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      logger.error('Token refresh failed', { error: error.message });
       return null;
     }
   }
 
   async makeAuthenticatedRequest(url: string, options: RequestInit = {}): Promise<Response> {
+    const sanitizedUrl = InputValidator.sanitizeUrl(url);
+    if (!sanitizedUrl) {
+      throw new Error('Invalid URL provided');
+    }
     let token = await AsyncStorage.getItem('authToken');
     
     const makeRequest = (authToken: string) => {
-      return fetch(url, {
+      return fetch(sanitizedUrl, {
         ...options,
         headers: {
           ...options.headers,

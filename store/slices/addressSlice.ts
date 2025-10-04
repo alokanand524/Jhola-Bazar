@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { logout } from './userSlice';
 
 interface Address {
   id: string;
@@ -30,6 +31,11 @@ const addressSlice = createSlice({
     clearSelectedAddress: (state) => {
       state.selectedAddress = null;
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(logout, (state) => {
+      state.selectedAddress = null;
+    });
   },
 });
 

@@ -1,4 +1,8 @@
-const API_BASE_URL = 'https://jholabazar.onrender.com/api/v1';
+import { config } from '@/config/env';
+import { InputValidator } from '@/utils/inputValidator';
+import { logger } from '@/utils/logger';
+
+const API_BASE_URL = config.API_BASE_URL;
 
 export interface Category {
   id: string;
@@ -24,7 +28,10 @@ export const categoryAPI = {
   },
 
   getCategoryById: async (id: string): Promise<CategoryWithChildren> => {
-    const response = await fetch(`${API_BASE_URL}/categories/${id}`);
+    const sanitizedId = InputValidator.sanitizeString(id);
+    if (!sanitizedId) throw new Error('Invalid category ID');
+    
+    const response = await fetch(`${API_BASE_URL}/categories/${sanitizedId}`);
     if (!response.ok) throw new Error('Failed to fetch category');
     const data = await response.json();
     return {
@@ -147,7 +154,8 @@ export const productAPI = {
   },
 
   getProductsByCategory: async (categoryId: string): Promise<Product[]> => {
-    const url = categoryId ? `${API_BASE_URL}/products?categoryId=${categoryId}` : `${API_BASE_URL}/products`;
+    const sanitizedCategoryId = categoryId ? InputValidator.sanitizeString(categoryId) : '';
+    const url = sanitizedCategoryId ? `${API_BASE_URL}/products?categoryId=${sanitizedCategoryId}` : `${API_BASE_URL}/products`;
     const response = await fetch(url);
     if (!response.ok) throw new Error('Failed to fetch products');
     const data = await response.json();
@@ -155,7 +163,10 @@ export const productAPI = {
   },
 
   getProductById: async (productId: string): Promise<Product> => {
-    const response = await fetch(`${API_BASE_URL}/products/${productId}`);
+    const sanitizedProductId = InputValidator.sanitizeString(productId);
+    if (!sanitizedProductId) throw new Error('Invalid product ID');
+    
+    const response = await fetch(`${API_BASE_URL}/products/${sanitizedProductId}`);
     if (!response.ok) throw new Error('Failed to fetch product');
     const data = await response.json();
     return transformProduct(data.data.product);

@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState, useEffect } from 'react';
-import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useTheme } from '@/hooks/useTheme';
 import { addressAPI } from '@/services/api';
+import { RootState } from '@/store/store';
+import { useSelector } from 'react-redux';
 
 interface Address {
   id: string;
@@ -50,8 +52,18 @@ const AddressCardSkeleton = () => {
 
 export default function AddressesScreen() {
   const { colors } = useTheme();
+  const { isLoggedIn } = useSelector((state: RootState) => state.user);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  // Redirect to login if not authenticated
+  React.useEffect(() => {
+    if (!isLoggedIn) {
+      router.replace('/login');
+      return;
+    }
+  }, [isLoggedIn]);
   
   const fetchAddresses = async () => {
     try {
@@ -97,6 +109,16 @@ export default function AddressesScreen() {
     
     checkAuthAndFetch();
   }, []);
+
+  const onRefresh = React.useCallback(async () => {
+    if (!isLoggedIn) return;
+    setRefreshing(true);
+    try {
+      await fetchAddresses();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [isLoggedIn]);
 
   const handleDeleteAddress = (id: string) => {
     Alert.alert(
@@ -192,6 +214,10 @@ export default function AddressesScreen() {
     </View>
   );
 
+  if (!isLoggedIn) {
+    return null;
+  }
+
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.lightGray }]}>
@@ -227,6 +253,14 @@ export default function AddressesScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.addressesList}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
         />
       ) : (
         <View style={styles.emptyState}>

@@ -1,12 +1,13 @@
 import { ProductCard } from '@/components/ProductCard';
 import { useTheme } from '@/hooks/useTheme';
+import { RootState } from '@/store/store';
+import { API_ENDPOINTS } from '@/constants/api';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams, Stack } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
-import { RootState } from '@/store/store';
 
 export default function SearchResultsScreen() {
   const { colors } = useTheme();
@@ -25,7 +26,7 @@ export default function SearchResultsScreen() {
 
     setLoading(true);
     try {
-      const response = await fetch(`https://jholabazar.onrender.com/api/v1/products/search?q=${encodeURIComponent(searchTerm)}`);
+      const response = await fetch(`${API_ENDPOINTS.BASE_URL}/products/search?q=${encodeURIComponent(searchTerm)}`);
       const result = await response.json();
       
       if (result.success && result.data?.results) {
@@ -82,7 +83,7 @@ export default function SearchResultsScreen() {
       if (selectedAddressData) {
         const selectedAddress = JSON.parse(selectedAddressData);
         if (selectedAddress.latitude && selectedAddress.longitude) {
-          const response = await fetch('https://jholabazar.onrender.com/api/v1/service-area/check', {
+          const response = await fetch(API_ENDPOINTS.SERVICE_AREA.CHECK, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

@@ -9,18 +9,21 @@ import { featuredThisWeek } from '@/data/sections';
 import { useLocation } from '@/hooks/useLocation';
 import { useTheme } from '@/hooks/useTheme';
 import { behaviorTracker } from '@/services/behaviorTracker';
-import { setSelectedAddress } from '@/store/slices/addressSlice';
+import { setSelectedAddress, clearSelectedAddress } from '@/store/slices/addressSlice';
 import { fetchCart } from '@/store/slices/cartSlice';
 import { fetchCategories } from '@/store/slices/categoriesSlice';
 import { fetchDeliveryTime } from '@/store/slices/deliverySlice';
 import { setProducts } from '@/store/slices/productsSlice';
 import { RootState } from '@/store/store';
+import { config } from '@/config/env';
+import { logger } from '@/utils/logger';
+import { API_ENDPOINTS } from '@/constants/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useEffect } from 'react';
-import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { handleTabBarScroll } from './_layout';
 
@@ -31,6 +34,7 @@ export default function HomeScreen() {
   const { items } = useSelector((state: RootState) => state.cart);
   const { deliveryTime } = useSelector((state: RootState) => state.delivery);
   const { selectedAddress } = useSelector((state: RootState) => state.address);
+  const { isLoggedIn } = useSelector((state: RootState) => state.user);
   const { colors } = useTheme();
   const { location, loading: locationLoading, error: locationError } = useLocation();
   const [isInitialLoading, setIsInitialLoading] = React.useState(true);
@@ -43,13 +47,14 @@ export default function HomeScreen() {
   const [loadingStep, setLoadingStep] = React.useState('loading');
   const [deliveryEstimate, setDeliveryEstimate] = React.useState<string | null>(null);
   const [isServiceable, setIsServiceable] = React.useState<boolean>(true);
+  const [refreshing, setRefreshing] = React.useState(false);
 
 
   const fetchApiProducts = async () => {
     try {
       setApiLoading(true);
       
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/products');
+      const response = await fetch(API_ENDPOINTS.PRODUCTS.ALL);
       const result = await response.json();
       
       const rawProducts = result.data?.products || [];
@@ -70,7 +75,7 @@ export default function HomeScreen() {
       
       setApiProducts(transformedProducts.slice(0, 6));
     } catch (error) {
-      console.error('Error fetching products:', error);
+      logger.error('Error fetching products', { error: error.message });
       setApiProducts([]);
     } finally {
       setApiLoading(false);
@@ -81,7 +86,7 @@ export default function HomeScreen() {
     try {
       setFeaturedLoading(true);
       
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/products/featured');
+      const response = await fetch(API_ENDPOINTS.PRODUCTS.FEATURED);
       const result = await response.json();
       
       const rawProducts = result.data?.products || [];
@@ -102,7 +107,7 @@ export default function HomeScreen() {
       
       setFeaturedProducts(transformedProducts);
     } catch (error) {
-      console.error('Error fetching featured products:', error);
+      logger.error('Error fetching featured products', { error: error.message });
       setFeaturedProducts([]);
     } finally {
       setFeaturedLoading(false);
@@ -111,12 +116,15 @@ export default function HomeScreen() {
 
   const loadSelectedAddress = async () => {
     try {
-      const address = await AsyncStorage.getItem('selectedDeliveryAddress');
-      if (address) {
-        dispatch(setSelectedAddress(JSON.parse(address)));
+      const token = await AsyncStorage.getItem('authToken');
+      if (token) {
+        const address = await AsyncStorage.getItem('selectedDeliveryAddress');
+        if (address) {
+          dispatch(setSelectedAddress(JSON.parse(address)));
+        }
       }
     } catch (error) {
-      console.log('Error loading selected address:', error);
+      logger.error('Error loading selected address', { error: error.message });
     }
   };
 
@@ -143,15 +151,8 @@ export default function HomeScreen() {
       // Step 5: Handle user data
       const token = await AsyncStorage.getItem('authToken');
       if (token) {
-        // Clear any previous user's saved address data
-        await AsyncStorage.removeItem('selectedDeliveryAddress');
-        dispatch(setSelectedAddress(null));
-        setDeliveryEstimate(null);
-        
         dispatch(fetchCart());
         fetchCartCount();
-        
-
       }
       
       setLoadingStep('complete');
@@ -163,16 +164,31 @@ export default function HomeScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      loadSelectedAddress();
-      fetchCartCount();
-      dispatch(fetchCart());
-    }, [dispatch])
+      const checkAuthAndLoadAddress = async () => {
+        const token = await AsyncStorage.getItem('authToken');
+        if (token) {
+          loadSelectedAddress();
+          dispatch(fetchCart());
+          fetchCartCount();
+        } else {
+          dispatch(clearSelectedAddress());
+          setApiCartCount(0);
+          setDeliveryEstimate(null);
+          setIsServiceable(true);
+          // Check current location serviceability for non-logged-in users
+          if (location?.latitude && location?.longitude) {
+            checkAddressServiceability(location.latitude.toString(), location.longitude.toString());
+          }
+        }
+      };
+      checkAuthAndLoadAddress();
+    }, [dispatch, location])
   );
 
   // Check serviceability for selected address
   const checkAddressServiceability = async (latitude: string, longitude: string) => {
     try {
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/service-area/check', {
+      const response = await fetch(API_ENDPOINTS.SERVICE_AREA.CHECK, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -195,18 +211,26 @@ export default function HomeScreen() {
         setIsServiceable(false);
       }
     } catch (error) {
-      console.error('Error checking serviceability:', error);
+      logger.error('Error checking serviceability', { error: error.message });
       setDeliveryEstimate('Not serviceable in your area');
       setIsServiceable(false);
     }
   };
 
-  // Update serviceability when selected address changes
+  // Update serviceability when selected address changes or user login status changes
   useEffect(() => {
-    if (selectedAddress?.latitude && selectedAddress?.longitude) {
+    if (isLoggedIn && selectedAddress?.latitude && selectedAddress?.longitude) {
       checkAddressServiceability(selectedAddress.latitude, selectedAddress.longitude);
+    } else if (!isLoggedIn) {
+      // Clear delivery estimate when user is not logged in
+      setDeliveryEstimate(null);
+      setIsServiceable(true);
+      // Check serviceability for current location if available
+      if (location?.latitude && location?.longitude) {
+        checkAddressServiceability(location.latitude.toString(), location.longitude.toString());
+      }
     }
-  }, [selectedAddress]);
+  }, [selectedAddress, isLoggedIn, location]);
 
   useEffect(() => {
     if (location?.latitude && location?.longitude) {
@@ -223,7 +247,8 @@ export default function HomeScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        console.log('Location permission denied');
+        logger.warn('Location permission denied');
+        setUserLocation('Current Location');
         return;
       }
 
@@ -270,19 +295,20 @@ export default function HomeScreen() {
           setUserLocation('Current Location');
         }
       } catch (geocodeError) {
-        console.log('Geocoding failed:', geocodeError);
+        logger.warn('Geocoding failed', { error: geocodeError.message });
         setUserLocation('Current Location');
       }
       
-      // Check serviceability without blocking
+      // Check serviceability for current location only if user is not logged in or no saved address
+      const token = await AsyncStorage.getItem('authToken');
       const savedAddress = await AsyncStorage.getItem('selectedDeliveryAddress');
-      if (!savedAddress) {
+      if (!token || !savedAddress) {
         checkAddressServiceability(latitude.toString(), longitude.toString())
-          .catch(err => console.log('Serviceability check failed:', err));
+          .catch(err => logger.warn('Serviceability check failed', { error: err.message }));
       }
     } catch (error) {
-      console.log('Error getting location:', error);
-      setUserLocation('Location unavailable');
+      logger.error('Error getting location', { error: error.message });
+      setUserLocation('Current Location');
     }
   };
 
@@ -298,7 +324,7 @@ export default function HomeScreen() {
         return;
       }
 
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/cart/', {
+      const response = await fetch(API_ENDPOINTS.CART.BASE, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -313,7 +339,7 @@ export default function HomeScreen() {
         setApiCartCount(0);
       }
     } catch (error) {
-      console.error('Error fetching cart count:', error);
+      logger.error('Error fetching cart count', { error: error.message });
       setApiCartCount(0);
     }
   };
@@ -323,6 +349,25 @@ export default function HomeScreen() {
   const handleScroll = (event: any) => {
     handleTabBarScroll(event);
   };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // Refresh all data
+      await Promise.all([
+        fetchApiProducts(),
+        fetchFeaturedProducts(),
+        dispatch(fetchCategories()),
+        isLoggedIn ? dispatch(fetchCart()) : Promise.resolve(),
+        isLoggedIn ? fetchCartCount() : Promise.resolve(),
+        loadSelectedAddress()
+      ]);
+    } catch (error) {
+      logger.error('Error refreshing home data', { error: error.message });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [dispatch, isLoggedIn]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -341,14 +386,14 @@ export default function HomeScreen() {
             <Text style={[styles.locationText, { color: colors.gray }]}>Delivery to</Text>
             {locationLoading ? (
               <SkeletonLoader width="70%" height={12} />
-            ) : locationError ? (
-              <Text style={[styles.addressText, { color: colors.gray }]}>Location unavailable</Text>
             ) : (
               <TouchableOpacity onPress={() => router.push('/saved-locations')}>
                 <Text style={[styles.addressText, { color: colors.text, fontWeight: 'bold' }]}>
-                  {selectedAddress ? 
-                    (selectedAddress.address.length > 28 ? selectedAddress.address.substring(0, 28) + '...' : selectedAddress.address) : 
-                    ((userLocation || 'Select Location').length > 28 ? (userLocation || 'Select Location').substring(0, 28) + '...' : (userLocation || 'Select Location'))
+                  {isLoggedIn && selectedAddress ? 
+                    ((selectedAddress.address || selectedAddress.fullAddress || selectedAddress.addressLine2 || '').length > 28 ? 
+                      (selectedAddress.address || selectedAddress.fullAddress || selectedAddress.addressLine2 || '').substring(0, 28) + '...' : 
+                      (selectedAddress.address || selectedAddress.fullAddress || selectedAddress.addressLine2 || '')) : 
+                    ((userLocation || 'Current Location').length > 28 ? (userLocation || 'Current Location').substring(0, 28) + '...' : (userLocation || 'Current Location'))
                   }
                 </Text>
               </TouchableOpacity>
@@ -388,6 +433,14 @@ export default function HomeScreen() {
         onScroll={handleScroll} 
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingBottom: 0 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
       >
         {/* 1. Carousel - Shows immediately */}
         <BannerCarousel />

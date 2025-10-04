@@ -2,13 +2,14 @@ import { setUser } from '@/store/slices/userSlice';
 import { RootState } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useState, useEffect } from 'react';
-import { Alert, Clipboard, Linking, Share, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, Modal } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '@/hooks/useTheme';
 import { profileAPI } from '@/services/api';
+import { API_ENDPOINTS } from '@/constants/api';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDispatch, useSelector } from 'react-redux';
 
 const monthNames = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -51,7 +52,7 @@ export default function EditProfileScreen() {
         return;
       }
       
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/profile', {
+      const response = await fetch(API_ENDPOINTS.USER.PROFILE, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

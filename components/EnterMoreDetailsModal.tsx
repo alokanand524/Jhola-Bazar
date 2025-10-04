@@ -1,11 +1,12 @@
 import { useTheme } from '@/hooks/useTheme';
+import { setSelectedAddress } from '@/store/slices/addressSlice';
 import { RootState } from '@/store/store';
+import { tokenManager } from '@/utils/tokenManager';
+import { API_ENDPOINTS } from '@/constants/api';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useSelector, useDispatch } from 'react-redux';
-import { setSelectedAddress } from '@/store/slices/addressSlice';
-import { tokenManager } from '@/utils/tokenManager';
+import { useDispatch, useSelector } from 'react-redux';
 
 interface EnterMoreDetailsModalProps {
   visible: boolean;
@@ -28,7 +29,7 @@ export default function EnterMoreDetailsModal({ visible, onClose, onSubmit, sele
 
   const loadUserData = async () => {
     try {
-      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/profile', {
+      const response = await tokenManager.makeAuthenticatedRequest(API_ENDPOINTS.USER.PROFILE, {
         headers: { 'Content-Type': 'application/json' }
       });
       
@@ -89,7 +90,7 @@ export default function EnterMoreDetailsModal({ visible, onClose, onSubmit, sele
         isDefault: markAsDefault
       };
 
-      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/service-area/save-address', {
+      const response = await tokenManager.makeAuthenticatedRequest(`${API_ENDPOINTS.BASE_URL}/service-area/save-address`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

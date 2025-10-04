@@ -1,30 +1,41 @@
+import { CartItemSkeleton, SkeletonLoader } from '@/components/SkeletonLoader';
+import { useTheme } from '@/hooks/useTheme';
+import NotificationService from '@/services/notificationService';
 import { removeFromCart, updateQuantity } from '@/store/slices/cartSlice';
+import { tokenManager } from '@/utils/tokenManager';
+import { API_ENDPOINTS } from '@/constants/api';
 import { RootState } from '@/store/store';
+import { useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
 import React from 'react';
-import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { Alert, FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch, useSelector } from 'react-redux';
-import { useTheme } from '@/hooks/useTheme';
-import { SkeletonLoader, CartItemSkeleton } from '@/components/SkeletonLoader';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { tokenManager } from '@/utils/tokenManager';
+import { useDispatch } from 'react-redux';
 
 export default function CartScreen() {
   const dispatch = useDispatch();
   const { colors } = useTheme();
+  const { isLoggedIn } = useSelector((state: RootState) => state.user);
   const [isLoading, setIsLoading] = React.useState(true);
   const [cartData, setCartData] = React.useState(null);
   const [apiItems, setApiItems] = React.useState([]);
   const [cartSummary, setCartSummary] = React.useState(null);
 
+  // Redirect to login if not authenticated
+  React.useEffect(() => {
+    if (!isLoggedIn) {
+      router.replace('/login');
+      return;
+    }
+  }, [isLoggedIn]);
+
   const fetchCartData = async () => {
     try {
       setIsLoading(true);
       
-      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/cart/');
+      const response = await tokenManager.makeAuthenticatedRequest(API_ENDPOINTS.CART.BASE);
 
       if (response.ok) {
         const result = await response.json();
@@ -34,6 +45,11 @@ export default function CartScreen() {
           setCartData(cart);
           setApiItems(cart.items || []);
           setCartSummary(cart.summary);
+          
+          // Trigger cart reminder if items exist
+          if (cart.items && cart.items.length > 0) {
+            NotificationService.checkCartAndScheduleReminder();
+          }
         }
       }
     } catch (error) {
@@ -60,7 +76,7 @@ export default function CartScreen() {
       if (selectedAddressData) {
         const selectedAddress = JSON.parse(selectedAddressData);
         if (selectedAddress.latitude && selectedAddress.longitude) {
-          const response = await fetch('https://jholabazar.onrender.com/api/v1/service-area/check', {
+          const response = await fetch(API_ENDPOINTS.SERVICE_AREA.CHECK, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -94,8 +110,8 @@ export default function CartScreen() {
     
     try {
       const endpoint = isIncrement ? 
-        `https://jholabazar.onrender.com/api/v1/cart/items/${itemId}/increment` :
-        `https://jholabazar.onrender.com/api/v1/cart/items/${itemId}/decrement`;
+        API_ENDPOINTS.CART.INCREMENT(itemId) :
+        API_ENDPOINTS.CART.DECREMENT(itemId);
       
       const response = await tokenManager.makeAuthenticatedRequest(endpoint, {
         method: 'PATCH'
@@ -114,7 +130,7 @@ export default function CartScreen() {
 
   const handleRemoveItem = async (itemId: string) => {
     try {
-      const response = await tokenManager.makeAuthenticatedRequest(`https://jholabazar.onrender.com/api/v1/cart/items/${itemId}`, {
+      const response = await tokenManager.makeAuthenticatedRequest(API_ENDPOINTS.CART.ITEM_BY_ID(itemId), {
         method: 'DELETE'
       });
 
@@ -134,6 +150,10 @@ export default function CartScreen() {
   // const deliveryFee = cartSummary?.deliveryCharge ? parseInt(cartSummary.deliveryCharge) : 0;
   const deliveryFee = 0; // Delivery fee disabled
   const finalTotal = (cartSummary?.subtotal || 0) + deliveryFee;
+
+  if (!isLoggedIn) {
+    return null;
+  }
 
   if (isLoading) {
     return (

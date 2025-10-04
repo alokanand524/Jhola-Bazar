@@ -1,6 +1,6 @@
 # Jhola-Bazar API Documentation
 
-Base URL: `https://jholabazar.onrender.com/api/v1`
+Base URL: `https://api.jholabazar.com/api/v1`
 
 ## 🔐 Authentication APIs
 

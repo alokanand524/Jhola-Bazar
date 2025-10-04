@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
 import React, { useState, useEffect } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/hooks/useTheme';
 import { useDispatch } from 'react-redux';
 import { setSelectedAddress } from '@/store/slices/addressSlice';
 import { tokenManager } from '@/utils/tokenManager';
+import { API_ENDPOINTS } from '@/constants/api';
 
 interface SavedAddress {
   id: string;
@@ -33,14 +34,24 @@ export default function SavedLocationsScreen() {
   const { colors } = useTheme();
   const dispatch = useDispatch();
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [refreshing, setRefreshing] = React.useState(false);
 
   useEffect(() => {
     loadSavedAddresses();
   }, []);
 
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadSavedAddresses();
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
   const loadSavedAddresses = async () => {
     try {
-      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/service-area/addresses');
+      const response = await tokenManager.makeAuthenticatedRequest(API_ENDPOINTS.ADDRESSES.ALL);
       if (response.ok) {
         const result = await response.json();
         setSavedAddresses(result.data || []);
@@ -81,7 +92,7 @@ export default function SavedLocationsScreen() {
   const handleMarkAsDefault = async (addressId: string) => {
     try {
       const response = await tokenManager.makeAuthenticatedRequest(
-        `https://jholabazar.onrender.com/api/v1/service-area/addresses/${addressId}`,
+        API_ENDPOINTS.ADDRESSES.BY_ID(addressId),
         {
           method: 'PUT',
           headers: {
@@ -102,7 +113,7 @@ export default function SavedLocationsScreen() {
   const handleDeleteAddress = async (addressId: string) => {
     try {
       const response = await tokenManager.makeAuthenticatedRequest(
-        `https://jholabazar.onrender.com/api/v1/service-area/addresses/${addressId}`,
+        API_ENDPOINTS.ADDRESSES.BY_ID(addressId),
         {
           method: 'DELETE',
         }
@@ -183,6 +194,14 @@ export default function SavedLocationsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.addressesList}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
         />
       ) : (
         <View style={styles.emptyState}>

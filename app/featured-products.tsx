@@ -1,12 +1,13 @@
 import { ProductCard } from '@/components/ProductCard';
 import { ProductCardSkeleton } from '@/components/SkeletonLoader';
 import { useTheme } from '@/hooks/useTheme';
+import { API_ENDPOINTS } from '@/constants/api';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function FeaturedProductsScreen() {
   const { colors } = useTheme();
@@ -15,6 +16,7 @@ export default function FeaturedProductsScreen() {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [filteredProducts, setFilteredProducts] = React.useState([]);
   const [isServiceable, setIsServiceable] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
 
   React.useEffect(() => {
     fetchFeaturedProducts();
@@ -28,7 +30,7 @@ export default function FeaturedProductsScreen() {
       if (selectedAddressData) {
         const selectedAddress = JSON.parse(selectedAddressData);
         if (selectedAddress.latitude && selectedAddress.longitude) {
-          const response = await fetch('https://jholabazar.onrender.com/api/v1/service-area/check', {
+          const response = await fetch(API_ENDPOINTS.SERVICE_AREA.CHECK, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -61,7 +63,7 @@ export default function FeaturedProductsScreen() {
 
   const fetchFeaturedProducts = async () => {
     try {
-      const response = await fetch('https://jholabazar.onrender.com/api/v1/products/featured');
+      const response = await fetch(API_ENDPOINTS.PRODUCTS.FEATURED);
       const result = await response.json();
       
       const rawProducts = result.data?.products || [];
@@ -88,6 +90,16 @@ export default function FeaturedProductsScreen() {
       setLoading(false);
     }
   };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchFeaturedProducts();
+      await checkServiceability();
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -125,6 +137,14 @@ export default function FeaturedProductsScreen() {
           columnWrapperStyle={styles.row}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
         />
       )}
     </SafeAreaView>

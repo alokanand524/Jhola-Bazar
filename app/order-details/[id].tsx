@@ -1,11 +1,12 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { useTheme } from '@/hooks/useTheme';
+import { tokenManager } from '@/utils/tokenManager';
+import { API_ENDPOINTS } from '@/constants/api';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useTheme } from '@/hooks/useTheme';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
-import { tokenManager } from '@/utils/tokenManager';
+import React from 'react';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function OrderDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -19,7 +20,7 @@ export default function OrderDetailsScreen() {
 
   const fetchOrderDetails = async () => {
     try {
-      const response = await tokenManager.makeAuthenticatedRequest(`https://jholabazar.onrender.com/api/v1/orders/${id}`);
+      const response = await tokenManager.makeAuthenticatedRequest(API_ENDPOINTS.ORDERS.BY_ID(id as string));
       
       if (response.ok) {
         const result = await response.json();

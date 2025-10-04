@@ -8,7 +8,12 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "build:production": "node ./scripts/build-production.js",
+    "build:android": "eas build --platform android",
+    "build:ios": "eas build --platform ios",
+    "type-check": "tsc --noEmit",
+    "security-check": "npm audit --audit-level moderate"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
@@ -19,10 +24,12 @@
     "expo": "~53.0.20",
     "expo-blur": "~14.1.5",
     "expo-constants": "~17.1.7",
+    "expo-device": "^8.0.9",
     "expo-font": "~13.3.2",
     "expo-haptics": "~14.1.4",
     "expo-linking": "~7.1.7",
     "expo-location": "~18.1.6",
+    "expo-notifications": "^0.32.12",
     "expo-router": "~5.1.4",
     "expo-status-bar": "~2.2.3",
     "expo-symbols": "~0.4.5",
@@ -31,6 +38,7 @@
     "react-dom": "19.0.0",
     "react-native": "0.79.5",
     "react-native-gesture-handler": "~2.24.0",
+    "react-native-maps": "1.20.1",
     "react-native-razorpay": "^2.3.0",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
@@ -38,8 +46,7 @@
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
     "react-redux": "^9.0.4",
-    "redux-persist": "^6.0.0",
-    "react-native-maps": "1.20.1"
+    "redux-persist": "^6.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

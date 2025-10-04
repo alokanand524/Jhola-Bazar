@@ -1,19 +1,20 @@
+import { ImageWithLoading } from '@/components/ImageWithLoading';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useTheme } from '@/hooks/useTheme';
+import { behaviorTracker } from '@/services/behaviorTracker';
 import { addToCart, updateQuantity } from '@/store/slices/cartSlice';
 import { fetchProductById } from '@/store/slices/productsSlice';
 import { RootState } from '@/store/store';
+import { tokenManager } from '@/utils/tokenManager';
+import { API_ENDPOINTS } from '@/constants/api';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
-import * as Haptics from 'expo-haptics';
-import { ImageWithLoading } from '@/components/ImageWithLoading';
+import { Alert, Dimensions, Modal, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import { behaviorTracker } from '@/services/behaviorTracker';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { tokenManager } from '@/utils/tokenManager';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -28,6 +29,9 @@ export default function ProductDetailScreen() {
     variants: false,
     features: false
   });
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [showImageGallery, setShowImageGallery] = React.useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = React.useState(0);
 
   
   const { selectedProduct, productLoading } = useSelector((state: RootState) => state.products);
@@ -64,7 +68,25 @@ export default function ProductDetailScreen() {
     }
   }, [selectedProduct]);
 
+  const onRefresh = React.useCallback(async () => {
+    if (id && typeof id === 'string') {
+      setRefreshing(true);
+      try {
+        await dispatch(fetchProductById(id));
+      } finally {
+        setRefreshing(false);
+      }
+    }
+  }, [dispatch, id]);
 
+  const openImageGallery = (index = 0) => {
+    setSelectedImageIndex(index);
+    setShowImageGallery(true);
+  };
+
+  const closeImageGallery = () => {
+    setShowImageGallery(false);
+  };
 
   if (productLoading || !selectedProduct) {
     return (
@@ -77,7 +99,7 @@ export default function ProductDetailScreen() {
           <View style={{ width: 24 }} />
         </View>
         <ScrollView style={styles.content}>
-          <SkeletonLoader width="100%" height={300} />
+          <SkeletonLoader width="100%" height={220} />
           <View style={styles.productInfo}>
             <SkeletonLoader width={80} height={24} style={{ marginBottom: 12 }} />
             <SkeletonLoader width="70%" height={28} style={{ marginBottom: 4 }} />
@@ -108,7 +130,7 @@ export default function ProductDetailScreen() {
         ...(addressId && { addressId })
       };
 
-      const response = await tokenManager.makeAuthenticatedRequest('https://jholabazar.onrender.com/api/v1/cart/add', {
+      const response = await tokenManager.makeAuthenticatedRequest(`${API_ENDPOINTS.BASE_URL}/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -128,7 +150,7 @@ export default function ProductDetailScreen() {
       if (selectedAddressData) {
         const selectedAddress = JSON.parse(selectedAddressData);
         if (selectedAddress.latitude && selectedAddress.longitude) {
-          const response = await fetch('https://jholabazar.onrender.com/api/v1/service-area/check', {
+          const response = await fetch(API_ENDPOINTS.SERVICE_AREA.CHECK, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -217,12 +239,12 @@ export default function ProductDetailScreen() {
       try {
         if (quantity > cartItem.quantity) {
           // Increment
-          await tokenManager.makeAuthenticatedRequest(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItem.cartItemId}/increment`, {
+          await tokenManager.makeAuthenticatedRequest(API_ENDPOINTS.CART.INCREMENT(cartItem.cartItemId), {
             method: 'PATCH'
           });
         } else {
           // Decrement
-          await tokenManager.makeAuthenticatedRequest(`https://jholabazar.onrender.com/api/v1/cart/items/${cartItem.cartItemId}/decrement`, {
+          await tokenManager.makeAuthenticatedRequest(API_ENDPOINTS.CART.DECREMENT(cartItem.cartItemId), {
             method: 'PATCH'
           });
         }
@@ -260,28 +282,42 @@ export default function ProductDetailScreen() {
           selectedProduct.images && selectedProduct.images.length > 1 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
               {selectedProduct.images.map((image, index) => (
-                <ImageWithLoading 
-                  key={index}
-                  source={{ uri: image }} 
-                  height={300} 
-                  style={styles.productImage} 
-                />
+                <TouchableOpacity key={index} onPress={() => openImageGallery(index)}>
+                  <ImageWithLoading 
+                    source={{ uri: image }} 
+                    height={220} 
+                    style={styles.productImage} 
+                  />
+                </TouchableOpacity>
               ))}
             </ScrollView>
           ) : (
-            <ImageWithLoading 
-              source={{ uri: selectedProduct.image || selectedProduct.images?.[0] }} 
-              height={300} 
-              style={styles.productImage} 
-            />
+            <TouchableOpacity onPress={() => openImageGallery(0)}>
+              <ImageWithLoading 
+                source={{ uri: selectedProduct.image || selectedProduct.images?.[0] }} 
+                height={220} 
+                style={styles.productImage} 
+              />
+            </TouchableOpacity>
           )
         ) : (
-          <SkeletonLoader width="100%" height={300} />
+          <SkeletonLoader width="100%" height={220} />
         )}
       </View>
 
       {/* Scrollable Content Section */}
-      <ScrollView style={styles.scrollableContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollableContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
+      >
         
         <View style={styles.productInfo}>
           {showElements.name ? (
@@ -296,19 +332,12 @@ export default function ProductDetailScreen() {
               
               <Text style={[styles.productName, { color: colors.text }]}>{selectedProduct.name}</Text>
               <Text style={[styles.productUnit, { color: colors.gray }]}>{selectedProduct.shortDescription}</Text>
-              
-              <View style={styles.ratingContainer}>
-                <Ionicons name="star" size={16} color="#FFD700" />
-                <Text style={[styles.rating, { color: colors.text }]}>{selectedProduct.rating || 4.5}</Text>
-                <Text style={[styles.deliveryTime, { color: colors.gray }]}>• {selectedProduct.deliveryTime || '10 mins'}</Text>
-              </View>
             </>
           ) : (
             <>
               <SkeletonLoader width={80} height={24} style={{ marginBottom: 12 }} />
               <SkeletonLoader width="70%" height={28} style={{ marginBottom: 4 }} />
-              <SkeletonLoader width="40%" height={16} style={{ marginBottom: 12 }} />
-              <SkeletonLoader width={120} height={16} style={{ marginBottom: 16 }} />
+              <SkeletonLoader width="40%" height={16} style={{ marginBottom: 16 }} />
             </>
           )}
           
@@ -458,6 +487,73 @@ export default function ProductDetailScreen() {
       </View>
 
 
+      {/* Image Gallery Modal */}
+      <Modal
+        visible={showImageGallery}
+        transparent={false}
+        animationType="fade"
+        onRequestClose={closeImageGallery}
+        statusBarTranslucent={true}
+      >
+        <StatusBar backgroundColor={colors.background} barStyle={colors.background === '#fff' ? 'dark-content' : 'light-content'} />
+        <View style={[styles.galleryContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.galleryHeader, { backgroundColor: colors.background }]}>
+            <TouchableOpacity onPress={closeImageGallery} style={styles.closeButton}>
+              <Ionicons name="close" size={28} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView 
+            horizontal 
+            pagingEnabled 
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(event) => {
+              const index = Math.round(event.nativeEvent.contentOffset.x / Dimensions.get('window').width);
+              setSelectedImageIndex(index);
+            }}
+            contentOffset={{ x: selectedImageIndex * Dimensions.get('window').width, y: 0 }}
+            style={styles.mainImageContainer}
+          >
+            {(selectedProduct.images || [selectedProduct.image]).map((image, index) => (
+              <View key={index} style={styles.imageSlide}>
+                <ImageWithLoading
+                  source={{ uri: image }}
+                  height={Dimensions.get('window').height * 0.6}
+                  style={styles.mainGalleryImage}
+                />
+              </View>
+            ))}
+          </ScrollView>
+
+          {selectedProduct.images && selectedProduct.images.length > 1 && (
+            <View style={styles.thumbnailContainer}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.thumbnailScroll}
+              >
+                {selectedProduct.images.map((image, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => setSelectedImageIndex(index)}
+                    style={[
+                      styles.thumbnailCard,
+                      { borderColor: selectedImageIndex === index ? colors.primary : colors.border }
+                    ]}
+                  >
+                    <ImageWithLoading
+                      source={{ uri: image }}
+                      height={60}
+                      style={styles.thumbnailImage}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -490,7 +586,7 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   productInfo: {
-    padding: 16,
+    padding: 12,
   },
   categoryBadge: {
     paddingHorizontal: 12,
@@ -687,11 +783,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   imageContainer: {
-    height: 300,
+    height: 220,
     backgroundColor: '#f5f5f5',
   },
   imageScroll: {
-    height: 300,
+    height: 220,
   },
 
 
@@ -723,5 +819,51 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 4,
     fontWeight: '500',
+  },
+  galleryContainer: {
+    flex: 1,
+    paddingTop: StatusBar.currentHeight || 0,
+  },
+  galleryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingTop: 40,
+  },
+  closeButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20,
+  },
+  mainImageContainer: {
+    flex: 1,
+  },
+  imageSlide: {
+    width: Dimensions.get('window').width,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  mainGalleryImage: {
+    width: '100%',
+    resizeMode: 'contain',
+  },
+  thumbnailContainer: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+  },
+  thumbnailScroll: {
+    paddingHorizontal: 8,
+  },
+  thumbnailCard: {
+    marginHorizontal: 4,
+    borderWidth: 2,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  thumbnailImage: {
+    width: 60,
+    borderRadius: 6,
   },
 });

@@ -1,4 +1,4 @@
-const BASE_URL = 'https://jholabazar.onrender.com/api/v1';
+const BASE_URL = 'https://api.jholabazar.com/api/v1';
 
 export interface Address {
   id: string;

@@ -4,6 +4,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { profileAPI } from '@/services/api';
 import { logout, setUser } from '@/store/slices/userSlice';
 import { RootState } from '@/store/store';
+import { persistor } from '@/store/store';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
@@ -60,7 +61,14 @@ export default function ProfileScreen() {
       'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: () => dispatch(logout()) },
+        { 
+          text: 'Logout', 
+          style: 'destructive', 
+          onPress: async () => {
+            dispatch(logout());
+            await persistor.purge();
+          }
+        },
       ]
     );
   };

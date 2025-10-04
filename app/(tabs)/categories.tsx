@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocalSearchParams } from 'expo-router';
@@ -17,6 +17,7 @@ export default function CategoriesScreen() {
   const { selectedCategory } = useSelector((state: RootState) => state.products);
   const { categories, loading } = useSelector((state: RootState) => state.categories);
   const { colors } = useTheme();
+  const [refreshing, setRefreshing] = React.useState(false);
 
   useEffect(() => {
     dispatch(fetchCategories());
@@ -36,6 +37,16 @@ export default function CategoriesScreen() {
       dispatch(fetchProductsByCategory(categoryId));
     }
   };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await dispatch(fetchCategories());
+      await dispatch(fetchProductsByCategory(''));
+    } finally {
+      setRefreshing(false);
+    }
+  }, [dispatch]);
 
   if (loading) {
     return (
@@ -67,6 +78,14 @@ export default function CategoriesScreen() {
         style={styles.content}
         onScroll={handleTabBarScroll}
         scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
       >
         <View style={styles.section}>
           <FlatList

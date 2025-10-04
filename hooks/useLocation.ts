@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
-import * as Location from 'expo-location';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { deliveryAPI } from '@/services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
+import { useEffect, useState } from 'react';
+import { config } from '@/config/env';
+import { InputValidator } from '@/utils/inputValidator';
+import { logger } from '@/utils/logger';
 
 interface LocationData {
   latitude: number;
@@ -22,7 +25,7 @@ export const useLocation = () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       
-      await fetch('https://jholabazar.onrender.com/api/v1/user/location', {
+      await fetch(`${config.API_BASE_URL}/user/location`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -37,7 +40,7 @@ export const useLocation = () => {
       
       clearTimeout(timeoutId);
     } catch (error) {
-      console.error('Failed to send location to backend:', error);
+      logger.error('Failed to send location to backend', { error: error.message });
     }
   };
 
@@ -49,7 +52,7 @@ export const useLocation = () => {
       );
       return response.deliveryTime || '10 mins';
     } catch (error) {
-      console.error('Failed to get delivery time:', error);
+      logger.error('Failed to get delivery time', { error: error.message });
       return '10 mins';
     }
   };
@@ -97,7 +100,7 @@ export const useLocation = () => {
           address = `${addr.name || ''}, ${addr.city || ''}, ${addr.region || ''}`.trim();
         }
       } catch (geocodeError) {
-        console.log('Geocoding failed, using coordinates:', geocodeError);
+        logger.warn('Geocoding failed, using coordinates', { error: geocodeError.message });
         address = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
       }
 
@@ -106,7 +109,7 @@ export const useLocation = () => {
       try {
         deliveryTime = await getDeliveryTime(latitude, longitude);
       } catch (deliveryError) {
-        console.log('Delivery time fetch failed, using default');
+        logger.warn('Delivery time fetch failed, using default', { error: deliveryError.message });
       }
       
       const locationData: LocationData = {
@@ -121,15 +124,15 @@ export const useLocation = () => {
       
       // Send to backend without blocking UI
       sendLocationToBackend(locationData).catch(err => 
-        console.log('Backend location update failed:', err)
+        logger.warn('Backend location update failed', { error: err.message })
       );
       
     } catch (error) {
-      console.error('Location error:', error);
+      logger.error('Location error', { error: error.message });
       
       // Retry logic
       if (retryCount < 2) {
-        console.log(`Retrying location fetch (${retryCount + 1}/2)`);
+        logger.info('Retrying location fetch', { attempt: retryCount + 1 });
         setTimeout(() => getCurrentLocation(retryCount + 1), 2000);
         return;
       }
@@ -151,7 +154,7 @@ export const useLocation = () => {
           await getCurrentLocation();
         }
       } catch (error) {
-        console.error('Error loading stored location:', error);
+        logger.error('Error loading stored location', { error: error.message });
         await getCurrentLocation();
       }
     };

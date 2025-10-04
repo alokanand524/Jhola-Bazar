@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Address {
   id: string;
@@ -77,6 +78,14 @@ const userSlice = createSlice({
       state.selectedAddress = null;
       state.paymentMethods = [];
       state.isLoggedIn = false;
+      // Clear all stored data when logging out
+      AsyncStorage.multiRemove([
+        'authToken',
+        'refreshToken', 
+        'selectedDeliveryAddress',
+        'userProfile',
+        'cartData'
+      ]);
     },
   },
 });

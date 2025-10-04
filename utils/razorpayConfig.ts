@@ -1,9 +1,11 @@
+import { config } from '@/config/env';
+
 export const RAZORPAY_CONFIG = {
-  key: 'rzp_test_1DP5mmOlF5G5ag', // Standard test key
+  key: config.RAZORPAY_KEY_ID,
   currency: 'INR',
   name: 'Jhola Bazar',
   description: 'Grocery Order Payment',
-  image: '', // Empty for now
+  image: '',
   theme: {
     color: '#00B761'
   }

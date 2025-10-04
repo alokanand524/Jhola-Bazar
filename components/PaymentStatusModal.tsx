@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Modal, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
 
@@ -7,9 +7,10 @@ interface PaymentStatusModalProps {
   visible: boolean;
   status: 'processing' | 'success' | 'failed';
   message: string;
+  onClose?: () => void;
 }
 
-export default function PaymentStatusModal({ visible, status, message }: PaymentStatusModalProps) {
+export default function PaymentStatusModal({ visible, status, message, onClose }: PaymentStatusModalProps) {
   const getStatusIcon = () => {
     switch (status) {
       case 'processing':

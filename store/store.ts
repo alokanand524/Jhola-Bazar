@@ -11,7 +11,7 @@ import deliveryReducer from './slices/deliverySlice';
 import addressReducer from './slices/addressSlice';
 
 const persistConfig = {
-  key: 'root',
+  key: 'jhola-bazar-root',
   storage: AsyncStorage,
   whitelist: ['user', 'cart', 'address'],
 };

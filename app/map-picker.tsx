@@ -8,6 +8,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MapView, { Region } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDispatch } from 'react-redux';
+import { setSelectedAddress } from '@/store/slices/addressSlice';
 
 interface LocationData {
   latitude: number;
@@ -21,6 +23,7 @@ const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey || pro
 
 export default function MapPickerScreen() {
   const { colors } = useTheme();
+  const dispatch = useDispatch();
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
   const [region, setRegion] = useState<Region>({
     latitude: 28.6139,
@@ -193,6 +196,8 @@ export default function MapPickerScreen() {
         const existingLocations = await AsyncStorage.getItem('savedLocations');
         const locations = existingLocations ? JSON.parse(existingLocations) : [];
         
+        const fullAddress = `${selectedLocation.locality}, ${selectedLocation.district}, ${selectedLocation.pincode}`;
+        
         const newLocation = {
           id: Date.now().toString(),
           locality: selectedLocation.locality,
@@ -200,13 +205,36 @@ export default function MapPickerScreen() {
           pincode: selectedLocation.pincode,
           latitude: selectedLocation.latitude,
           longitude: selectedLocation.longitude,
-          fullAddress: `${selectedLocation.locality}, ${selectedLocation.district}, ${selectedLocation.pincode}`,
+          fullAddress: fullAddress,
           timestamp: new Date().toISOString(),
           customerDetails: details
         };
         
+        // Save to recent locations
         locations.unshift(newLocation);
         await AsyncStorage.setItem('savedLocations', JSON.stringify(locations));
+        
+        // Create address object for Redux and AsyncStorage
+        const selectedAddressData = {
+          id: newLocation.id,
+          type: 'map_selected',
+          addressLine1: selectedLocation.locality,
+          addressLine2: fullAddress,
+          isDefault: false,
+          fullAddress: fullAddress,
+          address: fullAddress,
+          name: selectedLocation.locality,
+          timestamp: new Date().toISOString(),
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude
+        };
+        
+        // Update Redux state
+        dispatch(setSelectedAddress(selectedAddressData));
+        
+        // Update AsyncStorage for checkout
+        await AsyncStorage.setItem('selectedDeliveryAddress', JSON.stringify(selectedAddressData));
+        
         router.back();
       } catch (error) {
         console.log('Error saving location:', error);

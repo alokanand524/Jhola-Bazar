@@ -8,9 +8,17 @@ import { PersistGate } from 'redux-persist/integration/react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { store, persistor } from '@/store/store';
 import { useTheme } from '@/hooks/useTheme';
+import { useEffect } from 'react';
+import NotificationService from '@/services/notificationService';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 function AppContent() {
   const { theme } = useTheme();
+  
+  useEffect(() => {
+    NotificationService.initialize();
+    NotificationService.setupNotificationListeners();
+  }, []);
   
   return (
     <ThemeProvider value={theme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -53,12 +61,14 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <Provider store={store}>
-        <PersistGate loading={null} persistor={persistor}>
-          <AppContent />
-        </PersistGate>
-      </Provider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Provider store={store}>
+          <PersistGate loading={null} persistor={persistor}>
+            <AppContent />
+          </PersistGate>
+        </Provider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
